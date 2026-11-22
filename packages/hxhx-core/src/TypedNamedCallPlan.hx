@@ -58,6 +58,21 @@ class TypedNamedCallPlan {
 							case _:
 						}
 				}
+				// Dynamic evidence leaves a method type parameter unbound, as in Haxe 4.3.7
+				// (`unserializeEnum<T>(edecl:Enum<T>, ...)` called with `Enum<Dynamic>` in
+				// haxe.Unserializer). The call still passes the value: publish the declared
+				// parameter with Dynamic in place of the declaration's own type parameters.
+				if (type.isUnknown() && !source.isRest) switch slots[slot] {
+					case Supplied(index)
+						if (index < values.length
+							&& !values[index].getType().hasUnknownComponent()
+							&& mentionsDynamic(values[index].getType())):
+						final owned = declaration.getTypeParameterIds();
+						if (owned.length > 0 && TyTypeSubstitution.parameterIdentities(source.type).length > 0)
+							type = TyTypeSubstitution.apply(source.type,
+								TyTypeSubstitution.bind(owned, [for (_ in owned) TyType.fromHintText("Dynamic")], "dynamic method evidence"));
+					case _:
+				}
 				final elements = type.getTypeArguments();
 				if (source.isRest && elements.length != 1) throw "named call rest context requires its declared container";
 				{
@@ -73,5 +88,22 @@ class TypedNamedCallPlan {
 		final kinds = TypedExpr.operandKinds(values);
 		final types = TypedExpr.operandTypes(values, kinds);
 		return new TypedNamedCallBinding(declaration, extensionProvider, TyCallbackArgumentContext.publishSelected(callable, sources, types, index, order));
+	}
+
+	static function mentionsDynamic(type:TyType):Bool {
+		if (type.isDynamic())
+			return true;
+		if (type.isNullable())
+			return mentionsDynamic(type.unwrapNull());
+		for (argument in type.getTypeArguments())
+			if (mentionsDynamic(argument))
+				return true;
+		if (type.isFunction()) {
+			for (argument in type.getFunctionArguments())
+				if (mentionsDynamic(argument))
+					return true;
+			return mentionsDynamic(type.getFunctionReturn());
+		}
+		return false;
 	}
 }

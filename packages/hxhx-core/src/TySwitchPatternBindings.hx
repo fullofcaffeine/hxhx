@@ -75,11 +75,11 @@ class TySwitchPatternBindings {
 		return {declarations: declarations, occurrences: occurrences};
 	}
 
-	static function analyzeOr(patterns:Array<HxSwitchPattern>, baseType:TyType,
-			enumArguments:Null<(TyType, String, Int, Bool) -> Null<Array<TyType>>>):TySwitchPatternBindingAnalysis {
+	static function analyzeOr(patterns:Array<HxSwitchPattern>, baseType:TyType, enumArguments:Null<(TyType, String, Int, Bool) -> Null<Array<TyType>>>,
+			?elements:Array<TyType>):TySwitchPatternBindingAnalysis {
 		if (patterns == null || patterns.length == 0)
 			return emptyAnalysis();
-		final alternatives = [for (pattern in patterns) analyze(pattern, baseType, enumArguments)];
+		final alternatives = [for (pattern in patterns) analyze(pattern, baseType, enumArguments, elements)];
 		final declarations = [
 			for (fact in alternatives[0].declarations)
 				{name: fact.name, type: fact.type}
@@ -123,15 +123,20 @@ class TySwitchPatternBindings {
 		return arguments.length == 1 && (path == "Array" || path == "haxe.Array") ? arguments[0] : TyType.fromHintText("Dynamic");
 	}
 
-	static function analyze(pattern:HxSwitchPattern, baseType:TyType,
-			enumArguments:Null<(TyType, String, Int, Bool) -> Null<Array<TyType>>>):TySwitchPatternBindingAnalysis {
+	/**
+		`elements` holds the type of each element when the switch subject is an array literal:
+		Haxe 4.3.7 matches `switch [shape, paint]` position by position, so `case [Circle(r), Solid(c)]`
+		binds each element with its own type, not with the array's joined element type.
+	**/
+	static function analyze(pattern:HxSwitchPattern, baseType:TyType, enumArguments:Null<(TyType, String, Int, Bool) -> Null<Array<TyType>>>,
+			?elements:Array<TyType>):TySwitchPatternBindingAnalysis {
 		if (pattern == null)
 			return emptyAnalysis();
 		return switch (pattern) {
 			case PBind(name):
 				bindingFact(name, baseType);
 			case PCapture(name, inner):
-				mergeIndependent([bindingFact(name, baseType), analyze(inner, baseType, enumArguments)]);
+				mergeIndependent([bindingFact(name, baseType), analyze(inner, baseType, enumArguments, elements)]);
 			case PEnumExtract(name, arguments, provenance):
 				final children = arguments == null ? [] : arguments;
 				final types = enumArguments == null ? null : enumArguments(baseType, name, children.length,
@@ -151,17 +156,31 @@ class TySwitchPatternBindings {
 				]);
 			case PArray(items):
 				final children = items == null ? [] : items;
-				final itemType = arrayItemType(baseType);
-				mergeIndependent([for (item in children) analyze(item, itemType, enumArguments)]);
+				if (elements != null && elements.length == children.length) mergeIndependent([
+					for (i in 0...children.length)
+						analyze(children[i], elements[i], enumArguments)
+				]); else {
+					final itemType = arrayItemType(baseType);
+					mergeIndependent([for (item in children) analyze(item, itemType, enumArguments)]);
+				}
 			case PExtractor(_, resultPattern):
 				analyze(resultPattern, TyType.fromHintText("Dynamic"), enumArguments);
 			case PGuard(inner, _), PUnsupportedPattern(inner):
-				analyze(inner, baseType, enumArguments);
+				analyze(inner, baseType, enumArguments, elements);
 			case POr(patterns):
-				analyzeOr(patterns, baseType, enumArguments);
+				analyzeOr(patterns, baseType, enumArguments, elements);
 			case _:
 				emptyAnalysis();
 		}
+	}
+
+	/** The element types of an array-literal switch subject, or null for any other subject. */
+	public static function literalElements(subject:HxExpr, typeOf:HxExpr->TyType):Null<Array<TyType>> {
+		return switch subject {
+			case EParenthesized(inner, _): literalElements(inner, typeOf);
+			case EArrayDecl(values) if (values != null && values.length > 0): [for (value in values) typeOf(value)];
+			case _: null;
+		};
 	}
 
 	/**
@@ -172,10 +191,10 @@ class TySwitchPatternBindings {
 		the already-recorded symbol instead of allocating a replacement identity.
 	**/
 	public static function declare(environment:Null<TyFunctionEnv>, pattern:HxSwitchPattern, baseType:TyType,
-			?enumArguments:(TyType, String, Int, Bool) -> Null<Array<TyType>>):Array<TyLocalBinding> {
+			?enumArguments:(TyType, String, Int, Bool) -> Null<Array<TyType>>, ?elements:Array<TyType>):Array<TyLocalBinding> {
 		if (environment == null)
 			return [];
-		final analysis = analyze(pattern, baseType, enumArguments);
+		final analysis = analyze(pattern, baseType, enumArguments, elements);
 		final symbols = new StringMap<TySymbol>();
 		for (fact in analysis.declarations)
 			symbols.set(fact.name, environment.declareLocal(fact.name, fact.type, PatternVariable));
