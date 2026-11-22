@@ -73,7 +73,12 @@ class TyperStage {
 		if (existing != null && !existing.isUnknown() && !existing.isDynamic() && incoming != null && incoming.isDynamic())
 			return existing;
 		final compatible = TyType.unify(existing, incoming);
-		return compatible != null && !existing.hasUnknownComponent() ? existing : compatible;
+		// A local declared as bare `null` is a nullable monomorph in Haxe 4.3.7: a complete
+		// assigned value binds it (`var t = null; t = xtype(c);` is a Null<CType>). A value with
+		// unknown parts, or an object literal whose fields later uses still check, shares its
+		// inference term instead (`var e = null; e = {expr: ..., pos: pos};` in MacroStringTools).
+		final binds = existing.isNullLiteral() && incoming != null && !incoming.hasUnknownComponent() && !incoming.unwrapNull().isAnonymous();
+		return compatible != null && !existing.hasUnknownComponent() && !binds ? existing : compatible;
 	}
 
 	static function arrayElementType(t:TyType):Null<TyType> {
@@ -4742,7 +4747,10 @@ class TyperStage {
 						}
 						// Assignment as expression.
 						final destination = indexedDestination == null ? inferExprType(a, scope, ctx, pos) : indexedDestination;
-						final rhs = inferExprType(b, scope, ctx, pos, destination);
+						// A local declared as bare `null` is a nullable monomorph in Haxe 4.3.7: it
+						// gives the value no context (`var args = null; args = new Array();`,
+						// haxe.rtti.XmlParser). The value then supplies the local's type.
+						final rhs = inferExprType(b, scope, ctx, pos, destination.isNullLiteral() ? null : destination);
 						if (a.match(EArrayAccess(_, _))
 							&& destination.hasUnknownComponent()
 							&& scope.getInference().canReceiveContext(a, scope)
@@ -4779,10 +4787,12 @@ class TyperStage {
 							case EIdent(name):
 								final sym = scope.resolveSymbol(name);
 								if (sym != null) {
-									// The first assignment to an unannotated, uninitialized
-									// local must retain the RHS inference identity, just as
-									// an initializer does. Later uses constrain that same term.
-									if (sym.getType().isUnknown() && scope.getInference().sourceTerm(a, scope) == null) {
+									// The first assignment to an unannotated local that is
+									// uninitialized or only `null` must retain the RHS inference
+									// identity, just as an initializer does. Later uses constrain
+									// that same term.
+									if ((sym.getType().isUnknown() || sym.getType().isNullLiteral())
+										&& scope.getInference().sourceTerm(a, scope) == null) {
 										final assignedTerm = scope.getInference().sourceTerm(b, scope);
 										if (assignedTerm != null)
 											scope.getInference().recordLocal(sym, assignedTerm);

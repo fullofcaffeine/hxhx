@@ -1,0 +1,5 @@
+definition.items=Array<String>
+definition.platform=String
+field.first=String
+field.has=Bool
+field.second=String
