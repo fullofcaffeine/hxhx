@@ -21,6 +21,26 @@ class TyInferenceSolver {
 	var revision:Int = 0;
 	var sealed:Bool = false;
 
+	/**
+		Only `typeEqual` sets this. Exact unification otherwise keeps nullable wrappers, because an
+		inferred binding decides storage; `typeEqual` compares complete types the way Haxe 4.3.7
+		`type_eq` does, following `Null` on either side outside null safety.
+	 */
+	var followsNull:Bool = false;
+
+	/**
+		Whether two complete types are equal as Haxe 4.3.7 `type_eq` compares them: `Null` is
+		followed on either side, and structure fields compare by type, not by optionality. This
+		binds nothing; inference keeps using `constrain`.
+	 */
+	public static function typeEqual(left:TyType, right:TyType):Bool {
+		if (left.hasUnknownComponent() || right.hasUnknownComponent())
+			return false;
+		final solver = new TyInferenceSolver("type-equality");
+		solver.followsNull = true;
+		return solver.constrain(fromType(left), fromType(right));
+	}
+
 	public function new(owner:String) {
 		if (owner == null || owner.length == 0)
 			throw "inference requires an owning executable";
@@ -153,6 +173,7 @@ class TyInferenceSolver {
 	public function fork():TyInferenceSolver {
 		requireMutable();
 		final candidate = new TyInferenceSolver(owner);
+		candidate.followsNull = followsNull;
 		candidate.variables = variables.copy();
 		candidate.dynamicUses = dynamicUses.copy();
 		candidate.solutions = [for (solution in solutions) solution == null ? null : copyTerm(solution)];
@@ -431,13 +452,16 @@ class TyInferenceSolver {
 			case [Nominal(first, firstArguments), Nominal(second, secondArguments)]: first.equals(second) && unifyArguments(firstArguments, secondArguments,
 					resolveMember);
 			case [Nullable(first), Nullable(second)]: unify(first, second, resolveMember);
+			// `typeEqual` only: `Null<T>` and a concrete `T` are equal (see `followsNull`).
+			case [Nullable(first), _] if (followsNull): unify(first, b, resolveMember);
+			case [_, Nullable(second)] if (followsNull): unify(a, second, resolveMember);
 			case [
 				Function(firstArguments, firstResult, firstSignature),
 				Function(secondArguments, secondResult, secondSignature)
 			]: matchingCallableRules(firstSignature,
 				secondSignature) && unifyArguments(firstArguments, secondArguments, resolveMember) && unify(firstResult, secondResult, resolveMember);
-			case [Structure(first, firstSignature), Structure(second, secondSignature)]: matchingStructuralRules(firstSignature,
-					secondSignature) && unifyArguments(first, second, resolveMember);
+			case [Structure(first, firstSignature), Structure(second, secondSignature)]: matchingStructuralRules(firstSignature, secondSignature,
+					followsNull) && unifyArguments(first, second, resolveMember);
 			case _: false;
 		};
 	}
@@ -455,16 +479,33 @@ class TyInferenceSolver {
 	}
 
 	/** Compare field contracts independently of the child types being solved. Assignment remains a separate relation. */
-	static function matchingStructuralRules(left:TyType, right:TyType):Bool {
+	static function matchingStructuralRules(left:TyType, right:TyType, ignoreOptional:Bool):Bool {
 		final first = left.getAnonymousFields();
 		final second = right.getAnonymousFields();
 		if (first.length != second.length)
 			return false;
 		for (index in 0...first.length)
-			if (TyAnonymousField.semanticKey(TyAnonymousField.withType(first[index],
-				TyType.unknown())) != TyAnonymousField.semanticKey(TyAnonymousField.withType(second[index], TyType.unknown())))
+			if (structuralRuleKey(first[index], ignoreOptional) != structuralRuleKey(second[index], ignoreOptional))
 				return false;
 		return true;
+	}
+
+	/**
+		A field's name, access, visibility and (unless `ignoreOptional`) optionality, without its type.
+		Exact unification keeps the optional flag; `typeEqual` drops it, as Haxe 4.3.7 `type_eq` does
+		(`?tag:Int` and `tag:Null<Int>` are equal fields there).
+	 */
+	static function structuralRuleKey(field:TyAnonymousField, ignoreOptional:Bool):String {
+		final erased = TyAnonymousField.withType(field, TyType.unknown());
+		return TyAnonymousField.semanticKey({
+			name: erased.name,
+			type: erased.type,
+			kind: erased.kind,
+			isOptional: ignoreOptional ? false : erased.isOptional,
+			visibility: erased.visibility,
+			metadata: erased.metadata,
+			position: erased.position
+		});
 	}
 
 	function unifyArguments(left:Array<TyInferenceTerm>, right:Array<TyInferenceTerm>, ?resolveMember:TyInferenceMemberResolver):Bool {
