@@ -330,6 +330,15 @@ class TyType {
 	public function isUnknown():Bool
 		return kind == KIND_UNKNOWN;
 
+	/**
+		An open value: unknown, also inside `Null` (`Null<unknown>`). Haxe 4.3.7's `follow` sees
+		through `Null` (tFunctions.ml:503-504) and operator typing classifies operands with it
+		(operators.ml:114-123), so an operand typed `Null<unsolved>` still takes its type from a
+		peer or a use. Operand inference tests this rather than `isUnknown` (haxe_ocaml-ndk9u).
+	**/
+	public function isOpenValue():Bool
+		return unwrapNull().isUnknown();
+
 	/** An incomplete structural type cannot serve as a fully selected backend contract. */
 	public function hasUnknownComponent():Bool
 		return containsComponent(type -> type.isUnknown(), []);

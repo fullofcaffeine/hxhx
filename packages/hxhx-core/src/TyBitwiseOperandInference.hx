@@ -16,12 +16,12 @@ function constrain(input:{
 	if (input.sources.length != 2 || input.types.length != 2)
 		throw "bitwise operand inference requires two checked operands";
 	for (type in input.types)
-		if (!type.isUnknown() && !type.isDynamic() && type.unwrapNull().getSemanticKey() != "primitive:Int")
+		if (!type.isOpenValue() && !type.isDynamic() && type.unwrapNull().getSemanticKey() != "primitive:Int")
 			return;
 	final inference = input.scope.getInference();
 	final sources = [
 		for (index in 0...2)
-			if (input.types[index].isUnknown() && inference.canReceiveContext(input.sources[index], input.scope)) input.sources[index]
+			if (input.types[index].isOpenValue() && inference.canReceiveContext(input.sources[index], input.scope)) input.sources[index]
 	];
 	if (sources.length != 0 && !inference.constrain(sources, sources.map(_ -> TyType.fromHintText("Int")), input.scope, input.index))
 		throw new TyperError(input.filePath, input.position, "bitwise operands conflict with their inferred Int inputs");

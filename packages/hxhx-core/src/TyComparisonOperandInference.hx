@@ -23,10 +23,10 @@ function constrain(input:{
 	if (input.left.match(ENull) || input.right.match(ENull))
 		return;
 	final inference = input.scope.getInference();
-	final leftUnknown = input.leftType.isUnknown() && inference.canReceiveContext(input.left, input.scope);
-	final rightUnknown = input.rightType.isUnknown() && inference.canReceiveContext(input.right, input.scope);
+	final leftUnknown = input.leftType.isOpenValue() && inference.canReceiveContext(input.left, input.scope);
+	final rightUnknown = input.rightType.isOpenValue() && inference.canReceiveContext(input.right, input.scope);
 	function knownPeer(type:TyType):Null<TyType> {
-		return type.isUnknown() || type.hasUnknownComponent() || type.unwrapNull().isDynamic() ? null : type;
+		return type.isOpenValue() || type.hasUnknownComponent() || type.unwrapNull().isDynamic() ? null : type;
 	}
 	final sources = new Array<HxExpr>();
 	final expected = new Array<TyType>();
