@@ -9,6 +9,11 @@ import sys.io.File;
 	and Int to two unknown operands of an ordering. Two unknown operands of `==`, or a Dynamic peer,
 	leave it unknown. A range bound becomes Int. hxhx left these inputs unknown, so `l != 0` did not
 	make `l` an Int (haxe_ocaml-lisu2, step 3).
+
+	`value == null` makes `value` a `Null<Unknown>` (haxe_ocaml-a4ytl). The upstream observer reads
+	through `Null`, so the facts compare without the wrapper, and the wrapped types are checked
+	separately. Upstream also gives `nullFallback.first` the type `Null<Unknown>`, through the
+	shared result; hxhx leaves it `Unknown` (haxe_ocaml-catyk).
 **/
 class M14ComparisonOperandInferenceTest {
 	static final root = "test/fixtures/comparison_operand_inference";
@@ -59,15 +64,23 @@ class M14ComparisonOperandInferenceTest {
 		loader.markResolvedAlready([module]);
 		final typed = TyperStage.typeResolvedModule(module, index, loader, true);
 		final observations:Array<String> = [];
+		final wrapped:Array<String> = [];
 		for (cls in typed.getTypedClasses())
 			if (HxClassDecl.getName(cls.getSourceDeclaration()) == "Ops")
 				for (fn in cls.getFunctions())
-					for (parameter in fn.getEnvironment().getParams())
-						observations.push(HxFunctionDecl.getName(fn.getSourceDeclaration()) + "." + parameter.getName() + "="
-							+ parameter.getType().getDisplay());
+					for (parameter in fn.getEnvironment().getParams()) {
+						final name = HxFunctionDecl.getName(fn.getSourceDeclaration()) + "." + parameter.getName();
+						observations.push(name + "=" + parameter.getType().unwrapNull().getDisplay());
+						if (name == "nullCheck.value" || name == "nullFallback.second")
+							wrapped.push(name + "=" + parameter.getType().getDisplay());
+					}
 		observations.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		if (observations.join("\n") + "\n" != expectedTypes)
 			throw "comparison input facts differ:\n" + observations.join("\n");
+		wrapped.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		final expectedWrapped = "nullCheck.value=Null<Unknown>\nnullFallback.second=Null<Unknown>";
+		if (wrapped.join("\n") != expectedWrapped)
+			throw "comparison wrapped types differ:\n" + wrapped.join("\n");
 		final fullModule = new ResolvedModule("Main", path, ParserStage.parse(full, path));
 		final fullIndex = TyperIndex.buildHeaders([fullModule]);
 		final fullLoader = new ModuleLoader(classPaths, defines, fullIndex);

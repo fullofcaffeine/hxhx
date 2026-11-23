@@ -1343,7 +1343,7 @@ class TyFunctionInference {
 		switch solver.follow(term) {
 			case Variable(_):
 				final candidate = solver.fork();
-				final inner = solver.hasOmittedInputOrigin(term) ? candidate.freshOmittedParameter() : candidate.fresh();
+				final inner = candidate.freshWithOrigin(term);
 				if (candidate.constrain(term, Nullable(inner)))
 					solver.commit(candidate);
 			case _:

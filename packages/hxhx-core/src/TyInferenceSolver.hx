@@ -109,6 +109,23 @@ class TyInferenceSolver {
 		return allocate(null, SelfCallResult);
 	}
 
+	/**
+		A fresh variable with an unbound variable's origin and deferred Dynamic fallback, for a
+		type placed inside it (`Null<fresh>` from `value == null`). An untyped result such as
+		`var e = a.__enum__; if (e == null)` (js Type.enumEq) may then stay unsolved, as before.
+	 */
+	public function freshWithOrigin(term:TyInferenceTerm):TyInferenceTerm {
+		assertOwned(term);
+		return switch follow(term) {
+			case Variable(identity):
+				final inner = allocate(null, identity.kind);
+				if (dynamicUses[identity.ordinal])
+					visitDynamicUse(inner, false);
+				inner;
+			case _: fresh();
+		};
+	}
+
 	public function freshUntypedResult():TyInferenceTerm {
 		return allocate(null, UntypedResult);
 	}
