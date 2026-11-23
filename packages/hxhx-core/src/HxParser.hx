@@ -2751,6 +2751,12 @@ class HxParser {
 		// non-braced bodies have already parsed any returned calls or indexing.
 		if (seed.match(ESourceFunction(_, _, _, _)))
 			return seed;
+		// A block ends its expression, as in Haxe 4.3.7 (grammar.mly:1388-1390, `expr_next` only
+		// after an object literal): in `if (c) { ... }` followed by a line `(a ? b : c) + x;`, the
+		// parenthesized line is the next statement, not a call of the block (haxe.macro.Printer
+		// printTypeDefinition).
+		if (seed.match(ESourceGroup(_, _)))
+			return seed;
 		var e = seed;
 
 		inline function isTripleDotAhead():Bool {

@@ -1,0 +1,3 @@
+{
+	"f": "{\n\treturn switch (n) {\n\t\tcase 0:{\n\t\t\tvar x = 1;\n\t\t\tif (flag) {\n\t\t\t\tx = 2;\n\t\t\t};\n\t\t\t(flag ? \"a\" : \"b\") + x;\n\t\t};\n\t\tcase _:{\n\t\t\t\"z\";\n\t\t};\n\t};\n}"
+}
