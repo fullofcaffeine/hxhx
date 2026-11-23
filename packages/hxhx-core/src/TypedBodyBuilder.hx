@@ -507,11 +507,11 @@ class TypedBodyBuilder {
 		return switch (statement) {
 			case SBlock(statements, position):
 				SBlock(expandStructuralStatements(statements), position);
-			case SIf(condition, whenTrue, whenFalse, position):
+			case SIf(condition, whenTrue, whenFalse, position, valueReturn):
 				var expandedWhenFalse:Null<HxStmt> = null;
 				if (whenFalse != null)
 					expandedWhenFalse = expandStatement(whenFalse);
-				SIf(condition, expandStatement(whenTrue), expandedWhenFalse, position);
+				SIf(condition, expandStatement(whenTrue), expandedWhenFalse, position, valueReturn);
 			case SForIn(name, iterable, body, position):
 				SForIn(name, iterable, expandStatement(body), position);
 			case SForKeyValue(keyName, valueName, iterable, body, position):

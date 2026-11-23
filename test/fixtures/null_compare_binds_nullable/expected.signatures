@@ -1,0 +1,10 @@
+below=(x : Null<Int>) -> Bool
+chain=(c : Int, node : Node) -> Node
+flagged=(x : Null<Int>) -> Int
+merge=(a : Null<Node>, b : Null<Node>) -> Null<Node>
+orZero=(x : Null<Int>) -> Int
+returnFirst=(c : Int, node : Node) -> Null<Node>
+returnIf=(c : Int, node : Node) -> Node
+scaled=(x : Null<Int>) -> Int
+setResolver=(r : Null<Resolver>) -> Void
+wrap=(n : Node) -> Node
