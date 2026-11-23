@@ -54,20 +54,31 @@ class MacroBodyExport {
 		return {expr: statementDefinition(item, position), pos: position};
 	}
 
-	function statementDefinition(item:HxStmt, position:Position):ExprDef {
+	/** One declarator of a local variable statement. **/
+	function declarator(item:HxStmt, position:Position):Var {
 		return switch item {
-			case SBlock(statements, _):
-				EBlock([for (child in statements) statement(child, position)]);
 			case SVar(name, typeHint, initializer, _, metadata):
 				if (metadata != null && metadata.length > 0)
 					throw failure("metadata on a local variable is not exported yet");
-				EVars([
-					{
-						name: name,
-						type: typeOrNull(typeHint, position),
-						expr: initializer == null ? null : expression(initializer, position)
-					}
-				]);
+				{
+					name: name,
+					type: typeOrNull(typeHint, position),
+					expr: initializer == null ? null : expression(initializer, position)
+				};
+			case _:
+				throw failure("a declaration group holds a non-declaration statement");
+		};
+	}
+
+	function statementDefinition(item:HxStmt, position:Position):ExprDef {
+		return switch item {
+			case SBlock(statements, _, true):
+				// One `var a = 1, b = 2;` statement from authored parsing.
+				EVars([for (child in statements) declarator(child, position)]);
+			case SBlock(statements, _):
+				EBlock([for (child in statements) statement(child, position)]);
+			case SVar(_, _, _, _, _):
+				EVars([declarator(item, position)]);
 			case SIf(condition, whenTrue, whenFalse, _):
 				EIf(expression(condition, position), statement(whenTrue, position), whenFalse == null ? null : statement(whenFalse, position));
 			case SForIn(name, iterable, body, _):

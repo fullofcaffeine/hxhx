@@ -416,11 +416,11 @@ class HxParser {
 		return switch (stmt) {
 			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch is not source syntax";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
-			case SBlock(stmts, pos):
+			case SBlock(stmts, pos, declarationGroup):
 				final shifted = new Array<HxStmt>();
 				for (s in stmts)
 					shifted.push(rebaseFunctionBodyStmt(s, base, bodyStartIndex));
-				SBlock(shifted, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SBlock(shifted, rebaseFunctionBodyPos(pos, base, bodyStartIndex), declarationGroup);
 			case SVar(name, typeHint, init, pos, metadata):
 				SVar(name, typeHint, rebaseFunctionBodyExpr(init, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex),
 					metadata == null ? [] : metadata.copy());
@@ -666,11 +666,11 @@ class HxParser {
 		return switch (stmt) {
 			case SGuardedSwitch(_, _, _, _, _): throw "backend guarded switch is not source syntax";
 			case STargetScope(_, _, _): throw "native target scope is not valid in this source or target phase";
-			case SBlock(stmts, pos):
+			case SBlock(stmts, pos, declarationGroup):
 				final shifted = new Array<HxStmt>();
 				for (s in stmts)
 					shifted.push(offsetFunctionBodyStmtColumns(s, delta));
-				SBlock(shifted, offsetFunctionBodyPosColumn(pos, delta));
+				SBlock(shifted, offsetFunctionBodyPosColumn(pos, delta), declarationGroup);
 			case SVar(name, typeHint, init, pos, metadata):
 				SVar(name, typeHint, offsetFunctionBodyExprColumns(init, delta), offsetFunctionBodyPosColumn(pos, delta),
 					metadata == null ? [] : metadata.copy());
@@ -3923,7 +3923,7 @@ class HxParser {
 
 	function parseVarStmt(pos:HxPos):HxStmt {
 		final decls = parseVarDecls(pos);
-		return decls.length == 1 ? decls[0] : SBlock(decls, pos);
+		return decls.length == 1 ? decls[0] : SBlock(decls, pos, authoredSyntax ? true : null);
 	}
 
 	function parseStmtInto(out:Array<HxStmt>, stop:() -> Bool):Void {
@@ -3947,6 +3947,10 @@ class HxParser {
 				bump();
 			bump();
 			final decls = parseVarDecls(pos);
+			if (authoredSyntax && decls.length > 1) {
+				out.push(SBlock(decls, pos, true));
+				return;
+			}
 			for (stmt in decls)
 				out.push(stmt);
 			return;
