@@ -63,3 +63,4 @@ haxe test/m14_typed_capture_lowering_test.hxml
 haxe test/m14_typed_capture_plan_test.hxml
 haxe test/m14_typed_capture_static_method_test.hxml
 haxe test/m14_untyped_function_body_syntax_test.hxml
+haxe test/m14_var_declaration_group_test.hxml

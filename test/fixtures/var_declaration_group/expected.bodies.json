@@ -1,0 +1,5 @@
+{
+	"grouped": "{\n\tvar first = 1, second = 2, third = first + second;\n\treturn flag ? third : 0;\n}",
+	"sum": "{\n\tvar x = a * 2, y = b * 3;\n\tvar total:Int = x + y, label = \"sum\";\n\treturn total + label.length;\n}",
+	"uninitialized": "{\n\tvar left:String, right = \"b\";\n\tleft = \"a\";\n\treturn left + right;\n}"
+}
