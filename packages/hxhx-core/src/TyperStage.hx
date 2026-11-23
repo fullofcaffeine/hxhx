@@ -1412,6 +1412,34 @@ class TyperStage {
 	}
 
 	/** Build one body scope; constructor completion is distinct from its allocation result. */
+	/**
+		A call to the method being typed, from its own body, sees the parameter types the body has
+		bound so far. Haxe 4.3.7 types the body in order: a parameter monomorph that a `switch`
+		already bound to `Item` is not widened by a later recursive call passing `Null<Item>`
+		(haxe.CallStack.itemToString; unify follows `Null` once bound). Without this, the call's
+		argument filled the still-open header input and won.
+	**/
+	static function selfCallInputs(declaration:TyDeclarationInfo, signature:TyFunSig, scope:TyFunctionEnv):TyFunSig {
+		if (scope.getDeclaration() != declaration)
+			return signature;
+		final params = scope.getParams();
+		final inputs = signature.getArgs().copy();
+		if (params.length != inputs.length)
+			return signature;
+		var changed = false;
+		for (index in 0...inputs.length) {
+			if (!inputs[index].isUnknown())
+				continue;
+			final bound = scope.getInference().expressionType(EIdent(params[index].getName()), params[index].getType(), scope);
+			if (!bound.hasUnknownComponent()) {
+				inputs[index] = bound;
+				changed = true;
+			}
+		}
+		return changed ? new TyFunSig(signature.getName(), signature.getIsStatic(), signature.getArgNames().copy(), inputs,
+			signature.getArgOptional().copy(), signature.getArgRest().copy(), signature.getReturnType(), signature.getPos()) : signature;
+	}
+
 	static function typeFunction(fn:HxFunctionDecl, ctx:TyperContext, functionIdentity:String, ?semanticDeclaration:TyDeclarationInfo,
 			?onResult:TyMethodBodyResults.TyMethodBodyResult->Void):TyFunctionEnv {
 		// Stage 3 local scope:
@@ -1449,6 +1477,7 @@ class TyperStage {
 		validateClassArguments(expectedReturn, ctx, HxFunctionDecl.getPos(fn));
 		final scope = new TyFunctionEnv(HxFunctionDecl.getName(fn), params, locals, expectedReturn, TyType.unknown(), functionIdentity, null, false, 0,
 			HxFunctionDecl.getIsStatic(fn), new TyControlScope(functionIdentity, TypedBodyFingerprint.forStatements(semanticBody)), null, typeParameters);
+		scope.setDeclaration(semanticDeclaration);
 		scope.retainFunctionBody(fn, semanticBody);
 		for (argumentIndex in 0...functionArgs.length) {
 			final hint = HxFunctionArg.getTypeHint(functionArgs[argumentIndex]);
@@ -2643,7 +2672,7 @@ class TyperStage {
 				|| signature.getArgRest()
 					.indexOf(true) >= 0 ? null : ctx.getIndex()
 					.getMethodInputs()
-					.trial(declaration, signature, actual);
+					.trial(declaration, selfCallInputs(declaration, signature, scope), actual);
 		}
 		function select(signature:TyFunSig, actual:Array<TyType>, order:TyMethodArgumentOrder):TyMethodCallResolution {
 			final inference = scope.getInference();
