@@ -1349,6 +1349,15 @@ class TyFunctionInference {
 			}
 			if (term != null) {
 				final context = expectedType.unwrapNull();
+				// Haxe 4.3.7 `unify` binds an unbound monomorph to the whole destination, wrapper
+				// included (tUnification.ml:637-644): `s.ext = ext` with `ext:Null<String>` gives the
+				// untyped input `Null<String>` (haxe.io.Path.withExtension). An input that earlier
+				// evidence already bound keeps its type.
+				if (expectedType.isNullable()
+					&& !context.isDynamic()
+					&& candidate.hasOmittedInputOrigin(term)
+					&& candidate.constrain(term, TyInferenceSolver.fromType(expectedType)))
+					continue;
 				// Assignment context constrains the value inside a nullable input. Keep
 				// its wrapper on the stored term so body publication still admits null.
 				final value = switch term {
