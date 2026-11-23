@@ -378,6 +378,11 @@ class TyType {
 	public function isUnresolved():Bool
 		return kind == KIND_UNRESOLVED;
 
+	/** A complete, non-Dynamic value type that a Dynamic branch or return does not widen in a join. */
+	public static function isConcreteJoinPeer(type:TyType):Bool {
+		return !type.isDynamic() && !type.isNullLiteral() && !type.hasUnknownComponent() && !type.isNoNormalCompletion();
+	}
+
 	public function isTypeParameter():Bool
 		return kind == KIND_TYPE_PARAMETER;
 
