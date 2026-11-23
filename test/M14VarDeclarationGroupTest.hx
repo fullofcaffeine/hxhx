@@ -52,7 +52,8 @@ class M14VarDeclarationGroupTest {
 		Sys.println("VAR_DECLARATION_GROUP_AUTHORED:PASS");
 
 		// Ordinary parsing still flattens the declarators into the enclosing block.
-		expect("lowered sum", body(source, "sum", false), "{\n\tvar x = a * 2;\n\tvar y = b * 3;\n\tvar total:Int = x + y;\n\tvar label = \"sum\";\n\treturn total + label.length;\n}");
+		expect("lowered sum", body(source, "sum", false),
+			"{\n\tvar x = a * 2;\n\tvar y = b * 3;\n\tvar total:Int = x + y;\n\tvar label = \"sum\";\n\treturn total + label.length;\n}");
 		Sys.println("VAR_DECLARATION_GROUP_LOWERED:PASS");
 
 		final stdout = File.getContent(root + "/expected.stdout");
