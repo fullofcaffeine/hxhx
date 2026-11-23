@@ -57,12 +57,21 @@ try {
     'docs/follow-up.md',
     'packages/reflaxe.ocaml/src/reflaxe/ocaml/runtimegen/Runtime.hx'
   ])
+  // The scheduled full run is the release evidence: the cumulative paths keep the earlier
+  // high-risk change at Q3. A push to main runs the same inventory at most Q1.
   const cumulativeRisk = classify({
-    event: 'push',
+    event: 'schedule',
     changedPaths: cumulative.paths,
     producerSha: cheapFollowUp
   }, loadPolicy(path.resolve(__dirname, 'qa-risk-policy.json')))
   assert.strictEqual(cumulativeRisk.tier, 'Q3')
+  assert.ok(cumulativeRisk.reasons.includes('changed paths require Q3'), 'cumulative paths drive the scheduled tier')
+  const cumulativePush = classify({
+    event: 'push',
+    changedPaths: cumulative.paths,
+    producerSha: cheapFollowUp
+  }, loadPolicy(path.resolve(__dirname, 'qa-risk-policy.json')))
+  assert.strictEqual(cumulativePush.tier, 'Q1')
 
   const pullRequest = buildInventory({
     repositoryRoot: root,
@@ -156,12 +165,20 @@ try {
   assert.strictEqual(shallowInventory.metadata.complete, false)
   assert.strictEqual(shallowInventory.metadata.base.kind, 'unavailable_shallow_history')
   assert.deepStrictEqual(shallowInventory.paths, [])
+  // A missing inventory fails safe to Q3 for a pull request. A push to main stays at its Q1
+  // maximum; the scheduled run carries the full route.
   const shallowRisk = classify({
-    event: 'push',
+    event: 'pull_request',
     changedPaths: shallowInventory.paths,
     producerSha: shallowHead
   }, loadPolicy(path.resolve(__dirname, 'qa-risk-policy.json')))
   assert.strictEqual(shallowRisk.tier, 'Q3')
+  const shallowPush = classify({
+    event: 'push',
+    changedPaths: shallowInventory.paths,
+    producerSha: shallowHead
+  }, loadPolicy(path.resolve(__dirname, 'qa-risk-policy.json')))
+  assert.strictEqual(shallowPush.tier, 'Q1')
 
   console.log('QA_RISK_CHANGE_INVENTORY_FIXTURES:PASS')
 } finally {

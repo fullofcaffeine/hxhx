@@ -99,6 +99,8 @@ Full1 compatibility has passed.
 ## Release policy (Scoped 1.0)
 
 - `Release / Semantic Publish` (`.github/workflows/release.yml`) is the automation lane for normal semantic releases.
+  It publishes after a successful 02:00 scheduled Core run on `main`, or by manual dispatch with an exact Core run;
+  `scripts/release/verify-core-qa-proof.js` rejects push runs, which run at most Q1.
 - `Gate M7 / Replacement Bundle` (`.github/workflows/gate-m7.yml`) is the strict replacement-readiness lane.
 - For current 0.x automation, M7 strict is **not** a hard precondition of semantic publish.
 - For Scoped 1.0 release readiness/sign-off, M7 strict **is required** and must show:
@@ -165,6 +167,13 @@ changed; a **product surface** names the independently reported user claim that
 the evidence may support. These fields explain affected-test selection without
 changing the fail-safe Q0–Q4 tier. If the required Git history or release
 boundary is unavailable, routing fails safe to Q3.
+
+A push to `main` runs at most Q1 (`eventMaximums` in the policy): the route,
+the secret scan, and the guards. Each change was already proved by its pull
+request, and the 02:00 scheduled run routes the same cumulative inventory at Q3
+or higher. That scheduled run is the release evidence. Before this cap, full push
+runs used about 45% of the account's runner time, and most were cancelled by the
+next merge (Fable's CI review, 2026-11-23).
 
 The checked product-surface scorecards live in
 `docs/00-project/TESTING_PRODUCT_SURFACES.json`. Official Haxe target
@@ -503,4 +512,4 @@ Local suite runner guide for Full1 suite scaffolding (`misc/server/threads/optim
 | `Perf / M14 Portable vs Metal (Report Only)` | `.github/workflows/m14-perf-report.yml` | Portable vs metal benchmark reports (non-blocking). | **Manual + PR visibility** | `push`, `pull_request`, manual |
 | `Pilot / Reflaxe.Elixir Todo Promotion` | `.github/workflows/reflaxe-elixir-pilot.yml` | Scheduled/manual promotion pilot against pinned external todo-app source checkout, uploading promotion/load evidence. | **Manual + scheduled diagnostic** | weekly + manual |
 | `Utility / Bootstrap Regen Benchmark` | `.github/workflows/bootstrap-regen-bench.yml` | Report-only bootstrap regeneration timings with commit, machine, toolchain, configuration, raw-run, and median evidence. | **Manual utility** | manual |
-| `Release / Semantic Publish` | `.github/workflows/release.yml` | Automated semantic release publication after CI success. | **Release automation** | workflow-run from CI, manual |
+| `Release / Semantic Publish` | `.github/workflows/release.yml` | Automated semantic release publication after the scheduled full CI run succeeds. | **Release automation** | workflow-run from the scheduled CI run, manual |
