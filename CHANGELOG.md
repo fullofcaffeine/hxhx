@@ -1,3 +1,15 @@
+## [0.46.1](https://github.com/fullofcaffeine/hxhx/compare/v0.46.0...v0.46.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* **oracle:** print optional arguments as Null<T> on the hxhx side ([#262](https://github.com/fullofcaffeine/hxhx/issues/262)) ([5892c02](https://github.com/fullofcaffeine/hxhx/commit/5892c02e23b5196e42ddf3ac9bf92c8a32bcb28e))
+* **typer:** a recursive call does not widen a parameter the body bound ([#269](https://github.com/fullofcaffeine/hxhx/issues/269)) ([5b246c6](https://github.com/fullofcaffeine/hxhx/commit/5b246c6f31285dcce8434d9de0178030e941f3df))
+* **typer:** accept Array<Null<T>> where Array<T> is expected ([#268](https://github.com/fullofcaffeine/hxhx/issues/268)) ([2f6a104](https://github.com/fullofcaffeine/hxhx/commit/2f6a104e2b5a062ce3c22f9f08623919af8a6e8d))
+* **typer:** an untyped input assigned to a Null<T> destination takes Null<T> ([#267](https://github.com/fullofcaffeine/hxhx/issues/267)) ([0f8dc94](https://github.com/fullofcaffeine/hxhx/commit/0f8dc9446f6dc372a1df9f119b967ec1c96e34f5))
+* **typer:** unify anonymous type arguments as Haxe 4.3.7 does ([#257](https://github.com/fullofcaffeine/hxhx/issues/257)) ([eeddaaf](https://github.com/fullofcaffeine/hxhx/commit/eeddaaf7e169b65b02f569481622aa581668bbe6))
+* **typer:** x == null binds Null<T>; a recursive call can bind its result ([#270](https://github.com/fullofcaffeine/hxhx/issues/270)) ([f7864bf](https://github.com/fullofcaffeine/hxhx/commit/f7864bfadb7587bea513a16196d820cd393c582a)), closes [#269](https://github.com/fullofcaffeine/hxhx/issues/269)
+
 # [0.46.0](https://github.com/fullofcaffeine/hxhx/compare/v0.45.0...v0.46.0) (2026-11-22)
 
 
