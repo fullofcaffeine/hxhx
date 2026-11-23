@@ -4035,6 +4035,9 @@ class TyperStage {
 			return scheme == null ? runtimeTarget.getValueType() : TyType.classValue(scheme);
 		}
 		return switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case EParenthesized(inner, sourcePosition) | EPrivateAccess(inner, sourcePosition):
 				inferExprType(inner, scope, ctx, sourcePosition, expectedResult);
 			case ECall(EIdent("__hxhx_expr_meta"), [EString(_), EString(_), inner]):

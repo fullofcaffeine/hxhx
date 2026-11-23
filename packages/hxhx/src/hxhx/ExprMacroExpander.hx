@@ -440,6 +440,9 @@ class ExprMacroExpander {
 			throw "expression macro replacement exceeded expansion depth";
 
 		return switch (e) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case ELoweredControl(_, _, _, _):
 				throw "executable control cannot re-enter source macro expansion";
 			case EParenthesized(inner, position):
@@ -666,6 +669,9 @@ class ExprMacroExpander {
 
 	static function exprKind(e:HxExpr):String {
 		return switch (e) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case EBool(_): "Bool";
 			case EInt(_): "Int";
 			case EFloat(_): "Float";

@@ -20,13 +20,23 @@ class ParserStage {
 		return parseFilteredSource({originalSource: source, filteredSource: source, filePath: filePath == null ? "<memory>" : filePath});
 	}
 
+	/**
+		Parse with upstream syntax kept as written, for the parse oracle: syntax that ordinary
+		parsing lowers for the typer and backends stays in its authored form (`HxExpr.ERegexLiteral`).
+		Bodies the scanner path re-parses are still lowered.
+	**/
+	public static function parseAuthored(source:String, ?filePath:String):ParsedModule {
+		return parseFilteredSource({originalSource: source, filteredSource: source, filePath: filePath == null ? "<memory>" : filePath}, true);
+	}
+
 	/** Parse active text with exact Unicode positions from its original source. */
-	public static function parseFilteredSource(input:CompilerParseInput):ParsedModule {
+	public static function parseFilteredSource(input:CompilerParseInput, authoredSyntax:Bool = false):ParsedModule {
 		if (input == null || input.originalSource == null || input.filteredSource == null)
 			throw "parser requires original and filtered source text";
 		final source = input.filteredSource;
 		final expectedMainClass = expectedMainClassFromFile(input.filePath);
-		final decl = enrichPureParserDecl(source, expectedMainClass, new HxParser(source).parseModule(expectedMainClass, input.originalSource));
+		final decl = enrichPureParserDecl(source, expectedMainClass,
+			new HxParser(source, authoredSyntax).parseModule(expectedMainClass, input.originalSource));
 		final path = input.filePath == null || input.filePath.length == 0 ? "<memory>" : input.filePath;
 		return new ParsedModule(source, decl, path);
 	}

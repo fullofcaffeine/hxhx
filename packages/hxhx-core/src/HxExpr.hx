@@ -529,4 +529,15 @@ enum HxExpr {
 		Assignment parsing includes the RHS; ordinary binary operands remain separate.
 	 */
 	EPrivateAccess(inner:HxExpr, position:HxPos);
+
+	/**
+		A regular expression literal as written: `~/[0-9]+/g`.
+
+		Upstream Haxe 4.3.7 keeps `EConst(CRegexp(pattern, flags))` in the syntax tree. The parser
+		produces this node only in authored mode (`ParserStage.parseAuthored`), which the parse
+		oracle reads; ordinary parsing still lowers the literal to `new EReg(pattern, flags)` for
+		the typer and backends (haxe_ocaml-ac5i9.2). Appended so older generated enum identities
+		remain stable.
+	**/
+	ERegexLiteral(pattern:String, flags:String);
 }

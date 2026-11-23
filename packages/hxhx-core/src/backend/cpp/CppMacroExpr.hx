@@ -279,6 +279,9 @@ class CppMacroExpr {
 
 	static function exprKind(expr:HxExpr):String {
 		return switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case EParenthesized(_, _): "EParenthesized";
 			case EPrivateAccess(_, _): "EPrivateAccess";
 			case ESourceGroup(_, _): "ESourceGroup";
