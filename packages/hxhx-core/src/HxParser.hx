@@ -387,8 +387,7 @@ class HxParser {
 				var shiftedElse:Null<HxStmt> = null;
 				if (elseBranch != null)
 					shiftedElse = rebaseFunctionBodyStmt(elseBranch, base, bodyStartIndex);
-				SIf(cond, rebaseFunctionBodyStmt(thenBranch, base, bodyStartIndex), shiftedElse, rebaseFunctionBodyPos(pos, base, bodyStartIndex),
-					valueReturn);
+				SIf(cond, rebaseFunctionBodyStmt(thenBranch, base, bodyStartIndex), shiftedElse, rebaseFunctionBodyPos(pos, base, bodyStartIndex), valueReturn);
 			case SForIn(name, iterable, body, pos):
 				SForIn(name, iterable, rebaseFunctionBodyStmt(body, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SForKeyValue(keyName, valueName, iterable, body, pos):

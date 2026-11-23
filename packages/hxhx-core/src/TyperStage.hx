@@ -1510,11 +1510,11 @@ class TyperStage {
 
 		var completeReturnEvidence = true;
 		var selfBound = false;
-		final returnExprTy = inferReturnType(semanticBody, scope, ctx, complete -> completeReturnEvidence = complete,
-			retHintText != null && retHintText.length > 0 ? null : () -> {
-				final candidate = semanticDeclaration == null ? null : ctx.getIndex().getMethodBodyResults().selfBoundCandidate(semanticDeclaration);
-				candidate != null ? candidate : scope.getInference().selfBoundResult();
-			}, () -> selfBound = true);
+		final returnExprTy = inferReturnType(semanticBody, scope, ctx, complete ->
+			completeReturnEvidence = complete, retHintText != null && retHintText.length > 0 ? null : () -> {
+			final candidate = semanticDeclaration == null ? null : ctx.getIndex().getMethodBodyResults().selfBoundCandidate(semanticDeclaration);
+			candidate != null ? candidate : scope.getInference().selfBoundResult();
+		}, () -> selfBound = true);
 		final retTy = if (constructorBody && Std.isOfType(ctx.currentClass(), TyAbstractInfo)) {
 			// An abstract constructor initializes its backing value and completes with
 			// Void. Haxe permits a written result annotation, but that annotation does
@@ -1573,8 +1573,8 @@ class TyperStage {
 		final previews keeps those returns complete without rebinding names after scope
 		exit. Missing evidence still prevents publication of a checked method result.
 	 */
-	static function inferReturnType(statements:Array<HxStmt>, scope:TyFunctionEnv, ctx:TyperContext, ?onEvidence:Bool->Void,
-			?boundResult:Void->Null<TyType>, ?onBound:Void->Void):TyType {
+	static function inferReturnType(statements:Array<HxStmt>, scope:TyFunctionEnv, ctx:TyperContext, ?onEvidence:Bool->Void, ?boundResult:Void->Null<TyType>,
+			?onBound:Void->Void):TyType {
 		var out:Null<TyType> = null;
 		var sawUnresolvedValueReturn = false;
 		var sawIncompleteReturnType = false;

@@ -62,6 +62,7 @@ class TyFunctionInference {
 
 	/** Inside a lowered `return if`, whose branch returns count as one return after the `if`. */
 	var valueReturnDepth = 0;
+
 	var classValueUses:Array<InferredClassValueUse> = [];
 	var directCalls:Array<InferredDirectCall> = [];
 	var receiverCalls:Array<TyReceiverCallContext> = [];
