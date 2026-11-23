@@ -1,0 +1,9 @@
+count=(flag : Bool) -> Int
+describe=(tree : Tree) -> String
+dynamicFirst=(name : String) -> Tree
+dynamicLocal=(flag : Bool) -> String
+fail=(name : String) -> Dynamic
+ifValue=(flag : Bool) -> Tree
+pick=(name : String) -> Tree
+returnsDynamicFirst=(flag : Bool) -> Tree
+written=(op : String, left : Dynamic, right : Dynamic) -> Dynamic
