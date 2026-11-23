@@ -190,6 +190,15 @@ class TyFunctionEnv {
 	public function getOwnerIdentity():String
 		return ownerIdentity;
 
+	/** The method this environment types, when it types one; a self-call compares against it. */
+	var declaration:Null<TyDeclarationInfo> = null;
+
+	public function getDeclaration():Null<TyDeclarationInfo>
+		return declaration;
+
+	public function setDeclaration(value:Null<TyDeclarationInfo>):Void
+		declaration = value;
+
 	public function getInference():TyFunctionInference
 		return inference;
 
