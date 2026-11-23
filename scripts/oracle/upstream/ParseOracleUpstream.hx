@@ -32,6 +32,25 @@ class ParseOracleUpstream {
 		});
 	}
 
+	/** The authored statements of upstream's `_new` wrapper, as a block; null for any other shape. */
+	static function authoredAbstractConstructor(body:Expr):Null<Expr> {
+		return switch body.expr {
+			case EBlock(items) if (items.length >= 2):
+				final first = items[0];
+				final last = items[items.length - 1];
+				final declaresThis = switch first.expr {
+					case EVars([v]) if (v.name == "this" && v.expr == null): true;
+					case _: false;
+				}
+				final returnsThis = switch last.expr {
+					case EReturn({expr: ECast({expr: EConst(CIdent("this"))}, null)}): true;
+					case _: false;
+				}
+				declaresThis && returnsThis ? {expr: EBlock(items.slice(1, items.length - 1)), pos: body.pos} : null;
+			case _: null;
+		}
+	}
+
 	public static function record():Null<Array<Field>> {
 		final owner:Null<{module:String, name:String, pos:Position}> = switch Context.getLocalType() {
 			// An abstract's fields are built on its implementation class `Name_Impl_`; record them under the abstract's name.
@@ -48,14 +67,29 @@ class ParseOracleUpstream {
 			return null;
 		final printer = new haxe.macro.Printer();
 		final file = Context.getPosInfos(owner.pos).file;
+		final abstractImplementation = switch Context.getLocalType() {
+			case TInst(c, _): StringTools.endsWith(c.get().name, "_Impl_");
+			case _: false;
+		}
 		for (field in Context.getBuildFields()) {
-			final body = switch field.kind {
+			var body = switch field.kind {
 				case FFun(fn): fn.expr;
 				case FVar(_, value) | FProp(_, _, _, value): value;
 			}
 			if (body == null)
 				continue;
-			final key = owner.module + "." + owner.name + "." + field.name;
+			var name = field.name;
+			// Upstream builds an abstract's constructor as the implementation function `_new`
+			// before build macros run, wrapping the authored body in `var this:T; ...; return cast this;`.
+			// Record the authored body under `new`; any other shape stays `_new` and shows as a difference.
+			if (abstractImplementation && name == "_new") {
+				final authored = authoredAbstractConstructor(body);
+				if (authored != null) {
+					body = authored;
+					name = "new";
+				}
+			}
+			final key = owner.module + "." + owner.name + "." + name;
 			try {
 				records.push({key: key, file: file, body: printer.printExpr(ParseOracleNormalize.expr(body))});
 			} catch (e:haxe.Exception) {

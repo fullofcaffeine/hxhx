@@ -47,15 +47,18 @@ class ParseOracleHxhx {
 			final unknown:Position = {file: file, min: 0, max: 0};
 			for (cls in HxModuleDecl.getClasses(decl)) {
 				final owner = module + "." + HxClassDecl.getName(cls);
+				final isAbstract = HxClassDecl.getMetadata(cls).indexOf("__hxhx_abstract") >= 0;
 				for (fn in HxClassDecl.getFunctions(cls)) {
 					if (!HxFunctionDecl.getHasBody(fn))
 						continue;
 					final key = owner + "." + HxFunctionDecl.getName(fn);
+					// Upstream's recorder sees an abstract constructor only through its generated
+					// wrapper block, which loses the authored bracing; compare it as a block.
+					final braced = HxFunctionDecl.getBodyBraced(fn) || (isAbstract && HxFunctionDecl.getName(fn) == "new");
 					try {
 						records.push({
 							key: key,
-							body: printer.printExpr(ParseOracleNormalize.expr(export.functionBody(HxFunctionDecl.getBody(fn),
-								HxFunctionDecl.getBodyBraced(fn), unknown)))
+							body: printer.printExpr(ParseOracleNormalize.expr(export.functionBody(HxFunctionDecl.getBody(fn), braced, unknown)))
 						});
 					} catch (e:haxe.Exception) {
 						records.push({key: key, error: e.message});
