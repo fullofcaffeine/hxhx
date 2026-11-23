@@ -539,6 +539,32 @@ class TyFunctionInference {
 		return solver.constrainNullableInput(target, assigned);
 	}
 
+	/**
+		An assignment to a field of a generic instance binds the instance's open type arguments
+		through the declared field type, as Haxe 4.3.7 unifies the value with the field:
+		`var box = new Box(); box.items = source.copy();` gives `Box<Int>` (haxe.ds.HashMap.copy).
+		Only a conflict-free binding is kept; otherwise the existing assignment checks decide.
+	**/
+	public function constrainAssignedField(destination:HxExpr, value:HxExpr, valueType:TyType, environment:TyFunctionEnv, index:TyperIndex):Void {
+		if (solver.isSealed() || index == null)
+			return;
+		switch destination {
+			case EField(receiver, name):
+				final parent = sourceTerm(receiver, environment);
+				if (parent == null || !solver.follow(parent).match(Nominal(_, _)))
+					return;
+				final candidate = solver.fork();
+				final projected = candidate.field(parent, name, (owner, member) -> TyStructuralConstraint.inferredMember(index, owner, member));
+				if (projected == null)
+					return;
+				final assigned = sourceTerm(value, environment);
+				final supplied = assigned != null ? assigned : valueType.hasUnknownComponent() ? null : TyInferenceSolver.fromType(valueType);
+				if (supplied != null && candidate.constrain(projected, supplied))
+					solver.commit(candidate);
+			case _:
+		}
+	}
+
 	/** Retain parameter and result terms so replay observes constraints supplied after an earlier body call. */
 	public function recordSourceFunction(source:HxExpr, type:TyType, parameters:Array<TySymbol>, ?result:TyInferenceTerm):Void {
 		if (solver.isSealed())
