@@ -383,11 +383,11 @@ class HxParser {
 			case SVar(name, typeHint, init, pos, metadata):
 				SVar(name, typeHint, rebaseFunctionBodyExpr(init, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex),
 					metadata == null ? [] : metadata.copy());
-			case SIf(cond, thenBranch, elseBranch, pos):
+			case SIf(cond, thenBranch, elseBranch, pos, valueReturn):
 				var shiftedElse:Null<HxStmt> = null;
 				if (elseBranch != null)
 					shiftedElse = rebaseFunctionBodyStmt(elseBranch, base, bodyStartIndex);
-				SIf(cond, rebaseFunctionBodyStmt(thenBranch, base, bodyStartIndex), shiftedElse, rebaseFunctionBodyPos(pos, base, bodyStartIndex));
+				SIf(cond, rebaseFunctionBodyStmt(thenBranch, base, bodyStartIndex), shiftedElse, rebaseFunctionBodyPos(pos, base, bodyStartIndex), valueReturn);
 			case SForIn(name, iterable, body, pos):
 				SForIn(name, iterable, rebaseFunctionBodyStmt(body, base, bodyStartIndex), rebaseFunctionBodyPos(pos, base, bodyStartIndex));
 			case SForKeyValue(keyName, valueName, iterable, body, pos):
@@ -633,12 +633,12 @@ class HxParser {
 			case SVar(name, typeHint, init, pos, metadata):
 				SVar(name, typeHint, offsetFunctionBodyExprColumns(init, delta), offsetFunctionBodyPosColumn(pos, delta),
 					metadata == null ? [] : metadata.copy());
-			case SIf(cond, thenBranch, elseBranch, pos):
+			case SIf(cond, thenBranch, elseBranch, pos, valueReturn):
 				var shiftedElse:Null<HxStmt> = null;
 				if (elseBranch != null)
 					shiftedElse = offsetFunctionBodyStmtColumns(elseBranch, delta);
 				SIf(offsetFunctionBodyExprColumns(cond, delta), offsetFunctionBodyStmtColumns(thenBranch, delta), shiftedElse,
-					offsetFunctionBodyPosColumn(pos, delta));
+					offsetFunctionBodyPosColumn(pos, delta), valueReturn);
 			case SForIn(name, iterable, body, pos):
 				SForIn(name, offsetFunctionBodyExprColumns(iterable, delta), offsetFunctionBodyStmtColumns(body, delta),
 					offsetFunctionBodyPosColumn(pos, delta));
@@ -3698,10 +3698,10 @@ class HxParser {
 				// This `true ? v : null` trick forces the value through the nullable path so the
 				// generated OCaml uses `Obj.repr`.
 				final elseBranch:Null<HxStmt> = true ? SReturnVoid(pos) : null;
-				return SIf(cond, thenBranch, elseBranch, pos);
+				return SIf(cond, thenBranch, elseBranch, pos, true);
 			}
 			final elseBranch:Null<HxStmt> = true ? ensureBranchReturns(parseStmt(() -> cur.kind.match(TEof))) : null;
-			return SIf(cond, thenBranch, elseBranch, pos);
+			return SIf(cond, thenBranch, elseBranch, pos, true);
 		}
 
 		if (capturedReturnStringLiteral.length == 0) {

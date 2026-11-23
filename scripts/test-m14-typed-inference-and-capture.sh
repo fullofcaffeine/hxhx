@@ -46,6 +46,7 @@ haxe test/m14_native_class_storage_test.hxml
 haxe test/m14_native_stored_callback_views_test.hxml
 haxe test/m14_neko_enum_payload_count_test.hxml
 haxe test/m14_neko_native_array_primitives_test.hxml
+haxe test/m14_null_compare_binds_nullable_test.hxml
 haxe test/m14_null_destination_input_test.hxml
 haxe test/m14_null_local_assignment_test.hxml
 haxe test/m14_open_value_test.hxml

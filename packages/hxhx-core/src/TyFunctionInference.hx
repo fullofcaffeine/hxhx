@@ -54,6 +54,15 @@ class TyFunctionInference {
 	final owner:String;
 	var solver:TyInferenceSolver;
 	var occurrences:Array<InferredOccurrence> = [];
+
+	/** The result shared by the method's calls to itself, and whether a use bound it before the first return. */
+	var selfResult:Null<TyInferenceTerm> = null;
+
+	var selfResultBoundFirst:Null<Bool> = null;
+
+	/** Inside a lowered `return if`, whose branch returns count as one return after the `if`. */
+	var valueReturnDepth = 0;
+
 	var classValueUses:Array<InferredClassValueUse> = [];
 	var directCalls:Array<InferredDirectCall> = [];
 	var receiverCalls:Array<TyReceiverCallContext> = [];
@@ -224,6 +233,9 @@ class TyFunctionInference {
 		indexedUpdates.push(selection);
 		indexedUpdateOutcomes = trial.candidate.indexedUpdateOutcomes.copy();
 		diagnosticProbes = trial.candidate.diagnosticProbes.copy();
+		selfResult = trial.candidate.selfResult;
+		selfResultBoundFirst = trial.candidate.selfResultBoundFirst;
+		valueReturnDepth = trial.candidate.valueReturnDepth;
 		locals = new StringMap();
 		for (key => value in trial.candidate.locals)
 			locals.set(key, value);
@@ -655,6 +667,9 @@ class TyFunctionInference {
 		candidate.indexedUpdates = indexedUpdates.copy();
 		candidate.indexedUpdateOutcomes = indexedUpdateOutcomes.copy();
 		candidate.diagnosticProbes = diagnosticProbes.copy();
+		candidate.selfResult = selfResult;
+		candidate.selfResultBoundFirst = selfResultBoundFirst;
+		candidate.valueReturnDepth = valueReturnDepth;
 		for (key => value in locals)
 			candidate.locals.set(key, value);
 		return candidate;
@@ -668,6 +683,49 @@ class TyFunctionInference {
 				return entry.term;
 			}
 		return null;
+	}
+
+	/**
+		A call to the method being typed, while its result is still open, returns one result
+		variable shared by every such call. Haxe 4.3.7 gives a method without a result annotation
+		a monomorph result, and a recursive call returns it, so a use can bind it before any
+		`return` does (haxe.ds.BalancedTree.removeLoop: `wrap(removeLoop(...))` with
+		`wrap(n:Node)` binds it to Node; the later `return` of `Null<Node>` then unifies).
+	 */
+	public function selfCallResult(expression:HxExpr):TyType {
+		var term = occurrence(expression);
+		if (term == null) {
+			if (solver.isSealed())
+				throw "self-call result is absent from sealed inference";
+			if (selfResult == null)
+				selfResult = solver.freshSelfCallResult();
+			term = selfResult;
+			occurrences.push({expression: expression, term: term, sourceFingerprint: TypedBodyFingerprint.exactExpression(expression)});
+		}
+		return solver.isSealed() ? solver.published(term) : solver.preview(term);
+	}
+
+	/** Record, at the first return in typing order, whether a use already bound the shared self-call result. */
+	public function noteReturn():Void {
+		if (solver.isSealed() || selfResultBoundFirst != null || valueReturnDepth > 0)
+			return;
+		selfResultBoundFirst = selfResult != null && !solver.preview(selfResult).hasUnknownComponent();
+	}
+
+	public function beginValueReturn():Void {
+		valueReturnDepth++;
+	}
+
+	public function endValueReturn():Void {
+		if (valueReturnDepth == 0)
+			throw "value return ended without a beginning";
+		valueReturnDepth--;
+		noteReturn();
+	}
+
+	/** The self-call result a use bound before the first return; null when a return came first. */
+	public function selfBoundResult():Null<TyType> {
+		return selfResultBoundFirst == true ? solver.preview(selfResult) : null;
 	}
 
 	/** Retain one untyped result across contextual typing, aliases, and sealed body replay. */
@@ -1270,6 +1328,29 @@ class TyFunctionInference {
 	}
 
 	/** A body use may supply the first concrete evidence for an unannotated parameter. */
+	/**
+		`value == null` on an unsolved input binds it to `Null<fresh>`, as Haxe 4.3.7 types a `null`
+		literal against an unbound monomorph (typer.ml:329-345; `==` types its right side with the
+		left side's type as expected, operators.ml:554-558). Later evidence solves the inner
+		variable; an assignment already constrains the value inside a nullable term. The inner
+		variable keeps the input's origin, so an input nothing else constrains falls back as before.
+	**/
+	public function bindNullComparison(expression:HxExpr, environment:TyFunctionEnv):Void {
+		if (solver.isSealed())
+			return;
+		final term = sourceTerm(expression, environment);
+		if (term == null)
+			return;
+		switch solver.follow(term) {
+			case Variable(_):
+				final candidate = solver.fork();
+				final inner = candidate.freshWithOrigin(term);
+				if (candidate.constrain(term, Nullable(inner)))
+					solver.commit(candidate);
+			case _:
+		}
+	}
+
 	public function canReceiveContext(expression:HxExpr, environment:TyFunctionEnv):Bool {
 		return sourceTerm(expression, environment) != null || contextParameter(expression, environment) != null;
 	}
@@ -1360,7 +1441,8 @@ class TyFunctionInference {
 					continue;
 				// Assignment context constrains the value inside a nullable input. Keep
 				// its wrapper on the stored term so body publication still admits null.
-				final value = switch term {
+				// Follow first: an input bound to `Null<fresh>` by `value == null` is a variable here.
+				final value = switch candidate.follow(term) {
 					case Nullable(inner): inner;
 					case _: term;
 				};
