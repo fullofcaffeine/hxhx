@@ -14,6 +14,7 @@ private typedef CheckedMethodResult = {
 	final type:TyType;
 	final parameters:Array<TyType>;
 	final assumptions:Array<String>;
+	final selfBound:Bool;
 }
 
 /** Recursive reads can use a candidate only while its owning body is being rechecked. */
@@ -159,7 +160,8 @@ class TyMethodBodyResults {
 					type: selectedType,
 					parameters: selectedParameters,
 					// This candidate converged and has left active. Retain only unfinished outer assumptions.
-					assumptions: [for (name in frame.assumptions.keys()) if (active.exists(name)) name]
+					assumptions: [for (name in frame.assumptions.keys()) if (active.exists(name)) name],
+					selfBound: selected.selfBound == true
 				});
 				return selectedType;
 			}
@@ -194,8 +196,13 @@ class TyMethodBodyResults {
 		so later returns unify with it rather than join (`Null<Node>` returns into `Node`).
 	 */
 	public function selfBoundCandidate(declaration:TyDeclarationInfo):Null<TyType> {
-		final frame = active.get(declaration.getIdentity().getCanonicalKey());
-		return frame != null && frame.selfBound ? frame.type : null;
+		final key = declaration.getIdentity().getCanonicalKey();
+		final frame = active.get(key);
+		if (frame != null)
+			return frame.selfBound ? frame.type : null;
+		// Publication types the body again with the checked result; it must select the same result.
+		final existing = checked.get(key);
+		return existing != null && existing.declaration == declaration && existing.selfBound ? existing.type : null;
 	}
 
 	/** Copy checked inputs and result; the original signature remains the declaration lookup key. */

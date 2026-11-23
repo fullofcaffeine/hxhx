@@ -1639,7 +1639,10 @@ class TyperStage {
 							scope.exitLexicalScope();
 						}
 					}
-				case SIf(cond, thenBranch, elseBranch, pos):
+				case SIf(cond, thenBranch, elseBranch, pos, valueReturn):
+					// A lowered `return if` returns once, after its whole `if` (see `HxStmt.SIf`).
+					if (valueReturn == true)
+						scope.getInference().beginValueReturn();
 					// Best-effort: ensure the condition is at least type-checked for locals.
 					inferExprType(cond, scope, ctx, pos);
 					scope.enterLexicalScope();
@@ -1650,6 +1653,8 @@ class TyperStage {
 						typeStmt(elseBranch);
 						scope.exitLexicalScope();
 					}
+					if (valueReturn == true)
+						scope.getInference().endValueReturn();
 				case SWhile(cond, body, pos):
 					inferExprType(cond, scope, ctx, pos);
 					final controls = scope.requireControlScope();

@@ -59,6 +59,9 @@ class TyFunctionInference {
 	var selfResult:Null<TyInferenceTerm> = null;
 
 	var selfResultBoundFirst:Null<Bool> = null;
+
+	/** Inside a lowered `return if`, whose branch returns count as one return after the `if`. */
+	var valueReturnDepth = 0;
 	var classValueUses:Array<InferredClassValueUse> = [];
 	var directCalls:Array<InferredDirectCall> = [];
 	var receiverCalls:Array<TyReceiverCallContext> = [];
@@ -231,6 +234,7 @@ class TyFunctionInference {
 		diagnosticProbes = trial.candidate.diagnosticProbes.copy();
 		selfResult = trial.candidate.selfResult;
 		selfResultBoundFirst = trial.candidate.selfResultBoundFirst;
+		valueReturnDepth = trial.candidate.valueReturnDepth;
 		locals = new StringMap();
 		for (key => value in trial.candidate.locals)
 			locals.set(key, value);
@@ -664,6 +668,7 @@ class TyFunctionInference {
 		candidate.diagnosticProbes = diagnosticProbes.copy();
 		candidate.selfResult = selfResult;
 		candidate.selfResultBoundFirst = selfResultBoundFirst;
+		candidate.valueReturnDepth = valueReturnDepth;
 		for (key => value in locals)
 			candidate.locals.set(key, value);
 		return candidate;
@@ -701,9 +706,20 @@ class TyFunctionInference {
 
 	/** Record, at the first return in typing order, whether a use already bound the shared self-call result. */
 	public function noteReturn():Void {
-		if (solver.isSealed() || selfResultBoundFirst != null)
+		if (solver.isSealed() || selfResultBoundFirst != null || valueReturnDepth > 0)
 			return;
 		selfResultBoundFirst = selfResult != null && !solver.preview(selfResult).hasUnknownComponent();
+	}
+
+	public function beginValueReturn():Void {
+		valueReturnDepth++;
+	}
+
+	public function endValueReturn():Void {
+		if (valueReturnDepth == 0)
+			throw "value return ended without a beginning";
+		valueReturnDepth--;
+		noteReturn();
 	}
 
 	/** The self-call result a use bound before the first return; null when a return came first. */
