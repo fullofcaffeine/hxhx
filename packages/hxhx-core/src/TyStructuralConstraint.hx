@@ -87,8 +87,13 @@ private function assignArguments(index:TyperIndex, solver:TyInferenceSolver, act
 		final identity = type.getNominalIdentity();
 		return identity == null ? TyInferenceSolver.fromType(type) : Nominal(identity, type.getTypeArguments().map(context));
 	}
-	if (!constrainTerms(index, candidate, actual, context(expected)))
-		return false;
+	if (!constrainTerms(index, candidate, actual, context(expected))) {
+		// Haxe 4.3.7 compares invariant type arguments with `type_eq`, which follows `Null`
+		// (tUnification.ml:518-523; type arguments at :1085-1095): an `Array<Null<Int>>` is an
+		// `Array<Int>`. Complete types bind nothing, so the exact binding may fall back to it.
+		final concrete = solver.preview(actual);
+		return !concrete.hasUnknownComponent() && !expected.hasUnknownComponent() && TyInferenceSolver.typeEqual(concrete, expected);
+	}
 	for (structure in structures) {
 		// Compare the argument the variable received; a variable left open binds exactly.
 		final received = switch candidate.follow(structure.term) {
