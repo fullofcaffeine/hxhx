@@ -1430,8 +1430,10 @@ class TyperStage {
 		for (index in 0...inputs.length) {
 			if (!inputs[index].isUnknown())
 				continue;
-			final bound = scope.getInference().expressionType(EIdent(params[index].getName()), params[index].getType(), scope);
-			if (!bound.hasUnknownComponent()) {
+			// By symbol, not by name: a pattern may shadow the parameter (`case FilePos(s, ...)`).
+			// Generic and callable inputs keep their own recursion rules (`rec<T>(x:T, f, i)`).
+			final bound = scope.getInference().localType(params[index]);
+			if (!bound.hasUnknownComponent() && !bound.hasTypeParameter() && !bound.isFunction()) {
 				inputs[index] = bound;
 				changed = true;
 			}
