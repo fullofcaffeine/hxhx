@@ -32,21 +32,21 @@ class ParseOracleUpstream {
 		});
 	}
 
-	/** The authored statements of upstream's `_new` wrapper, as a block; null for any other shape. */
+	/**
+		The authored statements of upstream's `_new` wrapper, as a block; null for any other shape.
+		Haxe 4.3.7 builds it in typeloadFields.ml:265-298: a first `var this:T` with a type and no
+		initializer, the authored statements, and a last `return cast this`. Authored code cannot
+		declare `var this`, and only one statement is cut from each end.
+	**/
 	static function authoredAbstractConstructor(body:Expr):Null<Expr> {
 		return switch body.expr {
-			case EBlock(items) if (items.length >= 2):
-				final first = items[0];
-				final last = items[items.length - 1];
-				final declaresThis = switch first.expr {
-					case EVars([v]) if (v.name == "this" && v.expr == null): true;
+			case EBlock(items) if (items.length >= 2): final first = items[0]; final last = items[items.length - 1]; final declaresThis = switch first.expr {
+					case EVars([v]) if (v.name == "this" && v.type != null && v.expr == null): true;
 					case _: false;
-				}
-				final returnsThis = switch last.expr {
+				} final returnsThis = switch last.expr {
 					case EReturn({expr: ECast({expr: EConst(CIdent("this"))}, null)}): true;
 					case _: false;
-				}
-				declaresThis && returnsThis ? {expr: EBlock(items.slice(1, items.length - 1)), pos: body.pos} : null;
+				} declaresThis && returnsThis ? {expr: EBlock(items.slice(1, items.length - 1)), pos: body.pos} : null;
 			case _: null;
 		}
 	}
@@ -67,8 +67,9 @@ class ParseOracleUpstream {
 			return null;
 		final printer = new haxe.macro.Printer();
 		final file = Context.getPosInfos(owner.pos).file;
+		// By class kind, not name: a plain class may be called `X_Impl_`.
 		final abstractImplementation = switch Context.getLocalType() {
-			case TInst(c, _): StringTools.endsWith(c.get().name, "_Impl_");
+			case TInst(c, _): c.get().kind.match(KAbstractImpl(_));
 			case _: false;
 		}
 		for (field in Context.getBuildFields()) {

@@ -41,6 +41,14 @@ interpolated strings), number spelling, `default:` against `case _:`, `case A, B
 `case A | B:`, `case var t:` against `case t:`, and empty case bodies. Every other difference
 counts as a mismatch, including desugaring that `hxhx` does while it parses.
 
+Abstract constructors need one more rule. Upstream builds an abstract's constructor as the
+implementation function `_new` before build macros run, and wraps the authored body in
+`var this:T; ...; return cast this;` (Haxe 4.3.7 `typeloadFields.ml:265-298`). The upstream side
+removes exactly that wrapper and records the authored statements under `new`; any other `_new`
+shape stays `_new` and counts as missing. The wrapper loses the authored bracing, so the `hxhx`
+side prints an abstract's `new` as a block. The oracle therefore does not compare the bracing of a
+single-statement abstract constructor (`function new(i) this = i;`).
+
 ## Corpus and baseline
 
 The default corpus is the `haxe` package of the upstream standard library, excluding
