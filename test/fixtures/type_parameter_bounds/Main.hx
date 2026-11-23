@@ -80,7 +80,13 @@ class Ops {
 
 class Main {
 	static function main() {
-		Sys.println(Ops.viaClass(new Base()) + " " + Ops.viaTypedef(new Key(4)) + " " + Ops.viaShort(new Key(5)) + " " + Ops.hash(new Key(6)));
+		Sys.println(Ops.viaClass(new Base())
+			+ " "
+			+ Ops.viaTypedef(new Key(4))
+			+ " "
+			+ Ops.viaShort(new Key(5))
+			+ " "
+			+ Ops.hash(new Key(6)));
 		final table = new Table<Key, String>();
 		table.set(new Key(3), "three");
 		Sys.println(table.get(new Key(3)) + " " + new Point(2, 5).sum() + " " + Ops.fill([1, 2]).items.length);

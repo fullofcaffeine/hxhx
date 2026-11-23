@@ -102,7 +102,9 @@ class HxFunctionTypeParamMetadata {
 	}
 
 	static function isWordCode(code:Int):Bool {
-		return code == "_".code || (code >= "a".code && code <= "z".code) || (code >= "A".code && code <= "Z".code)
+		return code == "_".code
+			|| (code >= "a".code && code <= "z".code)
+			|| (code >= "A".code && code <= "Z".code)
 			|| (code >= "0".code && code <= "9".code);
 	}
 

@@ -91,7 +91,10 @@ class M14TypeParameterBoundsTest {
 			if (HxClassDecl.getName(cls.getSourceDeclaration()) == "Ops")
 				for (fn in cls.getFunctions())
 					for (parameter in fn.getEnvironment().getParams())
-						observations.push(HxFunctionDecl.getName(fn.getSourceDeclaration()) + "." + parameter.getName() + "="
+						observations.push(HxFunctionDecl.getName(fn.getSourceDeclaration())
+							+ "."
+							+ parameter.getName()
+							+ "="
 							+ shown(parameter.getType().unwrapNull(), HxFunctionDecl.getName(fn.getSourceDeclaration())));
 		// The full signatures upstream gives, `Null` wrappers and results included.
 		final signatures:Array<String> = [];
