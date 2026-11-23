@@ -4984,8 +4984,9 @@ class TyperStage {
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
-						// Builtin comparison binds unresolved inputs, as in Haxe 4.3.7.
-						if (bound == null && (leftType.isUnknown() || rightType.isUnknown()))
+						// Builtin comparison binds unresolved inputs, as in Haxe 4.3.7, including the inner
+						// type of an input that `value == null` made `Null<fresh>` (`x < 3` gives Null<Int>).
+						if (bound == null && (leftType.isOpenValue() || rightType.isOpenValue()))
 							TyComparisonOperandInference.constrain({
 								left: a,
 								right: b,
