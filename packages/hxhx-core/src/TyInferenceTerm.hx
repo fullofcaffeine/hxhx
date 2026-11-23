@@ -21,6 +21,7 @@ enum TyInferenceVariableKind {
 	OmittedInput;
 	UntypedResult;
 	UncheckedCastResult;
+	SelfCallResult;
 }
 
 /** Identity is object-owned, so unrelated solvers cannot forge equal variables by name. */

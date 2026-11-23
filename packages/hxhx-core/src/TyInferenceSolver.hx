@@ -104,6 +104,11 @@ class TyInferenceSolver {
 	}
 
 	/** An explicitly untyped result accepts later constraints; unused results retain Unknown rather than guessed Dynamic. */
+	/** A method's calls to itself share this result while its body chooses it; unused, it stays open. */
+	public function freshSelfCallResult():TyInferenceTerm {
+		return allocate(null, SelfCallResult);
+	}
+
 	public function freshUntypedResult():TyInferenceTerm {
 		return allocate(null, UntypedResult);
 	}

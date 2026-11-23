@@ -3,6 +3,9 @@ typedef TyMethodBodyResult = {
 	final type:TyType;
 	final complete:Bool;
 	final parameters:Array<TyType>;
+
+	/** The result came from the method's own recursive call, bound by a use before any return. */
+	@:optional final selfBound:Bool;
 }
 
 private typedef CheckedMethodResult = {
@@ -19,6 +22,7 @@ private typedef MethodResultFrame = {
 	final parameters:Array<TyType>;
 	final assumptions:haxe.ds.StringMap<Bool>;
 	var recursive:Bool;
+	final selfBound:Bool;
 }
 
 /**
@@ -115,6 +119,7 @@ class TyMethodBodyResults {
 		}
 		var candidate = written;
 		var candidateParameters = methodInputs.signature(declaration, declaration.getSignature()).getArgs();
+		var candidateSelfBound = false;
 		function identity(type:TyType, arguments:Array<TyType>):String {
 			return CompilerCacheIdentity.encode([type.getSemanticKey()].concat(arguments.map(argument -> argument.getSemanticKey())));
 		}
@@ -124,7 +129,8 @@ class TyMethodBodyResults {
 				type: candidate,
 				parameters: candidateParameters,
 				assumptions: new haxe.ds.StringMap(),
-				recursive: false
+				recursive: false,
+				selfBound: candidateSelfBound
 			};
 			active.set(key, frame);
 			final beforeInputs = methodInputs.getRevision();
@@ -164,6 +170,7 @@ class TyMethodBodyResults {
 			seen.set(selectedIdentity, true);
 			candidate = selectedType;
 			candidateParameters = selectedParameters;
+			candidateSelfBound = selected.selfBound == true;
 		}
 	}
 
@@ -179,6 +186,16 @@ class TyMethodBodyResults {
 			CompilerCacheIdentity.encode(HxFunctionDecl.getMetadata(source)),
 			TypedFunctionDefault.sourceIdentity(HxFunctionDecl.getArgs(source))
 		]);
+	}
+
+	/**
+		The candidate a recursive pass types with, when the previous pass took it from the
+		method's own call bound by a use. Haxe 4.3.7's result monomorph is already bound then,
+		so later returns unify with it rather than join (`Null<Node>` returns into `Node`).
+	 */
+	public function selfBoundCandidate(declaration:TyDeclarationInfo):Null<TyType> {
+		final frame = active.get(declaration.getIdentity().getCanonicalKey());
+		return frame != null && frame.selfBound ? frame.type : null;
 	}
 
 	/** Copy checked inputs and result; the original signature remains the declaration lookup key. */

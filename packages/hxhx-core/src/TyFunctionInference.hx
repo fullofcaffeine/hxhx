@@ -54,6 +54,11 @@ class TyFunctionInference {
 	final owner:String;
 	var solver:TyInferenceSolver;
 	var occurrences:Array<InferredOccurrence> = [];
+
+	/** The result shared by the method's calls to itself, and whether a use bound it before the first return. */
+	var selfResult:Null<TyInferenceTerm> = null;
+
+	var selfResultBoundFirst:Null<Bool> = null;
 	var classValueUses:Array<InferredClassValueUse> = [];
 	var directCalls:Array<InferredDirectCall> = [];
 	var receiverCalls:Array<TyReceiverCallContext> = [];
@@ -224,6 +229,8 @@ class TyFunctionInference {
 		indexedUpdates.push(selection);
 		indexedUpdateOutcomes = trial.candidate.indexedUpdateOutcomes.copy();
 		diagnosticProbes = trial.candidate.diagnosticProbes.copy();
+		selfResult = trial.candidate.selfResult;
+		selfResultBoundFirst = trial.candidate.selfResultBoundFirst;
 		locals = new StringMap();
 		for (key => value in trial.candidate.locals)
 			locals.set(key, value);
@@ -655,6 +662,8 @@ class TyFunctionInference {
 		candidate.indexedUpdates = indexedUpdates.copy();
 		candidate.indexedUpdateOutcomes = indexedUpdateOutcomes.copy();
 		candidate.diagnosticProbes = diagnosticProbes.copy();
+		candidate.selfResult = selfResult;
+		candidate.selfResultBoundFirst = selfResultBoundFirst;
 		for (key => value in locals)
 			candidate.locals.set(key, value);
 		return candidate;
@@ -668,6 +677,38 @@ class TyFunctionInference {
 				return entry.term;
 			}
 		return null;
+	}
+
+	/**
+		A call to the method being typed, while its result is still open, returns one result
+		variable shared by every such call. Haxe 4.3.7 gives a method without a result annotation
+		a monomorph result, and a recursive call returns it, so a use can bind it before any
+		`return` does (haxe.ds.BalancedTree.removeLoop: `wrap(removeLoop(...))` with
+		`wrap(n:Node)` binds it to Node; the later `return` of `Null<Node>` then unifies).
+	 */
+	public function selfCallResult(expression:HxExpr):TyType {
+		var term = occurrence(expression);
+		if (term == null) {
+			if (solver.isSealed())
+				throw "self-call result is absent from sealed inference";
+			if (selfResult == null)
+				selfResult = solver.freshSelfCallResult();
+			term = selfResult;
+			occurrences.push({expression: expression, term: term, sourceFingerprint: TypedBodyFingerprint.exactExpression(expression)});
+		}
+		return solver.isSealed() ? solver.published(term) : solver.preview(term);
+	}
+
+	/** Record, at the first return in typing order, whether a use already bound the shared self-call result. */
+	public function noteReturn():Void {
+		if (solver.isSealed() || selfResultBoundFirst != null)
+			return;
+		selfResultBoundFirst = selfResult != null && !solver.preview(selfResult).hasUnknownComponent();
+	}
+
+	/** The self-call result a use bound before the first return; null when a return came first. */
+	public function selfBoundResult():Null<TyType> {
+		return selfResultBoundFirst == true ? solver.preview(selfResult) : null;
 	}
 
 	/** Retain one untyped result across contextual typing, aliases, and sealed body replay. */
