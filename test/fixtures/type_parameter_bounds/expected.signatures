@@ -1,0 +1,5 @@
+fill=(source : Array<Int>) -> Box<Int>
+hash=(k : hash.K) -> Int
+viaClass=(t : viaClass.T) -> Int
+viaShort=(t : viaShort.T) -> Int
+viaTypedef=(t : viaTypedef.T) -> Int
