@@ -4582,6 +4582,7 @@ class TyperStage {
 				var joinFailed = false;
 				final branchTypes = new Array<TyType>();
 				final branchTerms = new Array<Null<TyInferenceTerm>>();
+				final open = expectedResult == null || expectedResult.isUnknown();
 				if (patterns != null && exprs != null) {
 					final count = patterns.length < exprs.length ? patterns.length : exprs.length;
 					for (i in 0...count) {
@@ -4611,11 +4612,12 @@ class TyperStage {
 
 						if (out.isUnknown())
 							out = branchTy;
-						else if (branchTy.isDynamic() && TyType.isConcreteJoinPeer(out)) {
+						else if (open && branchTy.isDynamic() && TyType.isConcreteJoinPeer(out)) {
 							// A Dynamic case value does not widen the switch, as for returns (see
 							// `inferReturnType`): Haxe 4.3.7 gives `switch` with a `default: fail()` arm
-							// (`fail():Dynamic`) the other arms' type.
-						} else if (out.isDynamic() && TyType.isConcreteJoinPeer(branchTy))
+							// (`fail():Dynamic`) the other arms' type. A written expected type instead
+							// casts each arm to it (`binary(...):Dynamic` keeps Dynamic).
+						} else if (open && out.isDynamic() && TyType.isConcreteJoinPeer(branchTy))
 							out = branchTy;
 						else {
 							final u = TyType.unify(out, branchTy);
