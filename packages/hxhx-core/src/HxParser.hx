@@ -1910,7 +1910,8 @@ class HxParser {
 				}
 			case TString(s, interpolate): bump(); // The literal-only code operation checks decoded source text before interpolation.
 				// Keep its field-access syntax intact for macro quotation and later typing.
-				final literalCode = cur.kind.match(TDot) && peekKind().match(TIdent("code")); interpolate && !literalCode ? parseInterpolatedStringExpr(s) : EString(s);
+				final literalCode = cur.kind.match(TDot) && peekKind().match(TIdent("code")); interpolate && !literalCode ? (authoredSyntax
+					&& s.indexOf("$") >= 0 ? EString(s, true) : parseInterpolatedStringExpr(s)) : EString(s);
 			case TInt(v):
 				requireValidHexLiteral();
 				final raw = cur.numericText;
