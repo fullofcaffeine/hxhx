@@ -92,6 +92,8 @@ class MacroSyntaxExport {
 				EConst(CIdent(value ? "true" : "false"));
 			case EString(value):
 				EConst(CString(value, DoubleQuotes));
+			case ERegexLiteral(pattern, flags):
+				EConst(CRegexp(pattern, flags));
 			case EInt(value):
 				EConst(CInt(Std.string(value), null));
 			case EFloat(value):

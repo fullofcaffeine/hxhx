@@ -174,6 +174,9 @@ class MetalProfileVerifier {
 			addViolation(violations, filePath, className, fnName, stmtPos, CODE_REFLECTION_CALL, "runtime type operation",
 				"runtime class identity needs the portable object representation", "use the portable profile for runtime class predicates");
 		switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case ESourceTry(_, bodies, position):
 				for (body in bodies)
 					verifyExpr(filePath, className, fnName, position, body, violations);

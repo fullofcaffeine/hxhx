@@ -1,0 +1,5 @@
+{
+	"escapes": "{\n\tvar slashes = ~/^(https?://)?([a-z.]+)$/;\n\tvar controls = ~/[\r\n\t]+/g;\n\tvar kept = ~/\\d+\\.\\w*\\$/;\n\treturn controls.replace(slashes.replace(text, \"$2\"), \" \") + (kept.match(text) ? \"!\" : \"\");\n}",
+	"literals": "{\n\tvar plain = ~/[0-9]+/;\n\tvar flagged = ~/ab+c/gi;\n\treturn plain.match(text) || flagged.match(text);\n}",
+	"receiver": "return ~/[aeiou]/g.replace(text, \"*\")"
+}

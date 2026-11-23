@@ -749,6 +749,9 @@ class NekoTargetCore {
 			return;
 		}
 		switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case ENew(typePath, args):
 				if (!NekoStringIntrinsics.ownsConstructor(typePath)) {
 					final info = constructionClass(context, expr);
@@ -1602,6 +1605,9 @@ class NekoTargetCore {
 				null, packed);
 		}
 		return switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case ENull:
 				"null";
 			case ELoweredControl(ArrayAppend, _, _, _):
@@ -1945,6 +1951,9 @@ class NekoTargetCore {
 
 	static function exprTag(expr:HxExpr):String {
 		return switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case ESourceGroup(_, _): "ESourceGroup";
 			case ESourceIf(_, _, _, _): "ESourceIf";
 			case ESourceFor(_, _, _, _): "ESourceFor";
