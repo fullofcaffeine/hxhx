@@ -1,3 +1,11 @@
+## [0.46.2](https://github.com/fullofcaffeine/hxhx/compare/v0.46.1...v0.46.2) (2026-11-23)
+
+
+### Bug Fixes
+
+* **typer:** a Dynamic return or case value does not widen the result ([#271](https://github.com/fullofcaffeine/hxhx/issues/271)) ([f6df585](https://github.com/fullofcaffeine/hxhx/commit/f6df5856dae0adfb714ed6dc12f7d0353e39ec08))
+* **typer:** type haxe.ds.HashMap: abstract headers, bounds, field binding ([#272](https://github.com/fullofcaffeine/hxhx/issues/272)) ([e372d26](https://github.com/fullofcaffeine/hxhx/commit/e372d268b0a474b34acf523e23bf8c039e84880d)), closes [#271](https://github.com/fullofcaffeine/hxhx/issues/271)
+
 ## [0.46.1](https://github.com/fullofcaffeine/hxhx/compare/v0.46.0...v0.46.1) (2026-11-23)
 
 

@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml/badge.svg)](https://github.com/fullofcaffeine/hxhx/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.46.1-blue)](https://github.com/fullofcaffeine/hxhx/releases)
+[![Version](https://img.shields.io/badge/version-0.46.2-blue)](https://github.com/fullofcaffeine/hxhx/releases)
 
 This repository contains two products. Both have the MIT license.
 
