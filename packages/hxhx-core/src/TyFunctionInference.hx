@@ -1270,6 +1270,29 @@ class TyFunctionInference {
 	}
 
 	/** A body use may supply the first concrete evidence for an unannotated parameter. */
+	/**
+		`value == null` on an unsolved input binds it to `Null<fresh>`, as Haxe 4.3.7 types a `null`
+		literal against an unbound monomorph (typer.ml:329-345; `==` types its right side with the
+		left side's type as expected, operators.ml:554-558). Later evidence solves the inner
+		variable; an assignment already constrains the value inside a nullable term. The inner
+		variable keeps the input's origin, so an input nothing else constrains falls back as before.
+	**/
+	public function bindNullComparison(expression:HxExpr, environment:TyFunctionEnv):Void {
+		if (solver.isSealed())
+			return;
+		final term = sourceTerm(expression, environment);
+		if (term == null)
+			return;
+		switch solver.follow(term) {
+			case Variable(_):
+				final candidate = solver.fork();
+				final inner = solver.hasOmittedInputOrigin(term) ? candidate.freshOmittedParameter() : candidate.fresh();
+				if (candidate.constrain(term, Nullable(inner)))
+					solver.commit(candidate);
+			case _:
+		}
+	}
+
 	public function canReceiveContext(expression:HxExpr, environment:TyFunctionEnv):Bool {
 		return sourceTerm(expression, environment) != null || contextParameter(expression, environment) != null;
 	}
@@ -1360,7 +1383,8 @@ class TyFunctionInference {
 					continue;
 				// Assignment context constrains the value inside a nullable input. Keep
 				// its wrapper on the stored term so body publication still admits null.
-				final value = switch term {
+				// Follow first: an input bound to `Null<fresh>` by `value == null` is a variable here.
+				final value = switch candidate.follow(term) {
 					case Nullable(inner): inner;
 					case _: term;
 				};
