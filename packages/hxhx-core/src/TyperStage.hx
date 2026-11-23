@@ -520,10 +520,8 @@ class TyperStage {
 				fields.sort((left, right) -> left.name < right.name ? 1 : left.name > right.name ? -1 : 0);
 				return "{ " + [
 					for (field in fields)
-						(field.isOptional ? "?" : "")
-						+ field.name
-						+ " : "
-						+ show(field.isOptional && !field.type.isNullable() ? TyType.nullable(field.type) : field.type)].join(", ") + " }";
+						(field.isOptional ? "?" : "") + field.name + " : " + show(TyAnonymousField.valueType(field))
+				].join(", ") + " }";
 			}
 			final identity = type.getNominalIdentity();
 			if (identity == null)

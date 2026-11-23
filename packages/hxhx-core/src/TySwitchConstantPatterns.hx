@@ -188,6 +188,6 @@ private function anonymousFields(type:Null<TyType>):Null<haxe.ds.StringMap<TyTyp
 		return null;
 	final fields = new haxe.ds.StringMap<TyType>();
 	for (field in structure.getAnonymousFields())
-		fields.set(field.name, field.isOptional && !field.type.isNullable() ? TyType.nullable(field.type) : field.type);
+		fields.set(field.name, TyAnonymousField.valueType(field));
 	return fields;
 }

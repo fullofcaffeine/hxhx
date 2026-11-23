@@ -28,6 +28,7 @@ haxe test/m14_callback_field_requirement_input_test.hxml
 
 # Sorted section: add new tests here, in alphabetical order.
 haxe test/m14_abstract_field_operator_test.hxml
+haxe test/m14_anonymous_argument_variance_test.hxml
 haxe test/m14_array_literal_switch_test.hxml
 haxe test/m14_bitwise_parameter_inference_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
@@ -45,6 +46,7 @@ haxe test/m14_neko_enum_payload_count_test.hxml
 haxe test/m14_neko_native_array_primitives_test.hxml
 haxe test/m14_null_local_assignment_test.hxml
 haxe test/m14_open_value_test.hxml
+haxe test/m14_optional_field_type_equality_test.hxml
 haxe test/m14_primitive_constructor_effects_test.hxml
 haxe test/m14_statement_control_projection_test.hxml
 haxe test/m14_structural_field_over_extension_test.hxml

@@ -90,7 +90,7 @@ class TypedBackendObjectAccess {
 		its recorded type is the plain field type.
 	**/
 	public static function fieldDestination(field:TyAnonymousField):TyType {
-		return field.isOptional && !field.type.isNullable() ? TyType.nullable(field.type) : field.type;
+		return TyAnonymousField.valueType(field);
 	}
 
 	/** An optional structure field (`?o:Float`) is a nullable place. */

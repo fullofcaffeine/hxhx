@@ -1,0 +1,6 @@
+direct.first=String
+direct.second=String
+extra.a=Int
+extra.b=Int
+nested.flag=Bool
+nested.name=String
