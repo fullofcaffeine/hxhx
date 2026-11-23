@@ -13,6 +13,8 @@ const path = require('path')
 const repoRoot = path.resolve(__dirname, '../..')
 const fixtureRoot = path.join(repoRoot, 'test/portable/fixtures')
 const fixtureRunner = path.join(repoRoot, 'scripts/test-portable.sh')
+const durationTablePath = path.join(repoRoot, 'scripts/ci/portable-fixture-durations.json')
+const durationTableSchema = 'hxhx.portable-fixture-durations.v1'
 const defaultFixtureTimeoutSeconds = 30 * 60
 // Hosted CI pins a much smaller deadline. The larger explicit-local ceiling
 // accommodates adversarial fixtures with dozens of independent inspector runs
@@ -101,9 +103,42 @@ function parseShard(indexValue, countValue) {
 	return { index: Number(indexRaw), count: Number(countRaw) }
 }
 
-/** Partitions the stable fixture order without omissions or overlap. */
-function selectShard(fixtures, shard) {
-	return fixtures.filter((_, index) => index % shard.count === shard.index)
+/**
+ * Loads recorded fixture durations. A fixture missing from the table weighs the
+ * table's median, so a new fixture is balanced roughly and never dropped.
+ */
+function loadDurations(file = durationTablePath) {
+	if (!fs.existsSync(file)) return { weights: new Map(), defaultWeight: 1 }
+	const table = JSON.parse(fs.readFileSync(file, 'utf8'))
+	if (table.schema !== durationTableSchema || !table.fixtures || typeof table.fixtures !== 'object') {
+		fail(`${path.relative(repoRoot, file)} must be a ${durationTableSchema} table with a fixtures object`)
+	}
+	const weights = new Map(Object.entries(table.fixtures))
+	for (const [name, seconds] of weights) {
+		if (!Number.isInteger(seconds) || seconds <= 0) fail(`portable fixture duration for ${name} must be a positive integer, got: ${seconds}`)
+	}
+	const sorted = [...weights.values()].sort((left, right) => left - right)
+	return { weights, defaultWeight: sorted.length === 0 ? 1 : sorted[Math.floor(sorted.length / 2)] }
+}
+
+/**
+ * Partitions fixtures by recorded duration without omissions or overlap
+ * (haxe_ocaml-2pno4). Fixtures go, slowest first, to the shard with the least
+ * recorded time (ties to the lowest index), and each shard runs its slowest
+ * fixtures first. With equal weights this is the old `index % count` split.
+ */
+function selectShard(fixtures, shard, durations = { weights: new Map(), defaultWeight: 1 }) {
+	const weight = name => (durations.weights.has(name) ? durations.weights.get(name) : durations.defaultWeight)
+	const order = [...fixtures].sort((left, right) => weight(right) - weight(left) || (left < right ? -1 : left > right ? 1 : 0))
+	const loads = new Array(shard.count).fill(0)
+	const assigned = Array.from({ length: shard.count }, () => [])
+	for (const name of order) {
+		let target = 0
+		for (let index = 1; index < shard.count; index++) if (loads[index] < loads[target]) target = index
+		loads[target] += weight(name)
+		assigned[target].push(name)
+	}
+	return assigned[shard.index]
 }
 
 /** Signals only one child process tree owned by this runner. */
@@ -251,10 +286,12 @@ async function main() {
 	const timeoutSeconds = parseTimeoutSeconds(process.env.PORTABLE_FIXTURE_TIMEOUT_SECONDS)
 	const allFixtures = discoverFixtures(fixtureRoot, process.env.PORTABLE_FIXTURE_ALLOWLIST)
 	const shard = parseShard(process.env.PORTABLE_SHARD_INDEX, process.env.PORTABLE_SHARD_COUNT)
-	const fixtures = selectShard(allFixtures, shard)
+	const durations = loadDurations()
+	const fixtures = selectShard(allFixtures, shard, durations)
+	const estimatedSeconds = fixtures.reduce((sum, name) => sum + (durations.weights.has(name) ? durations.weights.get(name) : durations.defaultWeight), 0)
 	if (fixtures.length === 0) fail(`Portable shard ${shard.index}/${shard.count} selected no fixtures`)
 	const activeChildren = new Map()
-	console.log(`[portable-pool] fixtures=${fixtures.length}/${allFixtures.length} shard=${shard.index}/${shard.count} jobs=${Math.min(jobs, fixtures.length)} fixture_timeout_seconds=${timeoutSeconds}`)
+	console.log(`[portable-pool] fixtures=${fixtures.length}/${allFixtures.length} shard=${shard.index}/${shard.count} jobs=${Math.min(jobs, fixtures.length)} fixture_timeout_seconds=${timeoutSeconds} recorded_worker_seconds=${estimatedSeconds}`)
 	let shuttingDown = false
 	const stopForSignal = signal => {
 		if (shuttingDown) return
@@ -324,5 +361,6 @@ module.exports = {
 	parseTimeoutSeconds,
 	runOwnedCommand,
 	runPool,
-	selectShard
+	selectShard,
+	loadDurations
 }
