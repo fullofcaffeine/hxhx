@@ -12,7 +12,8 @@ const {
 	parseTimeoutSeconds,
 	runOwnedCommand,
 	runPool,
-	selectShard
+	selectShard,
+	loadDurations
 } = require('./run-portable-fixtures')
 
 function processExists(pid) {
@@ -133,12 +134,25 @@ async function main() {
 	assert.deepStrictEqual(secondShard, ['b', 'e'])
 	assert.deepStrictEqual(thirdShard, ['c'])
 	assert.deepStrictEqual([...firstShard, ...secondShard, ...thirdShard].sort(), shardInput)
+	// Recorded durations: slowest first to the least-loaded shard, slowest first inside it, and a
+	// fixture missing from the table weighs the median instead of being dropped.
+	const weighted = { weights: new Map([['huge', 9], ['big', 5], ['mid', 4], ['small', 1]]), defaultWeight: 4 }
+	const weightedInput = ['big', 'huge', 'mid', 'new', 'small']
+	const weightedShards = [0, 1].map(index => selectShard(weightedInput, { index, count: 2 }, weighted))
+	assert.deepStrictEqual(weightedShards, [['huge', 'new'], ['big', 'mid', 'small']])
+	assert.deepStrictEqual(weightedShards.flat().sort(), weightedInput)
 	const discoveredFixtures = discoverFixtures(path.join(repoRoot, 'test/portable/fixtures'), '')
-	const discoveredShards = [0, 1, 2].map(index => selectShard(discoveredFixtures, { index, count: 3 }))
+	const durations = loadDurations()
+	const discoveredShards = [0, 1, 2].map(index => selectShard(discoveredFixtures, { index, count: 3 }, durations))
 	const selectedFixtures = discoveredShards.flat()
 	assert.strictEqual(new Set(selectedFixtures).size, discoveredFixtures.length)
 	assert.deepStrictEqual(selectedFixtures.sort(), discoveredFixtures)
-	assert.ok(Math.max(...discoveredShards.map(shard => shard.length)) - Math.min(...discoveredShards.map(shard => shard.length)) <= 1)
+	const weight = name => (durations.weights.has(name) ? durations.weights.get(name) : durations.defaultWeight)
+	const shardSeconds = discoveredShards.map(shard => shard.reduce((sum, name) => sum + weight(name), 0))
+	const slowestFixture = Math.max(...discoveredFixtures.map(weight))
+	assert.ok(Math.max(...shardSeconds) - Math.min(...shardSeconds) <= slowestFixture, `portable shards are unbalanced: ${shardSeconds.join(', ')}`)
+	for (const shard of discoveredShards)
+		for (let index = 1; index < shard.length; index++) assert.ok(weight(shard[index - 1]) >= weight(shard[index]), 'each shard runs its slowest fixtures first')
 
 	let active = 0
 	let maximumActive = 0
