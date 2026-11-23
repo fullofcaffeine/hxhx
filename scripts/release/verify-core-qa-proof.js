@@ -50,7 +50,9 @@ function validateRun(run, receipt, candidateSha, expectedRunAttempt) {
   invariant(run.name === CORE_WORKFLOW, `unexpected Core workflow: ${run.name}`)
   invariant(run.path === '.github/workflows/ci.yml', `unexpected Core workflow path: ${run.path}`)
   invariant(run.conclusion === 'success', `Core run conclusion must be success, received ${run.conclusion}`)
-  invariant(['push', 'workflow_dispatch'].includes(run.event), `Core release proof cannot use event ${run.event}`)
+  // Push runs on main run at most Q1 (scripts/ci/qa-risk-policy.json eventMaximums); the
+  // 02:00 scheduled run carries the full cumulative route that releases require.
+  invariant(['schedule', 'workflow_dispatch'].includes(run.event), `Core release proof cannot use event ${run.event}`)
   invariant(PUBLISH_BRANCHES.includes(run.head_branch), `Core release proof cannot use branch ${run.head_branch}`)
   invariant(run.head_sha === candidateSha, 'Core run head does not match the release candidate')
   invariant(run.event === receipt.event, 'Core run event does not match the routing receipt')

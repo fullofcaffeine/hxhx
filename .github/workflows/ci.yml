@@ -5,10 +5,12 @@ on:
     branches: [ master, main ]
   pull_request:
     branches: [ master, main ]
-  # One full run of main each night. A push to main cancels the previous push run,
-  # so most main runs never finish (45 of 60 on 2026-11-18/19); this run checks the
-  # merged result of the day's PRs and saves fresh caches (bead haxe_ocaml-vxnea).
-  # 02:00 UTC is outside the 05:00-14:00 UTC peak measured in that bead.
+  # One full run of main each night. A push to main runs at most Q1 (route, secret
+  # scan, guards; qa-risk-policy.json eventMaximums): pull requests proved each
+  # change, and full push runs were mostly cancelled by the next merge while using
+  # about 45% of runner time. This run checks the merged result of the day's PRs,
+  # saves fresh caches (bead haxe_ocaml-vxnea), and is the release evidence
+  # (release.yml). 02:00 UTC is outside the 05:00-14:00 UTC peak in that bead.
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:

@@ -41,7 +41,7 @@ function run(candidateSha, overrides = {}) {
     run_attempt: 2,
     name: 'CI / Core PR Checks',
     path: '.github/workflows/ci.yml',
-    event: 'push',
+    event: 'schedule',
     head_branch: 'main',
     head_sha: candidateSha,
     conclusion: 'success',
@@ -86,13 +86,13 @@ try {
 
   const inventory = buildInventory({
     repositoryRoot: root,
-    event: 'push',
+    event: 'schedule',
     eventBaseSha: highRisk,
     headSha: candidate
   })
   const policyPath = path.resolve(__dirname, '../ci/qa-risk-policy.json')
   const receipt = classify({
-    event: 'push',
+    event: 'schedule',
     changedPaths: inventory.paths,
     producerSha: candidate
   }, loadPolicy(policyPath))
@@ -113,6 +113,12 @@ try {
   const result = validateProof(options)
   assert.strictEqual(result.receipt.tier, 'Q3')
 
+  // A push run is light (at most Q1), so it can never be release evidence; only the full
+  // scheduled run or an exact manual dispatch can.
+  expectFailure(() => validateProof({
+    ...options,
+    run: run(candidate, { event: 'push' })
+  }), /Core release proof cannot use event push/)
   expectFailure(() => validateProof({
     ...options,
     run: run(candidate, { run_attempt: 1 })
@@ -169,7 +175,7 @@ try {
     changedPathsSha256: require('./verify-core-qa-proof').pathDigest(['docs/follow-up.md'])
   }
   const cheapReceipt = classify({
-    event: 'push',
+    event: 'schedule',
     changedPaths: ['docs/follow-up.md'],
     producerSha: candidate
   }, loadPolicy(policyPath))
