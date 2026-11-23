@@ -1438,8 +1438,8 @@ class TyperStage {
 				changed = true;
 			}
 		}
-		return changed ? new TyFunSig(signature.getName(), signature.getIsStatic(), signature.getArgNames().copy(), inputs,
-			signature.getArgOptional().copy(), signature.getArgRest().copy(), signature.getReturnType(), signature.getPos()) : signature;
+		return changed ? new TyFunSig(signature.getName(), signature.getIsStatic(), signature.getArgNames().copy(), inputs, signature.getArgOptional().copy(),
+			signature.getArgRest().copy(), signature.getReturnType(), signature.getPos()) : signature;
 	}
 
 	static function typeFunction(fn:HxFunctionDecl, ctx:TyperContext, functionIdentity:String, ?semanticDeclaration:TyDeclarationInfo,
