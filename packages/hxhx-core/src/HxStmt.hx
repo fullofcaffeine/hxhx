@@ -60,8 +60,13 @@ enum HxStmt {
 		- Control flow is pervasive in upstream code and is necessary for Gate 1.
 		- Even before typing control flow correctly, parsing it avoids token drift and
 		  makes later typing work local and structured.
+
+		`valueReturn` marks the parser's lowering of `return if (c) a else b` into an `if`
+		with a return in each branch. Haxe 4.3.7 types the whole `if` before its one
+		`return`, so the typer counts the branch returns as one return after the `if`
+		(the order decides a recursive method's result). Structural rebuilds preserve it.
 	**/
-	SIf(cond:HxExpr, thenBranch:HxStmt, elseBranch:Null<HxStmt>, pos:HxPos);
+	SIf(cond:HxExpr, thenBranch:HxStmt, elseBranch:Null<HxStmt>, pos:HxPos, ?valueReturn:Bool);
 
 	/**
 		For-in loop: `for (name in iterable) body`.

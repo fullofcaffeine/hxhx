@@ -1509,7 +1509,12 @@ class TyperStage {
 		}
 
 		var completeReturnEvidence = true;
-		final returnExprTy = inferReturnType(semanticBody, scope, ctx, complete -> completeReturnEvidence = complete);
+		var selfBound = false;
+		final returnExprTy = inferReturnType(semanticBody, scope, ctx, complete ->
+			completeReturnEvidence = complete, retHintText != null && retHintText.length > 0 ? null : () -> {
+			final candidate = semanticDeclaration == null ? null : ctx.getIndex().getMethodBodyResults().selfBoundCandidate(semanticDeclaration);
+			candidate != null ? candidate : scope.getInference().selfBoundResult();
+		}, () -> selfBound = true);
 		final retTy = if (constructorBody && Std.isOfType(ctx.currentClass(), TyAbstractInfo)) {
 			// An abstract constructor initializes its backing value and completes with
 			// Void. Haxe permits a written result annotation, but that annotation does
@@ -1556,7 +1561,8 @@ class TyperStage {
 			onResult({
 				type: retTy,
 				complete: completeReturnEvidence && !retTy.hasUnknownComponent(),
-				parameters: scope.getParams().map(parameter -> parameter.getType())
+				parameters: scope.getParams().map(parameter -> parameter.getType()),
+				selfBound: selfBound
 			});
 		return scope.withReturnTypes(retTy, returnExprTy);
 	}
@@ -1567,7 +1573,8 @@ class TyperStage {
 		final previews keeps those returns complete without rebinding names after scope
 		exit. Missing evidence still prevents publication of a checked method result.
 	 */
-	static function inferReturnType(statements:Array<HxStmt>, scope:TyFunctionEnv, ctx:TyperContext, ?onEvidence:Bool->Void):TyType {
+	static function inferReturnType(statements:Array<HxStmt>, scope:TyFunctionEnv, ctx:TyperContext, ?onEvidence:Bool->Void, ?boundResult:Void->Null<TyType>,
+			?onBound:Void->Void):TyType {
 		var out:Null<TyType> = null;
 		var sawUnresolvedValueReturn = false;
 		var sawIncompleteReturnType = false;
@@ -1643,7 +1650,10 @@ class TyperStage {
 							scope.exitLexicalScope();
 						}
 					}
-				case SIf(cond, thenBranch, elseBranch, pos):
+				case SIf(cond, thenBranch, elseBranch, pos, valueReturn):
+					// A lowered `return if` returns once, after its whole `if` (see `HxStmt.SIf`).
+					if (valueReturn == true)
+						scope.getInference().beginValueReturn();
 					// Best-effort: ensure the condition is at least type-checked for locals.
 					inferExprType(cond, scope, ctx, pos);
 					scope.enterLexicalScope();
@@ -1654,6 +1664,8 @@ class TyperStage {
 						typeStmt(elseBranch);
 						scope.exitLexicalScope();
 					}
+					if (valueReturn == true)
+						scope.getInference().endValueReturn();
 				case SWhile(cond, body, pos):
 					inferExprType(cond, scope, ctx, pos);
 					final controls = scope.requireControlScope();
@@ -1765,6 +1777,7 @@ class TyperStage {
 								&& hinted.getSemanticKey() != initializerType.getSemanticKey())))
 						scope.getInference().recordLocal(sym, initializerTerm, hasWrittenType ? hinted : null);
 				case SReturnVoid(pos):
+					scope.getInference().noteReturn();
 					controls.currentReturns().record(Known(TyType.fromHintText("Void")), pos);
 				case SReturn(e, pos):
 					final expected = scope.getReturnType();
@@ -1774,6 +1787,7 @@ class TyperStage {
 						TyAuthoredAssignmentCheck.check(expected, t, scope.isUntypedContext() || TyFieldAssignment.explicitlyUntyped(e), ctx.getFilePath(),
 							pos, null, () -> writtenReturnDisplay(expected, scope, ctx));
 					final term = scope.getInference().sourceTerm(e, scope);
+					scope.getInference().noteReturn();
 					controls.currentReturns().record(term == null ? Known(t) : term, pos);
 				case SExpr(e, pos):
 					inferExprType(e, scope, ctx, pos);
@@ -1784,7 +1798,27 @@ class TyperStage {
 
 		for (s in statements)
 			typeStmt(s);
-		for (returned in controls.finishReturns(rootTarget)) {
+		final finished = controls.finishReturns(rootTarget);
+		// A result the method's own call bound before any return is Haxe 4.3.7's bound result
+		// monomorph: each return unifies with it, through `Null`, instead of joining.
+		final bound = boundResult == null ? null : boundResult();
+		if (bound != null && !bound.hasUnknownComponent() && !bound.isNullable() && finished.length > 0) {
+			var accepted = true;
+			for (returned in finished) {
+				final type = scope.getInference().termType(returned.term);
+				final unified = type.isUnknown() ? bound : TyType.unify(bound, type);
+				if (unified == null || unified.unwrapNull().getSemanticKey() != bound.getSemanticKey())
+					accepted = false;
+			}
+			if (accepted) {
+				if (onEvidence != null)
+					onEvidence(true);
+				if (onBound != null)
+					onBound();
+				return bound;
+			}
+		}
+		for (returned in finished) {
 			final type = scope.getInference().termType(returned.term);
 			if (type.isUnknown())
 				sawUnresolvedValueReturn = true;
@@ -3705,6 +3739,12 @@ class TyperStage {
 			&& (expr.match(ECall(_, _)) || expr.match(EField(_, _)))
 			&& scope.getInference().sourceTerm(expr, scope) == null)
 			result = scope.getInference().untypedResult(expr);
+		final selfCall = capture == null || capture.selection == null ? null : capture.selection.declaration;
+		if (result.isUnknown()
+			&& selfCall != null
+			&& selfCall == scope.getDeclaration()
+			&& selfCall.getSignature().getReturnType().isUnknown())
+			result = scope.getInference().selfCallResult(expr);
 		// Field requirements belong to the receiver's inference variable, including
 		// reads through aliases. Resolve that shared fact before applying context.
 		result = scope.getInference().expressionType(expr, result, scope);
@@ -4482,6 +4522,7 @@ class TyperStage {
 					TyLambdaResultContract.check(valueType, returns.expected, ctx.getFilePath(), pos, isStrict());
 					if (!valueType.isNoNormalCompletion()) {
 						final term = value == null ? null : scope.getInference().sourceTerm(value, scope);
+						scope.getInference().noteReturn();
 						returns.record(term == null ? Known(valueType) : term, pos);
 					}
 					TyType.noNormalCompletion();
@@ -4962,8 +5003,9 @@ class TyperStage {
 						final leftType = inferExprType(a, scope, ctx, pos);
 						final rightType = inferExprType(b, scope, ctx, pos);
 						final bound = TyAbstractBinaryBinding.select(ctx.getIndex(), leftType, rightType, op, ctx.getFilePath(), pos);
-						// Builtin comparison binds unresolved inputs, as in Haxe 4.3.7.
-						if (bound == null && (leftType.isUnknown() || rightType.isUnknown()))
+						// Builtin comparison binds unresolved inputs, as in Haxe 4.3.7, including the inner
+						// type of an input that `value == null` made `Null<fresh>` (`x < 3` gives Null<Int>).
+						if (bound == null && (leftType.isOpenValue() || rightType.isOpenValue()))
 							TyComparisonOperandInference.constrain({
 								left: a,
 								right: b,

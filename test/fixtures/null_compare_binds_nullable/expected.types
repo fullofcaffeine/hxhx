@@ -1,0 +1,14 @@
+below.x=Int
+chain.c=Int
+chain.node=Node
+flagged.x=Int
+merge.a=Node
+merge.b=Node
+orZero.x=Int
+returnFirst.c=Int
+returnFirst.node=Node
+returnIf.c=Int
+returnIf.node=Node
+scaled.x=Int
+setResolver.r=Resolver
+wrap.n=Node
