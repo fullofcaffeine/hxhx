@@ -35,8 +35,7 @@ class ParserStage {
 			throw "parser requires original and filtered source text";
 		final source = input.filteredSource;
 		final expectedMainClass = expectedMainClassFromFile(input.filePath);
-		final decl = enrichPureParserDecl(source, expectedMainClass,
-			new HxParser(source, authoredSyntax).parseModule(expectedMainClass, input.originalSource));
+		final decl = enrichPureParserDecl(source, expectedMainClass, new HxParser(source, authoredSyntax).parseModule(expectedMainClass, input.originalSource));
 		final path = input.filePath == null || input.filePath.length == 0 ? "<memory>" : input.filePath;
 		return new ParsedModule(source, decl, path);
 	}
