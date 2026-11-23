@@ -94,10 +94,51 @@ class HxParser {
 		return c >= "A".code && c <= "Z".code;
 	}
 
-	public function new(source:String) {
+	/**
+		Authored mode keeps upstream syntax that ordinary parsing lowers for the typer and
+		backends (regex literals). Only `ParserStage.parseAuthored` enables it.
+	**/
+	final authoredSyntax:Bool;
+
+	public function new(source:String, authoredSyntax:Bool = false) {
+		this.authoredSyntax = authoredSyntax;
 		this.source = source == null ? "" : source;
 		lex = new HxLexer(source);
 		cur = lex.next();
+	}
+
+	/**
+		The pattern upstream's `CRegexp` holds: Haxe 4.3.7's lexer decodes `\/`, `\r`, `\n` and
+		`\t` while reading a regex literal and keeps every other escape as written (lexer.ml:616-622).
+		The lexer here keeps the raw text, which ordinary parsing passes to `new EReg` unchanged.
+	**/
+	static function authoredRegexPattern(raw:String):String {
+		final out = new StringBuf();
+		var index = 0;
+		while (index < raw.length) {
+			final code = StringTools.fastCodeAt(raw, index);
+			if (code == "\\".code && index + 1 < raw.length) {
+				final next = StringTools.fastCodeAt(raw, index + 1);
+				switch next {
+					case "/".code:
+						out.addChar("/".code);
+					case "r".code:
+						out.addChar("\r".code);
+					case "n".code:
+						out.addChar("\n".code);
+					case "t".code:
+						out.addChar("\t".code);
+					case _:
+						out.addChar(code);
+						out.addChar(next);
+				}
+				index += 2;
+				continue;
+			}
+			out.addChar(code);
+			index++;
+		}
+		return out.toString();
 	}
 
 	inline function posIndex(pos:Null<HxPos>):Int {
@@ -1888,7 +1929,7 @@ class HxParser {
 				&& suffix.length > 0 ? ECall(EIdent("__hxhx_float_literal"), [EString(raw), EString(suffix)]) : EFloat(v);
 			case TRegex(pattern, flags):
 				bump();
-				ENew("EReg", [EString(pattern), EString(flags)]);
+				authoredSyntax ? ERegexLiteral(authoredRegexPattern(pattern), flags) : ENew("EReg", [EString(pattern), EString(flags)]);
 			case TIdent(name):
 				bump();
 				// Stage 3 bring-up: treat some uppercase-start identifiers as enum-like value

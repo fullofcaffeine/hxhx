@@ -46,7 +46,7 @@ class ParseOracleHxhx {
 		for (file in files) {
 			final decl = try {
 				final filtered = HxConditionalCompilation.filterSource(sys.io.File.getContent(file), defines);
-				ParserStage.parse(filtered, file).getDecl();
+				ParserStage.parseAuthored(filtered, file).getDecl();
 			} catch (e:haxe.Exception) {
 				fileErrors.push({file: file, error: e.message});
 				continue;

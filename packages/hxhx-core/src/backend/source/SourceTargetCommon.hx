@@ -1585,6 +1585,9 @@ class SourceTargetCommon {
 
 	static function exprKind(expr:HxExpr):String {
 		return switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case ESourceGroup(_, _): "ESourceGroup";
 			case ESourceIf(_, _, _, _): "ESourceIf";
 			case ESourceFor(_, _, _, _): "ESourceFor";
@@ -14753,6 +14756,9 @@ class SourceTargetCommon {
 				names.set(clean, true);
 		}
 		switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case ESourceGroup(children, _) | ELoweredControl(_, _, children, _):
 				for (child in children)
 					phpRecordReferencedMemberExpr(child, names);

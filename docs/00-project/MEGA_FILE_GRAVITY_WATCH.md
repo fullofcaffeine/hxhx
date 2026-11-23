@@ -33,6 +33,11 @@ On November 8, 2026, Int-to-Float promotion at typed value boundaries
 consolidation. That consolidation brought 36 open branches into one PR and
 raised the count to 10,667 lines; the Stage3 emitter's retirement under
 `haxe_ocaml-38gsp.1` remains the extraction plan.
+On November 23, 2026, the HxParser count was refreshed for parser parity
+(`haxe_ocaml-ac5i9`): authored parsing keeps upstream syntax for the parse
+oracle (regex literals, `var a, b` groups, `return if`) next to the ordinary
+lowering. The planned stage B moves those lowerings into a separate pass, which
+would make the parser smaller again.
 The guard allows small drift but asks for this table to be refreshed when a
 watched file moves by more than 250 lines.
 
@@ -41,7 +46,7 @@ watched file moves by more than 250 lines.
 | `packages/hxhx-core/src/backend/source/SourceTargetCommon.hx` | 19,846 | Multiple source/native target families share one backend surface. Target-specific runtime/API shims can quietly become common-backend behavior. |
 | `packages/hxhx-core/src/backend/cpp/CppTargetCore.hx` | 25,549 | Fixed prelude assembly lives in `CppProgramPrelude`, and known standard-library carrier signatures live in `CppKnownStdlibSignatures`; rendering, helper reachability, runtime support coordination, type-flow inference, and smoke support still make this a red hotspot. |
 | `packages/hxhx-core/src/EmitterStage.hx` | 10,667 | Core stage orchestration plus target/runtime shims can blur frontend/backend ownership. |
-| `packages/hxhx-core/src/HxParser.hx` | 4,937 | Parser behavior is central and easy to destabilize with local workarounds. |
+| `packages/hxhx-core/src/HxParser.hx` | 5,218 | Parser behavior is central and easy to destabilize with local workarounds. |
 | `packages/hxhx-core/src/ParserStage.hx` | 279 | The July 24 parser hard cut removed the duplicate native decoder and profiling copies. Keep this file as the narrow stage/cache adapter around `HxParser`; module-local recovery scanning remains isolated in `ParserStageScanHelpers`. |
 | `packages/hxhx/src/hxhx/Stage3Compiler.hx` | 1,023 | Keep orchestration-only; do not let it become a target/runtime implementation surface. |
 

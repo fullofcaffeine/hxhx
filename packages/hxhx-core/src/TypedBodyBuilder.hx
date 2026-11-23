@@ -810,6 +810,10 @@ class TypedBodyBuilder {
 			case ECall(EIdent("__hxhx_expr_meta"), [EString(name), EString(arguments), inner]):
 				TypedExpr.metadata(name, arguments,
 					buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected, selectedCallType), position);
+			case ERegexLiteral(_, _):
+				// Only authored-mode parsing (the parse oracle) keeps the literal; ordinary
+				// parsing lowers it to `new EReg(...)` before typing.
+				throw "regex literal syntax reached typing; parse with ParserStage.parse";
 			case ENull:
 				TypedExpr.nullValue(nodeType, position);
 			case EPrivateAccess(inner, sourcePosition):

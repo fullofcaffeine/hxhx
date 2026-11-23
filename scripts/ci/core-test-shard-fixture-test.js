@@ -664,7 +664,7 @@ function main() {
   for (const index of [0, 1, 2]) {
     requireIncludes(
       q2Matrix,
-      `          - shard: portable\n            label: Portable fixtures (${index + 1}/3)\n            timeout_minutes: 50\n            portable_shard_index: "${index}"\n            portable_shard_count: "3"\n            portable_jobs: "4"\n            portable_fixture_timeout_seconds: "2100"`,
+      `          - shard: portable\n            label: Portable fixtures (${index + 1}/3)\n            timeout_minutes: 60\n            portable_shard_index: "${index}"\n            portable_shard_count: "3"\n            portable_jobs: "4"\n            portable_fixture_timeout_seconds: "2100"`,
       `Core portable fixture partition ${index}`
     )
   }

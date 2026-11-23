@@ -92,6 +92,9 @@ class JsExprEmitter {
 		if (exactEnumConstructor != null)
 			return emitExactEnumConstructor(exactEnumConstructor, scope);
 		return switch (expr) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case EPrivateAccess(_, _):
 				throw "source access permission must be consumed before JavaScript emission";
 			case ESourceTry(_, _, _) | ESourceGroup(_, _) | ESourceFunction(_, _, _, _) | ESourceIf(_, _, _, _) | ESourceFor(_, _, _, _) | EThrow(_, _) |

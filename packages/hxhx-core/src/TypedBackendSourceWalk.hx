@@ -65,8 +65,8 @@ class TypedBackendSourceWalk {
 				visit(condition);
 				for (value in body)
 					visit(value);
-			case ENull | EBool(_) | EString(_) | EInt(_) | EFloat(_) | EEnumValue(_) | EThis | ESuper | EIdent(_) | EMacroType(_) | ETryCatchRaw(_) |
-				ESwitchRaw(_) | EUnsupported(_) | EBreak(_) | EContinue(_):
+			case ENull | EBool(_) | EString(_) | ERegexLiteral(_, _) | EInt(_) | EFloat(_) | EEnumValue(_) | EThis | ESuper | EIdent(_) | EMacroType(_) |
+				ETryCatchRaw(_) | ESwitchRaw(_) | EUnsupported(_) | EBreak(_) | EContinue(_):
 		}
 	}
 

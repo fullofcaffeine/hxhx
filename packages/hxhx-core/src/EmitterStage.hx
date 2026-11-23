@@ -4135,6 +4135,9 @@ class EmitterStage {
 			return numericStringIntrinsic;
 
 		return switch (e) {
+			case ERegexLiteral(_, _):
+				// Only authored parsing (the parse oracle) keeps the literal; ordinary parsing lowers it to `new EReg`.
+				throw "regex literal syntax must be lowered before this stage";
 			case EMacroExpr(inner, _):
 				TypedBackendSourceWalk.expression(inner, node -> {
 					if (node.match(EDiscardThen(_, _)))

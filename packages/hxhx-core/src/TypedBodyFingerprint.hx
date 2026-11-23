@@ -149,6 +149,10 @@ class TypedBodyFingerprint {
 			case EString(value):
 				addString(state, "expr-string");
 				addString(state, value);
+			case ERegexLiteral(pattern, flags):
+				addString(state, "expr-regex");
+				addString(state, pattern);
+				addString(state, flags);
 			case EInt(value):
 				addString(state, "expr-int");
 				addInt(state, value);
