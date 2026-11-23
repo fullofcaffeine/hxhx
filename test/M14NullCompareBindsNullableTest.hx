@@ -45,6 +45,8 @@ class M14NullCompareBindsNullableTest {
 		final expectedSignatures = File.getContent(root + "/expected.signatures");
 		observe("node_modules/.bin/haxe", [
 			"-cp",
+			"test/fixtures/method_parameter_dynamic_context",
+			"-cp",
 			root,
 			"-main",
 			"Main",

@@ -1,0 +1,11 @@
+count.flag=Bool
+describe.tree=Tree
+dynamicFirst.name=String
+dynamicLocal.flag=Bool
+fail.name=String
+ifValue.flag=Bool
+pick.name=String
+returnsDynamicFirst.flag=Bool
+written.left=Dynamic
+written.op=String
+written.right=Dynamic
