@@ -1052,8 +1052,16 @@ class ParserStageScanHelpers {
 			var fields = new Array<HxFieldDecl>();
 			var functions = new Array<HxFunctionDecl>();
 
-			var headerTok = scanNextToken(source, i);
-			while (headerTok.text.length > 0 && headerTok.text != "{" && headerTok.text != ";") {
+			// The body starts after the type parameters and outside the underlying type's
+			// parentheses: `abstract HashMap<K:{function hashCode():Int;}, V>(HashMapData<K, V>)` and
+			// `abstract Point({x:Int, y:Int})` contain braces before it (haxe.ds.HashMap).
+			var headerTok = scanNextToken(source, typeParams.nextPos);
+			var parenDepth = 0;
+			while (headerTok.text.length > 0 && (parenDepth > 0 || (headerTok.text != "{" && headerTok.text != ";"))) {
+				if (headerTok.text == "(")
+					parenDepth += 1;
+				else if (headerTok.text == ")")
+					parenDepth -= 1;
 				headerTok = scanNextToken(source, headerTok.nextPos);
 			}
 			if (headerTok.text == "{") {
