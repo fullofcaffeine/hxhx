@@ -3,14 +3,45 @@
 	values use their real core provider, so String members do not depend on another
 	module having loaded String first. No member types or signatures live here.
  */
-function owner(receiver:TyType, context:TyperContext):Null<TyNominalInfo> {
+function owner(receiver:TyType, context:TyperContext, depth:Int = 0):Null<TyNominalInfo> {
 	if (context.getIndex() == null)
 		return null;
 	final value = TyAliasExpansion.revealNonNullable(receiver);
+	// A type parameter's members come from its constraints, as in Haxe 4.3.7 (fields.ml looks
+	// through `KTypeParameter` bounds): `t.code()` with `T:Base` reads `Base.code`. The first
+	// nominal bound owns the lookup; structural bounds are read by `TyStructuralFieldRead`.
+	if (value.isTypeParameter()) {
+		if (depth > 8)
+			return null;
+		for (bound in context.getIndex().getParameterBounds(value.getTypeParameterIdentity())) {
+			final found = owner(bound, context, depth + 1);
+			if (found != null)
+				return found;
+		}
+		return null;
+	}
 	final identity = value.getNominalIdentity();
 	if (identity != null)
 		return context.getIndex().getByFullName(identity.getCanonicalName());
 	return value.isPrimitive() ? context.resolvePrimitiveProvider(value) : null;
+}
+
+/**
+	The bound of a type parameter receiver that has the structure field `name`, or the
+	receiver itself. `k.hashCode()` with `K:{function hashCode():Int;}` (haxe.ds.HashMap) or a
+	typedef bound reads the structure's field, as Haxe 4.3.7 looks through `KTypeParameter`
+	constraints in order. A Dynamic bound supplies no field type.
+ */
+function structuralView(receiver:TyType, name:String, context:TyperContext, depth:Int = 0):TyType {
+	final value = TyAliasExpansion.revealNonNullable(receiver);
+	if (!value.isTypeParameter() || context.getIndex() == null || depth > 8)
+		return receiver;
+	for (bound in context.getIndex().getParameterBounds(value.getTypeParameterIdentity())) {
+		final view = structuralView(bound, name, context, depth + 1);
+		if (!TyAliasExpansion.revealNonNullable(view).isDynamic() && TyStructuralFieldRead.resolve(view, name) != null)
+			return view;
+	}
+	return receiver;
 }
 
 /**

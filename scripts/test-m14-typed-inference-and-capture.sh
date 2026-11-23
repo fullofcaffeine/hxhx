@@ -56,6 +56,7 @@ haxe test/m14_primitive_constructor_effects_test.hxml
 haxe test/m14_statement_control_projection_test.hxml
 haxe test/m14_structural_field_over_extension_test.hxml
 haxe test/m14_try_assignment_value_test.hxml
+haxe test/m14_type_parameter_bounds_test.hxml
 haxe test/m14_typed_backend_capture_catalog_test.hxml
 haxe test/m14_typed_capture_lowering_test.hxml
 haxe test/m14_typed_capture_plan_test.hxml

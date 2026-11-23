@@ -76,11 +76,36 @@ class HxFunctionTypeParamMetadata {
 		return out;
 	}
 
+	/**
+		Drop whitespace from constraint spelling, except one space between two word characters:
+		a declaration-form structure keeps `{function hashCode():Int;}` (haxe.ds.HashMap) instead
+		of becoming `{functionhashCode():Int;}`.
+	**/
 	static function compactTypeHint(text:String):String {
-		var out = StringTools.trim(text == null ? "" : text);
-		for (whitespace in [" ", "\t", "\r", "\n"])
-			out = StringTools.replace(out, whitespace, "");
-		return out;
+		final source = StringTools.trim(text == null ? "" : text);
+		final out = new StringBuf();
+		var previous = -1;
+		var spaced = false;
+		for (index in 0...source.length) {
+			final code = StringTools.fastCodeAt(source, index);
+			if (code == " ".code || code == "\t".code || code == "\r".code || code == "\n".code) {
+				spaced = true;
+				continue;
+			}
+			if (spaced && isWordCode(previous) && isWordCode(code))
+				out.addChar(" ".code);
+			spaced = false;
+			out.addChar(code);
+			previous = code;
+		}
+		return out.toString();
+	}
+
+	static function isWordCode(code:Int):Bool {
+		return code == "_".code
+			|| (code >= "a".code && code <= "z".code)
+			|| (code >= "A".code && code <= "Z".code)
+			|| (code >= "0".code && code <= "9".code);
 	}
 
 	/** Split compound bounds without splitting type arguments, function groups, or anonymous fields. */

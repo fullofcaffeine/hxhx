@@ -137,7 +137,7 @@ function argumentMember(index:TyperIndex, receiver:TyType, wanted:TyAnonymousFie
 }
 
 /** Project declared member types through the receiver's existing variables, including inherited owner substitutions. */
-private function inferredMember(index:TyperIndex, receiver:TyInferenceTerm, name:String):Null<TyInferenceTerm> {
+function inferredMember(index:TyperIndex, receiver:TyInferenceTerm, name:String):Null<TyInferenceTerm> {
 	if (index == null)
 		return null;
 	return switch receiver {

@@ -2977,7 +2977,7 @@ class TyperStage {
 			return null;
 		// A structure's own field wins over a static extension of the same name, as in Haxe 4.3.7:
 		// with `using Lambda;`, `access.has("x")` calls `{function has(name:String):Bool;}`.
-		if (TyStructuralFieldRead.resolve(receiverType, field) != null)
+		if (TyStructuralFieldRead.resolve(TyReceiverMemberLookup.structuralView(receiverType, field, ctx), field) != null)
 			return null;
 		final extensionArguments = [receiver].concat(args == null ? [] : args);
 		for (extension in ctx.extensionMethods(field, receiverType)) {
@@ -4232,7 +4232,7 @@ class TyperStage {
 						final nativeString = TyNekoNativeStringRead.resolve(objTy, _field, ctx);
 						if (nativeString != null)
 							return nativeString;
-						final structuralField = TyStructuralFieldRead.resolve(objTy, _field);
+						final structuralField = TyStructuralFieldRead.resolve(TyReceiverMemberLookup.structuralView(objTy, _field, ctx), _field);
 						if (structuralField != null)
 							return structuralField;
 						if (objTy.unwrapNull().isAnonymous() && isStrict())
@@ -4412,7 +4412,7 @@ class TyperStage {
 								} else {
 									// `obj` is a value identifier (local/param), not a type name.
 									final objTy = inferExprType(obj, scope, ctx, pos);
-									final structural = TyStructuralFieldRead.resolve(objTy, field);
+									final structural = TyStructuralFieldRead.resolve(TyReceiverMemberLookup.structuralView(objTy, field, ctx), field);
 									if (scope.getInference().isUncheckedCallable(callee, scope))
 										return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult,
 											structural == null ? TyType.unknown() : structural);
@@ -4471,7 +4471,7 @@ class TyperStage {
 
 								// `obj` is a value identifier (local/param), not a type name.
 								final objTy = inferExprType(obj, scope, ctx, pos);
-								final structural = TyStructuralFieldRead.resolve(objTy, field);
+								final structural = TyStructuralFieldRead.resolve(TyReceiverMemberLookup.structuralView(objTy, field, ctx), field);
 								if (scope.getInference().isUncheckedCallable(callee, scope))
 									return inferFunctionValueCall(callee, args, scope, ctx, pos, expectedResult,
 										structural == null ? TyType.unknown() : structural);
@@ -4881,6 +4881,8 @@ class TyperStage {
 								+ rhs.getDisplay()
 								+ " is not compatible with indexed element "
 								+ destination.getDisplay());
+						if (a.match(EField(_, _)) && destination.hasUnknownComponent() && !scope.isUntypedContext())
+							scope.getInference().constrainAssignedField(a, b, rhs, scope, ctx.getIndex());
 						final assignedField = resolveFieldDeclaration(a, scope, ctx, pos);
 						final fieldName = assignedField == null ? dynamicMemberWriteName(a, scope, ctx, pos) : assignedField.getCanonicalKey();
 						TyFieldAssignment.check({
