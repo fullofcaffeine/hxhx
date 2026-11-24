@@ -99,7 +99,7 @@ let runWaitStdio = fun baseArgs runOne error -> (try let input = Obj.magic (Sys_
           Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0))
         ) else if HxRuntime.tags_has __exn_tags_41 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_40) : Haxe_io_Error.error) in (
           ignore e;
-          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_33 = error in let __call_arg_0_34 = let __string_part_35 = "wait-stdio failed to read frame length: " in let __string_part_36 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_35 ^ __string_part_36 in __call_callee_33 __call_arg_0_34)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_33 = error in let __call_arg_0_34 = let __string_part_35 = "wait-stdio failed to read frame length: " in let __string_part_36 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_35 ^ __string_part_36 in __call_callee_33 __call_arg_0_34)))
         ) else if HxRuntime.tags_has __exn_tags_41 "String" then let e = (Obj.obj __exn_v_40 : string) in (
           ignore e;
           Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_37 = error in let __call_arg_0_38 = "wait-stdio failed to read frame length: " ^ HxString.toStdString e in __call_callee_37 __call_arg_0_38)))
@@ -109,7 +109,7 @@ let runWaitStdio = fun baseArgs runOne error -> (try let input = Obj.magic (Sys_
           Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0))
         ) else if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_42)) : Haxe_io_Error.error) in (
           ignore e;
-          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_33 = error in let __call_arg_0_34 = let __string_part_35 = "wait-stdio failed to read frame length: " in let __string_part_36 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_35 ^ __string_part_36 in __call_callee_33 __call_arg_0_34)))
+          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_33 = error in let __call_arg_0_34 = let __string_part_35 = "wait-stdio failed to read frame length: " in let __string_part_36 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_35 ^ __string_part_36 in __call_callee_33 __call_arg_0_34)))
         ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_42) : string) in (
           ignore e;
           Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_callee_37 = error in let __call_arg_0_38 = "wait-stdio failed to read frame length: " ^ HxString.toStdString e in __call_callee_37 __call_arg_0_38)))
@@ -201,7 +201,7 @@ let readConnectDisplayStdin = fun args -> (try (
           Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         ) else if HxRuntime.tags_has __exn_tags_69 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_68) : Haxe_io_Error.error) in (
           ignore e;
-          HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_65 = "connect failed to read display-stdin frame length: " in let __string_part_66 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_65 ^ __string_part_66)) ["Dynamic"]
+          HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_65 = "connect failed to read display-stdin frame length: " in let __string_part_66 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_65 ^ __string_part_66)) ["Dynamic"]
         ) else if HxRuntime.tags_has __exn_tags_69 "String" then let e = (Obj.obj __exn_v_68 : string) in (
           ignore e;
           HxType.hx_throw_typed_rtti (Obj.repr ("connect failed to read display-stdin frame length: " ^ HxString.toStdString e)) ["Dynamic"]
@@ -211,7 +211,7 @@ let readConnectDisplayStdin = fun args -> (try (
           Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
         ) else if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_70)) : Haxe_io_Error.error) in (
           ignore e;
-          HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_65 = "connect failed to read display-stdin frame length: " in let __string_part_66 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_65 ^ __string_part_66)) ["Dynamic"]
+          HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_65 = "connect failed to read display-stdin frame length: " in let __string_part_66 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_65 ^ __string_part_66)) ["Dynamic"]
         ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_70) : string) in (
           ignore e;
           HxType.hx_throw_typed_rtti (Obj.repr ("connect failed to read display-stdin frame length: " ^ HxString.toStdString e)) ["Dynamic"]

@@ -52,7 +52,8 @@ let adapt = fun expression value locals names -> (try let tempMaybeTypedBackendL
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match expression with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match expression with
     | HxExpr.EIdent __enum_param_1 -> __enum_param_1
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in if locals == Obj.magic (HxRuntime.hx_null) then let __assign_2 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
     tempMaybeTypedBackendLocalProjection := __assign_2;

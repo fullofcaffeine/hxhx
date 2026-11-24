@@ -69,7 +69,8 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match callee with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match callee with
     | HxExpr.EField (__enum_param_142, _) -> __enum_param_142
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
     | HxExpr.EField (_, __enum_param_143) -> __enum_param_143
@@ -120,7 +121,8 @@ let reflectionCallName = fun callee -> let tempResult = ref (Obj.magic (HxRuntim
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_144 -> __enum_param_144
     | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
     | "Reflect" -> let field = (_g1 : string) in let __assign_146 = Obj.magic ("Reflect." ^ HxString.toStdString field : string) in (
@@ -508,6 +510,11 @@ let rec verifyExpr = fun filePath className fnName stmtPos expr violations -> ig
       )) done
     ))
     | HxExpr.EPrivateAccess (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in let position = Obj.magic _g1 in verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic position) (Obj.magic inner) (Obj.magic violations))
+    | HxExpr.ERegexLiteral (_p0, _p1) -> (
+      ignore _p0;
+      ignore _p1;
+      HxType.hx_throw_typed_rtti (Obj.repr "regex literal syntax must be lowered before this stage") ["Dynamic"]
+    )
 ))
 
 let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (match stmt with
@@ -528,10 +535,13 @@ let rec verifyStmt = fun filePath className fnName stmt violations -> ignore (ma
       if init != Obj.magic (HxRuntime.hx_null) then ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Obj.magic violations)) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let pos = Obj.magic _g3 in (
-    ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic cond) (Obj.magic violations));
-    ignore (verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic thenBranch) (Obj.magic violations));
-    if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (Obj.magic violations)) else ()
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in (
+    ignore _p4;
+    let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let pos = Obj.magic _g3 in (
+      ignore (verifyExpr (filePath : string) (className : string) (fnName : string) (Obj.magic pos) (Obj.magic cond) (Obj.magic violations));
+      ignore (verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.magic thenBranch) (Obj.magic violations));
+      if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (verifyStmt (filePath : string) (className : string) (fnName : string) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (Obj.magic violations)) else ()
+    )
   ))
   | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore ((
     ignore _p0;

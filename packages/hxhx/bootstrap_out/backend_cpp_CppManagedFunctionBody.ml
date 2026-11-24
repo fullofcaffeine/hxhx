@@ -98,7 +98,8 @@ let render = fun self (destination : string) (scope : Obj.t) (services : Obj.t) 
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then (
           ignore (match expression with
             | HxExpr.ELambda (__enum_param_15, _, _) -> __enum_param_15
             | _ -> failwith "Unexpected enum parameter");

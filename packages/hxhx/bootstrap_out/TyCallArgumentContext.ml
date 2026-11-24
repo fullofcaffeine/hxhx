@@ -4,51 +4,70 @@
 
 let __reflaxe_ocaml__ = ()
 
-let agreed = fun arguments arity declarationIndex -> (try let _g = Obj.magic (let __arr_48 = HxArray.create () in __arr_48) in let _g1 = ref 0 in let _g2 = arity in (
+let positionalArguments = fun signature arity -> (try let parameters = Obj.magic (TyFunSig.getArgs (Obj.magic signature) ()) in let optional = Obj.magic (TyFunSig.getArgOptional (Obj.magic signature) ()) in (
+  ignore (if (let __array_receiver_52 = Obj.magic (TyFunSig.getArgRest (Obj.magic signature) ()) in let __array_arg_0_53 = true in HxArray.indexOf_default __array_receiver_52 __array_arg_0_53) >= 0 || HxArray.length parameters < arity then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0)) else ());
+  ignore (if HxArray.length parameters = arity then Stdlib.raise (HxRuntime.Hx_return (Obj.repr arity)) else ());
+  let _g = ref arity in let _g1 = HxArray.length parameters in (
+    ignore (while !_g < _g1 do ignore (let index = let __old_54 = !_g in let __new_55 = HxInt.add __old_54 1 in (
+      ignore (_g := __new_55);
+      __old_54
+    ) in if (let __array_read_receiver_56 = optional in let __array_read_index_57 = index in HxArray.get (Obj.magic __array_read_receiver_56) __array_read_index_57) <> true then Stdlib.raise (HxRuntime.Hx_return (Obj.repr 0)) else ()) done);
+    let count = ref 0 in (
+      ignore (while !count < arity && (let __array_read_receiver_58 = optional in let __array_read_index_59 = !count in HxArray.get (Obj.magic __array_read_receiver_58) __array_read_index_59) <> true do ignore (let __old_60 = !count in let __new_61 = HxInt.add __old_60 1 in (
+        ignore (count := __new_61);
+        __old_60
+      )) done);
+      !count
+    )
+  )
+) with
+  | HxRuntime.Hx_return __ret_62 -> (Obj.obj __ret_62 : int) : int)
+
+let agreed = fun arguments arity declarationIndex -> (try let _g = Obj.magic (let __arr_76 = HxArray.create () in __arr_76) in let _g1 = ref 0 in let _g2 = arity in (
   ignore (while !_g1 < _g2 do ignore ((
-    ignore (let __old_49 = !_g1 in let __new_50 = HxInt.add __old_49 1 in (
-      ignore (_g1 := __new_50);
-      __old_49
+    ignore (let __old_77 = !_g1 in let __new_78 = HxInt.add __old_77 1 in (
+      ignore (_g1 := __new_78);
+      __old_77
     ));
-    let __array_receiver_51 = Obj.magic _g in let __array_arg_0_52 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_51 __array_arg_0_52
+    let __array_receiver_79 = Obj.magic _g in let __array_arg_0_80 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_79 __array_arg_0_80
   )) done);
   let tempArray = Obj.magic _g in let contexts = Obj.magic tempArray in (
     ignore (if HxArray.length arguments = 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr contexts)) else ());
     let _g = ref 0 in let _g1 = arity in (
-      ignore (while !_g < _g1 do try ignore (let index = let __old_53 = !_g in let __new_54 = HxInt.add __old_53 1 in (
-        ignore (_g := __new_54);
-        __old_53
-      ) in let first = Obj.magic (let __array_read_receiver_55 = let __array_read_receiver_57 = arguments in let __array_read_index_58 = 0 in HxArray.get (Obj.magic __array_read_receiver_57) __array_read_index_58 in let __array_read_index_56 = index in HxArray.get (Obj.magic __array_read_receiver_55) __array_read_index_56) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-        ignore (if TyType.isFunction (Obj.magic first) () && TyType.hasUnknownComponent (Obj.magic (TyType.getFunctionReturn (Obj.magic first) ())) () then let __assign_59 = Obj.magic (TyType.withFunctionTypes (Obj.magic first) (Obj.magic (TyType.getFunctionArguments (Obj.magic first) ())) (Obj.magic (TyType.unknown ()))) in (
-          tempTyType := __assign_59;
-          __assign_59
-        ) else let __assign_60 = Obj.magic first in (
-          tempTyType := __assign_60;
-          __assign_60
+      ignore (while !_g < _g1 do try ignore (let index = let __old_81 = !_g in let __new_82 = HxInt.add __old_81 1 in (
+        ignore (_g := __new_82);
+        __old_81
+      ) in let first = Obj.magic (let __array_read_receiver_83 = let __array_read_receiver_85 = arguments in let __array_read_index_86 = 0 in HxArray.get (Obj.magic __array_read_receiver_85) __array_read_index_86 in let __array_read_index_84 = index in HxArray.get (Obj.magic __array_read_receiver_83) __array_read_index_84) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+        ignore (if TyType.isFunction (Obj.magic first) () && TyType.hasUnknownComponent (Obj.magic (TyType.getFunctionReturn (Obj.magic first) ())) () then let __assign_87 = Obj.magic (TyType.withFunctionTypes (Obj.magic first) (Obj.magic (TyType.getFunctionArguments (Obj.magic first) ())) (Obj.magic (TyType.unknown ()))) in (
+          tempTyType := __assign_87;
+          __assign_87
+        ) else let __assign_88 = Obj.magic first in (
+          tempTyType := __assign_88;
+          __assign_88
         ));
         let expected = Obj.magic (!tempTyType) in (
-          ignore (if TyType.isFunction (Obj.magic expected) () then ignore (if HxArray.length (let __array_receiver_61 = Obj.magic (TyType.getFunctionArguments (Obj.magic expected) ()) in let __array_arg_0_62 = fun hx_type -> TyType.hasUnknownComponent (Obj.magic hx_type) () in HxArray.filter __array_receiver_61 __array_arg_0_62) > 0 then Stdlib.raise (HxRuntime.Hx_continue) else ()) else ignore (if TypedCollectionExpectation.context (Obj.magic expected) == Obj.magic (HxRuntime.hx_null) && (TyType.hasUnknownComponent (Obj.magic expected) () || TyperContext.expectedEnumOwner (Obj.magic declarationIndex) (Obj.magic expected) == Obj.magic (HxRuntime.hx_null)) then Stdlib.raise (HxRuntime.Hx_continue) else ()));
+          ignore (if TyType.isFunction (Obj.magic expected) () then ignore (if HxArray.length (let __array_receiver_89 = Obj.magic (TyType.getFunctionArguments (Obj.magic expected) ()) in let __array_arg_0_90 = fun hx_type -> TyType.hasUnknownComponent (Obj.magic hx_type) () in HxArray.filter __array_receiver_89 __array_arg_0_90) > 0 then Stdlib.raise (HxRuntime.Hx_continue) else ()) else ignore (if TypedCollectionExpectation.context (Obj.magic expected) == Obj.magic (HxRuntime.hx_null) && (TyType.hasUnknownComponent (Obj.magic expected) () || TyperContext.expectedEnumOwner (Obj.magic declarationIndex) (Obj.magic expected) == Obj.magic (HxRuntime.hx_null) && TyperContext.expectedEnumAbstract (Obj.magic declarationIndex) (Obj.magic expected) == Obj.magic (HxRuntime.hx_null)) then Stdlib.raise (HxRuntime.Hx_continue) else ()));
           let agreed__local = ref true in let _g2 = ref 0 in (
-            ignore (while !_g2 < HxArray.length arguments do ignore (let types = Obj.magic (let __array_read_receiver_63 = arguments in let __array_read_index_64 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_63) __array_read_index_64) in (
-              ignore (let __old_65 = !_g2 in let __new_66 = HxInt.add __old_65 1 in (
-                ignore (_g2 := __new_66);
-                __new_66
+            ignore (while !_g2 < HxArray.length arguments do ignore (let types = Obj.magic (let __array_read_receiver_91 = arguments in let __array_read_index_92 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_91) __array_read_index_92) in (
+              ignore (let __old_93 = !_g2 in let __new_94 = HxInt.add __old_93 1 in (
+                ignore (_g2 := __new_94);
+                __new_94
               ));
-              let candidate = Obj.magic (let __array_read_receiver_67 = types in let __array_read_index_68 = index in HxArray.get (Obj.magic __array_read_receiver_67) __array_read_index_68) in let tempTyType1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-                ignore (if TyType.isFunction (Obj.magic candidate) () && TyType.hasUnknownComponent (Obj.magic (TyType.getFunctionReturn (Obj.magic candidate) ())) () then let __assign_69 = Obj.magic (TyType.withFunctionTypes (Obj.magic candidate) (Obj.magic (TyType.getFunctionArguments (Obj.magic candidate) ())) (Obj.magic (TyType.unknown ()))) in (
-                  tempTyType1 := __assign_69;
-                  __assign_69
-                ) else let __assign_70 = Obj.magic candidate in (
-                  tempTyType1 := __assign_70;
-                  __assign_70
+              let candidate = Obj.magic (let __array_read_receiver_95 = types in let __array_read_index_96 = index in HxArray.get (Obj.magic __array_read_receiver_95) __array_read_index_96) in let tempTyType1 = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+                ignore (if TyType.isFunction (Obj.magic candidate) () && TyType.hasUnknownComponent (Obj.magic (TyType.getFunctionReturn (Obj.magic candidate) ())) () then let __assign_97 = Obj.magic (TyType.withFunctionTypes (Obj.magic candidate) (Obj.magic (TyType.getFunctionArguments (Obj.magic candidate) ())) (Obj.magic (TyType.unknown ()))) in (
+                  tempTyType1 := __assign_97;
+                  __assign_97
+                ) else let __assign_98 = Obj.magic candidate in (
+                  tempTyType1 := __assign_98;
+                  __assign_98
                 ));
-                let comparable = Obj.magic (!tempTyType1) in if let __string_eq_left_71 = TyType.getSemanticKey (Obj.magic comparable) () in let __string_eq_right_72 = TyType.getSemanticKey (Obj.magic expected) () in not (HxString.equals __string_eq_left_71 __string_eq_right_72) then ignore (let __assign_73 = false in (
-                  agreed__local := __assign_73;
-                  __assign_73
+                let comparable = Obj.magic (!tempTyType1) in if let __string_eq_left_99 = TyType.getSemanticKey (Obj.magic comparable) () in let __string_eq_right_100 = TyType.getSemanticKey (Obj.magic expected) () in not (HxString.equals __string_eq_left_99 __string_eq_right_100) then ignore (let __assign_101 = false in (
+                  agreed__local := __assign_101;
+                  __assign_101
                 )) else ()
               )
             )) done);
-            if !agreed__local then ignore (let __assign_74 = Obj.magic expected in HxArray.set (Obj.magic contexts) index __assign_74) else ()
+            if !agreed__local then ignore (let __assign_102 = Obj.magic expected in HxArray.set (Obj.magic contexts) index __assign_102) else ()
           )
         )
       )) with
@@ -57,7 +76,7 @@ let agreed = fun arguments arity declarationIndex -> (try let _g = Obj.magic (le
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_75 -> (Obj.obj __ret_75 : TyType.t HxArray.t) : TyType.t HxArray.t)
+  | HxRuntime.Hx_return __ret_103 -> (Obj.obj __ret_103 : TyType.t HxArray.t) : TyType.t HxArray.t)
 
 let shared = fun signatures arity methodParameters declarationIndex -> (try (
   ignore (if methodParameters != Obj.magic (HxRuntime.hx_null) && HxArray.length methodParameters <> HxArray.length signatures then HxType.hx_throw_typed_rtti (Obj.repr "call context requires method binders for each signature") ["Dynamic"] else ());
@@ -88,54 +107,78 @@ let shared = fun signatures arity methodParameters declarationIndex -> (try (
         let __array_receiver_20 = Obj.magic _g in let __array_arg_0_21 = Obj.magic (!tempArray1) in HxArray.push __array_receiver_20 __array_arg_0_21
       )
     )) done);
-    let tempArray = Obj.magic _g in let arguments = Obj.magic tempArray in let _g = ref 0 in (
+    let tempArray = Obj.magic _g in let arguments = Obj.magic tempArray in let positional = ref arity in let _g = ref 0 in (
       ignore (while !_g < HxArray.length signatures do ignore (let signature = Obj.magic (let __array_read_receiver_22 = signatures in let __array_read_index_23 = !_g in HxArray.get (Obj.magic __array_read_receiver_22) __array_read_index_23) in (
         ignore (let __old_24 = !_g in let __new_25 = HxInt.add __old_24 1 in (
           ignore (_g := __new_25);
           __new_25
         ));
-        if HxArray.length (TyFunSig.getArgs (Obj.magic signature) ()) <> arity || (let __array_receiver_26 = Obj.magic (TyFunSig.getArgRest (Obj.magic signature) ()) in let __array_arg_0_27 = true in HxArray.indexOf_default __array_receiver_26 __array_arg_0_27) >= 0 then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t HxArray.t) in let _g2 = Obj.magic (let __arr_28 = HxArray.create () in __arr_28) in let _g1 = ref 0 in let _g3 = arity in (
-          ignore (while !_g1 < _g3 do ignore ((
-            ignore (let __old_29 = !_g1 in let __new_30 = HxInt.add __old_29 1 in (
-              ignore (_g1 := __new_30);
-              __old_29
-            ));
-            let __array_receiver_31 = Obj.magic _g2 in let __array_arg_0_32 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_31 __array_arg_0_32
-          )) done);
-          ignore (let __assign_33 = Obj.magic _g2 in (
-            tempResult := __assign_33;
-            __assign_33
-          ));
-          Stdlib.raise (HxRuntime.Hx_return (Obj.repr (!tempResult)))
-        ) else ()
+        let count = positionalArguments (Obj.magic signature) arity in if count < !positional then ignore (let __assign_26 = count in (
+          positional := __assign_26;
+          __assign_26
+        )) else ()
       )) done);
-      agreed (Obj.magic arguments) arity (Obj.magic declarationIndex)
+      ignore (if !positional = 0 then let _g = Obj.magic (let __arr_27 = HxArray.create () in __arr_27) in let _g1 = ref 0 in let _g2 = arity in (
+        ignore (while !_g1 < _g2 do ignore ((
+          ignore (let __old_28 = !_g1 in let __new_29 = HxInt.add __old_28 1 in (
+            ignore (_g1 := __new_29);
+            __old_28
+          ));
+          let __array_receiver_30 = Obj.magic _g in let __array_arg_0_31 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_30 __array_arg_0_31
+        )) done);
+        let tempResult = Obj.magic _g in Stdlib.raise (HxRuntime.Hx_return (Obj.repr tempResult))
+      ) else ());
+      let _g = Obj.magic (let __arr_32 = HxArray.create () in __arr_32) in let _g1 = ref 0 in (
+        ignore (while !_g1 < HxArray.length arguments do ignore (let types = Obj.magic (let __array_read_receiver_33 = arguments in let __array_read_index_34 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_33) __array_read_index_34) in (
+          ignore (let __old_35 = !_g1 in let __new_36 = HxInt.add __old_35 1 in (
+            ignore (_g1 := __new_36);
+            __new_36
+          ));
+          let __array_receiver_37 = Obj.magic _g in let __array_arg_0_38 = Obj.magic (let __array_receiver_39 = Obj.magic types in let __array_arg_0_40 = 0 in let __array_arg_1_41 = !positional in HxArray.slice __array_receiver_39 __array_arg_0_40 __array_arg_1_41) in HxArray.push __array_receiver_37 __array_arg_0_38
+        )) done);
+        let tempArray2 = Obj.magic _g in let contexts = Obj.magic (agreed (Obj.magic tempArray2) (!positional) (Obj.magic declarationIndex)) in let _g = Obj.magic (let __arr_42 = HxArray.create () in __arr_42) in let _g1 = ref 0 in let _g2 = arity in (
+          ignore (while !_g1 < _g2 do ignore (let index = let __old_43 = !_g1 in let __new_44 = HxInt.add __old_43 1 in (
+            ignore (_g1 := __new_44);
+            __old_43
+          ) in let tempMaybeTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
+            ignore (if index < !positional then let __assign_45 = Obj.magic (Obj.magic (let __array_read_receiver_46 = contexts in let __array_read_index_47 = index in HxArray.get (Obj.magic __array_read_receiver_46) __array_read_index_47)) in (
+              tempMaybeTyType := __assign_45;
+              __assign_45
+            ) else let __assign_48 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+              tempMaybeTyType := __assign_48;
+              __assign_48
+            ));
+            let __array_receiver_49 = Obj.magic _g in let __array_arg_0_50 = Obj.magic (!tempMaybeTyType) in HxArray.push __array_receiver_49 __array_arg_0_50
+          )) done);
+          let tempResult1 = Obj.magic _g in tempResult1
+        )
+      )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_34 -> (Obj.obj __ret_34 : TyType.t HxArray.t) : TyType.t HxArray.t)
+  | HxRuntime.Hx_return __ret_51 -> (Obj.obj __ret_51 : TyType.t HxArray.t) : TyType.t HxArray.t)
 
 let functionValue = fun signature arity declarationIndex -> (try let parameters = Obj.magic (TyCallableSignature.getParameters (Obj.magic signature) ()) in let tempShortCircuit = ref (false : bool) in (
-  ignore (if HxArray.length parameters <> arity then let __assign_35 = true in (
-    tempShortCircuit := __assign_35;
-    __assign_35
-  ) else let __assign_36 = HxArray.length (let __array_receiver_37 = Obj.magic parameters in let __array_arg_0_38 = fun parameter -> HxRuntime.unbox_bool_or_obj (HxAnon.get parameter "isRest") in HxArray.filter __array_receiver_37 __array_arg_0_38) > 0 in (
-    tempShortCircuit := __assign_36;
-    __assign_36
+  ignore (if HxArray.length parameters <> arity then let __assign_63 = true in (
+    tempShortCircuit := __assign_63;
+    __assign_63
+  ) else let __assign_64 = HxArray.length (let __array_receiver_65 = Obj.magic parameters in let __array_arg_0_66 = fun parameter -> HxRuntime.unbox_bool_or_obj (HxAnon.get parameter "isRest") in HxArray.filter __array_receiver_65 __array_arg_0_66) > 0 in (
+    tempShortCircuit := __assign_64;
+    __assign_64
   ));
-  ignore (if !tempShortCircuit then let _g = Obj.magic (let __arr_39 = HxArray.create () in __arr_39) in let _g1 = ref 0 in let _g2 = arity in (
+  ignore (if !tempShortCircuit then let _g = Obj.magic (let __arr_67 = HxArray.create () in __arr_67) in let _g1 = ref 0 in let _g2 = arity in (
     ignore (while !_g1 < _g2 do ignore ((
-      ignore (let __old_40 = !_g1 in let __new_41 = HxInt.add __old_40 1 in (
-        ignore (_g1 := __new_41);
-        __old_40
+      ignore (let __old_68 = !_g1 in let __new_69 = HxInt.add __old_68 1 in (
+        ignore (_g1 := __new_69);
+        __old_68
       ));
-      let __array_receiver_42 = Obj.magic _g in let __array_arg_0_43 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_42 __array_arg_0_43
+      let __array_receiver_70 = Obj.magic _g in let __array_arg_0_71 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in HxArray.push __array_receiver_70 __array_arg_0_71
     )) done);
     let tempResult = Obj.magic _g in Stdlib.raise (HxRuntime.Hx_return (Obj.repr tempResult))
   ) else ());
-  agreed (Obj.magic (let __arr_44 = HxArray.create () in (
-    ignore (HxArray.push __arr_44 (let __array_receiver_45 = Obj.magic parameters in let __array_arg_0_46 = fun parameter -> Obj.obj (HxAnon.get parameter "type") in HxArray.map __array_receiver_45 __array_arg_0_46));
-    __arr_44
+  agreed (Obj.magic (let __arr_72 = HxArray.create () in (
+    ignore (HxArray.push __arr_72 (let __array_receiver_73 = Obj.magic parameters in let __array_arg_0_74 = fun parameter -> Obj.obj (HxAnon.get parameter "type") in HxArray.map __array_receiver_73 __array_arg_0_74));
+    __arr_72
   ))) arity (Obj.magic declarationIndex)
 ) with
-  | HxRuntime.Hx_return __ret_47 -> (Obj.obj __ret_47 : TyType.t HxArray.t) : TyType.t HxArray.t)
+  | HxRuntime.Hx_return __ret_75 -> (Obj.obj __ret_75 : TyType.t HxArray.t) : TyType.t HxArray.t)

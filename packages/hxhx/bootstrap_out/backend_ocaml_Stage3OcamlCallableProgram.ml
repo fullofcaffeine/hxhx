@@ -355,7 +355,7 @@ let stage3ocamlcallablefunction_returned = fun self (statement : HxStmt.hxstmt) 
         ignore (if (match statement with
           | HxStmt.SBlock (_, _) -> 0
           | HxStmt.SVar (_, _, _, _, _) -> 1
-          | HxStmt.SIf (_, _, _, _) -> 2
+          | HxStmt.SIf (_, _, _, _, _) -> 2
           | HxStmt.SForIn (_, _, _, _) -> 3
           | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
           | HxStmt.SWhile (_, _, _) -> 5
@@ -401,7 +401,7 @@ let stage3ocamlcallablefunction_returnedExpression = fun self (expression : HxEx
       ignore (if (match statement with
         | HxStmt.SBlock (_, _) -> 0
         | HxStmt.SVar (_, _, _, _, _) -> 1
-        | HxStmt.SIf (_, _, _, _) -> 2
+        | HxStmt.SIf (_, _, _, _, _) -> 2
         | HxStmt.SForIn (_, _, _, _) -> 3
         | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
         | HxStmt.SWhile (_, _, _) -> 5
@@ -514,7 +514,8 @@ let stage3ocamlcallablefunction_call = fun self (expression : HxExpr.hxexpr) (fa
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expression with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expression with
           | HxExpr.ECall (__enum_param_179, _) -> __enum_param_179
           | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expression with
           | HxExpr.ECall (_, __enum_param_180) -> __enum_param_180
@@ -667,7 +668,8 @@ let stage3ocamlcallablefunction_render = fun self (expression : HxExpr.hxexpr) (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g2 = (match expression with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g2 = (match expression with
         | HxExpr.EBinop (__enum_param_124, _, _) -> __enum_param_124
         | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match expression with
         | HxExpr.EBinop (_, __enum_param_125, _) -> __enum_param_125
@@ -746,7 +748,8 @@ let stage3ocamlcallablefunction_render = fun self (expression : HxExpr.hxexpr) (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 34 then let _g2 = Obj.magic (match expression with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 34 then let _g2 = Obj.magic (match expression with
         | HxExpr.ECheckType (__enum_param_150, _) -> __enum_param_150
         | _ -> failwith "Unexpected enum parameter") in (
         ignore (match expression with

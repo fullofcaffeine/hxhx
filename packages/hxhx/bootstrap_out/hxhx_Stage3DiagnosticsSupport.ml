@@ -74,7 +74,8 @@ let rec countUnsupportedExprsInExpr = fun expr -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47 with
       | 3 -> (
         ignore (let __enum_param_17 = expr in if __enum_param_17 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_17 with
           | HxExpr.ELoweredControl (__enum_param_16, _, _, _) -> __enum_param_16
@@ -538,7 +539,8 @@ let rec collectUnsupportedExprRawInExpr = fun expr out max -> ignore (try ignore
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47 with
     | 3 -> ignore ((
       ignore (let __enum_param_212 = expr in if __enum_param_212 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_212 with
         | HxExpr.ELoweredControl (__enum_param_211, _, _, _) -> __enum_param_211
@@ -874,11 +876,14 @@ let rec collectUnsupportedExprRawInStmt = fun stmt out max -> ignore (try ignore
         collectUnsupportedExprRawInExpr init (Obj.magic out) max
       )
     ))
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
-      ignore _g3;
-      ignore (collectUnsupportedExprRawInExpr (Obj.repr cond) (Obj.magic out) max);
-      ignore (collectUnsupportedExprRawInStmt (Obj.magic thenBranch) (Obj.magic out) max);
-      if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (collectUnsupportedExprRawInStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (Obj.magic out) max) else ()
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in (
+      ignore _p4;
+      let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
+        ignore _g3;
+        ignore (collectUnsupportedExprRawInExpr (Obj.repr cond) (Obj.magic out) max);
+        ignore (collectUnsupportedExprRawInStmt (Obj.magic thenBranch) (Obj.magic out) max);
+        if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (collectUnsupportedExprRawInStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (Obj.magic out) max) else ()
+      )
     ))
     | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> ignore (let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in (
       ignore _g;
@@ -1038,19 +1043,22 @@ let rec countUnsupportedExprsInStmt = fun stmt -> let tempResult = ref (0 : int)
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
-      ignore _g3;
-      let tempNumber = ref (0 : int) in (
-        ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_414 = 0 in (
-          tempNumber := __assign_414;
-          __assign_414
-        ) else let __assign_415 = countUnsupportedExprsInStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
-          tempNumber := __assign_415;
-          __assign_415
-        ));
-        let __assign_416 = HxInt.add (HxInt.add (countUnsupportedExprsInExpr (Obj.repr cond)) (countUnsupportedExprsInStmt (Obj.magic thenBranch))) (!tempNumber) in (
-          tempResult := __assign_416;
-          __assign_416
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in (
+      ignore _p4;
+      let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
+        ignore _g3;
+        let tempNumber = ref (0 : int) in (
+          ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_414 = 0 in (
+            tempNumber := __assign_414;
+            __assign_414
+          ) else let __assign_415 = countUnsupportedExprsInStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
+            tempNumber := __assign_415;
+            __assign_415
+          ));
+          let __assign_416 = HxInt.add (HxInt.add (countUnsupportedExprsInExpr (Obj.repr cond)) (countUnsupportedExprsInStmt (Obj.magic thenBranch))) (!tempNumber) in (
+            tempResult := __assign_416;
+            __assign_416
+          )
         )
       )
     )
@@ -1379,7 +1387,7 @@ let formatDynamicException = fun (error : Obj.t) -> (try (
           __assign_566
         )
       ) else Stdlib.raise (__exn_570));
-    let reflectedMessage = Obj.repr (Obj.magic (!tempMaybeVar)) in (
+    let reflectedMessage = Obj.magic (!tempMaybeVar) in (
       ignore (if reflectedMessage != Obj.magic (HxRuntime.hx_null) then ignore (let message = ("<unsupported>" : string) in if (let __string_receiver_574 = message in HxString.length __string_receiver_574) > 0 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr message)) else ()) else ());
       HxDynamic.toStdString error
     )

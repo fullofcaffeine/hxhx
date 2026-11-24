@@ -23,30 +23,32 @@ let store = fun hx_type value -> (try (
 ) with
   | HxRuntime.Hx_return __ret_8 -> (Obj.obj __ret_8 : string) : string)
 
-let read = fun hx_type value -> (
+let read = fun hx_type value -> (try (
   ignore (if TyType.isUnknown (Obj.magic hx_type) () then HxType.hx_throw_typed_rtti (Obj.repr "OCaml object read requires an exact result type") ["Dynamic"] else ());
+  ignore (if TyType.isNullable (Obj.magic hx_type) () && (let __string_eq_left_9 = TyType.getSemanticKey (Obj.magic (TyType.unwrapNull (Obj.magic hx_type) ())) () in let __string_eq_right_10 = "primitive:Bool" in HxString.equals __string_eq_left_9 __string_eq_right_10) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (("(Obj.magic (let __hx_nullable_bool = Obj.repr (" ^ HxString.toStdString value) ^ ") in if HxRuntime.is_null __hx_nullable_bool then __hx_nullable_bool else Obj.repr (HxRuntime.unbox_bool_or_obj __hx_nullable_bool)))"))) else ());
   let tempResult = ref (HxString.hx_null_string : string) in (
-    ignore (if let __string_eq_left_9 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_10 = "primitive:Bool" in HxString.equals __string_eq_left_9 __string_eq_right_10 then let __assign_11 = (("HxRuntime.unbox_bool_or_obj (" ^ HxString.toStdString value) ^ ")" : string) in (
-      tempResult := __assign_11;
-      __assign_11
-    ) else if TyType.isDynamic (Obj.magic hx_type) () then let __assign_12 = (value : string) in (
-      tempResult := __assign_12;
-      __assign_12
-    ) else let __assign_13 = (("(Obj.magic (" ^ HxString.toStdString value) ^ "))" : string) in (
+    ignore (if let __string_eq_left_11 = TyType.getSemanticKey (Obj.magic hx_type) () in let __string_eq_right_12 = "primitive:Bool" in HxString.equals __string_eq_left_11 __string_eq_right_12 then let __assign_13 = (("HxRuntime.unbox_bool_or_obj (" ^ HxString.toStdString value) ^ ")" : string) in (
       tempResult := __assign_13;
       __assign_13
+    ) else if TyType.isDynamic (Obj.magic hx_type) () then let __assign_14 = (value : string) in (
+      tempResult := __assign_14;
+      __assign_14
+    ) else let __assign_15 = (("(Obj.magic (" ^ HxString.toStdString value) ^ "))" : string) in (
+      tempResult := __assign_15;
+      __assign_15
     ));
     !tempResult
   )
-)
+) with
+  | HxRuntime.Hx_return __ret_16 -> (Obj.obj __ret_16 : string) : string)
 
 let equality = fun equal left right names -> let leftName = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_object_left" : string) : string) in let rightName = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_object_right" : string) : string) in let tempString = ref (HxString.hx_null_string : string) in (
-  ignore (if equal then let __assign_14 = "==" in (
-    tempString := __assign_14;
-    __assign_14
-  ) else let __assign_15 = "!=" in (
-    tempString := __assign_15;
-    __assign_15
+  ignore (if equal then let __assign_17 = "==" in (
+    tempString := __assign_17;
+    __assign_17
+  ) else let __assign_18 = "!=" in (
+    tempString := __assign_18;
+    __assign_18
   ));
   ((((((((((((("(let " ^ HxString.toStdString leftName) ^ " = (") ^ HxString.toStdString left) ^ ") in let ") ^ HxString.toStdString rightName) ^ " = (") ^ HxString.toStdString right) ^ ") in (Obj.repr ") ^ HxString.toStdString leftName) ^ ") ") ^ HxString.toStdString (!tempString)) ^ " (Obj.repr ") ^ HxString.toStdString rightName) ^ "))"
 )
@@ -54,17 +56,17 @@ let equality = fun equal left right names -> let leftName = (Backend_ocaml_Stage
 let storageDestination = fun actual field -> (try (
   ignore (if actual == Obj.magic (HxRuntime.hx_null) || field == Obj.magic (HxRuntime.hx_null) || Backend_ocaml_Stage3OcamlNullablePrimitive.innerPrimitive (Obj.magic actual) == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr field)) else ());
   let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-    ignore (if Backend_ocaml_Stage3OcamlNumericWidening.isFloatDestination (Obj.magic field) then let __assign_16 = Obj.magic (Obj.magic (TyType.nullable (Obj.magic field) (Obj.magic (HxRuntime.hx_null)))) in (
-      tempResult := __assign_16;
-      __assign_16
-    ) else let __assign_17 = Obj.magic (Obj.magic field) in (
-      tempResult := __assign_17;
-      __assign_17
+    ignore (if Backend_ocaml_Stage3OcamlNumericWidening.isFloatDestination (Obj.magic field) then let __assign_19 = Obj.magic (Obj.magic (TyType.nullable (Obj.magic field) (Obj.magic (HxRuntime.hx_null)))) in (
+      tempResult := __assign_19;
+      __assign_19
+    ) else let __assign_20 = Obj.magic (Obj.magic field) in (
+      tempResult := __assign_20;
+      __assign_20
     ));
     !tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_18 -> (Obj.obj __ret_18 : TyType.t) : TyType.t)
+  | HxRuntime.Hx_return __ret_21 -> (Obj.obj __ret_21 : TyType.t) : TyType.t)
 
 let literal = fun occurrence emit names quote -> let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
   ignore (let _g = Obj.magic (TypedBackendAggregateOccurrence.getExpression (Obj.magic occurrence) ()) in if (match _g with
@@ -114,52 +116,53 @@ let literal = fun occurrence emit names quote -> let tempArray = ref (Obj.magic 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g1 = Obj.magic (match _g with
-    | HxExpr.EAnon (__enum_param_19, _) -> __enum_param_19
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g1 = Obj.magic (match _g with
+    | HxExpr.EAnon (__enum_param_22, _) -> __enum_param_22
     | _ -> failwith "Unexpected enum parameter") in (
     ignore (match _g with
-      | HxExpr.EAnon (_, __enum_param_20) -> __enum_param_20
+      | HxExpr.EAnon (_, __enum_param_23) -> __enum_param_23
       | _ -> failwith "Unexpected enum parameter");
-    let fields = Obj.magic _g1 in let __assign_21 = Obj.magic fields in (
-      tempArray := __assign_21;
-      __assign_21
+    let fields = Obj.magic _g1 in let __assign_24 = Obj.magic fields in (
+      tempArray := __assign_24;
+      __assign_24
     )
   ) else HxType.hx_throw_typed_rtti (Obj.repr "object allocation requires an anonymous aggregate") ["Dynamic"]);
   let fields = Obj.magic (!tempArray) in let values = Obj.magic (TypedBackendAggregateOccurrence.getChildren (Obj.magic occurrence) ()) in let types = Obj.magic (TypedBackendAggregateOccurrence.getChildTypes (Obj.magic occurrence) ()) in let hx_object = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_object" : string) : string) in let structure = Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic (TypedBackendAggregateOccurrence.getType (Obj.magic occurrence) ()))) in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
-    ignore (if TyType.isAnonymous (Obj.magic structure) () then let __assign_22 = Obj.magic (TyType.getAnonymousFields (Obj.magic structure) ()) in (
-      tempArray1 := __assign_22;
-      __assign_22
-    ) else let __assign_23 = Obj.magic (let __arr_24 = HxArray.create () in __arr_24) in (
-      tempArray1 := __assign_23;
-      __assign_23
+    ignore (if TyType.isAnonymous (Obj.magic structure) () then let __assign_25 = Obj.magic (TyType.getAnonymousFields (Obj.magic structure) ()) in (
+      tempArray1 := __assign_25;
+      __assign_25
+    ) else let __assign_26 = Obj.magic (let __arr_27 = HxArray.create () in __arr_27) in (
+      tempArray1 := __assign_26;
+      __assign_26
     ));
-    let structureFields = Obj.magic (!tempArray1) in let stored = let __callback_input_46 = fun index -> let expected = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : TyType.t) in let _g = ref 0 in (
-      ignore (while !_g < HxArray.length structureFields do ignore (let field = let __array_read_receiver_25 = structureFields in let __array_read_index_26 = !_g in HxArray.get (Obj.magic __array_read_receiver_25) __array_read_index_26 in (
-        ignore (let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
-          ignore (_g := __new_28);
-          __new_28
+    let structureFields = Obj.magic (!tempArray1) in let stored = let __callback_input_49 = fun index -> let expected = ref (Obj.magic (Obj.magic (HxRuntime.hx_null)) : TyType.t) in let _g = ref 0 in (
+      ignore (while !_g < HxArray.length structureFields do ignore (let field = let __array_read_receiver_28 = structureFields in let __array_read_index_29 = !_g in HxArray.get (Obj.magic __array_read_receiver_28) __array_read_index_29 in (
+        ignore (let __old_30 = !_g in let __new_31 = HxInt.add __old_30 1 in (
+          ignore (_g := __new_31);
+          __new_31
         ));
-        if let __string_eq_left_29 = Obj.obj (HxAnon.get field "name") in let __string_eq_right_30 = let __array_read_receiver_31 = fields in let __array_read_index_32 = index in HxArray.get (Obj.magic __array_read_receiver_31) __array_read_index_32 in HxString.equals __string_eq_left_29 __string_eq_right_30 then ignore (let __assign_33 = Obj.magic (Obj.magic (storageDestination (Obj.magic (let __array_read_receiver_34 = types in let __array_read_index_35 = index in HxArray.get (Obj.magic __array_read_receiver_34) __array_read_index_35)) (Obj.magic (TypedBackendObjectAccess.fieldDestination field)))) in (
-          expected := __assign_33;
-          __assign_33
+        if let __string_eq_left_32 = Obj.obj (HxAnon.get field "name") in let __string_eq_right_33 = let __array_read_receiver_34 = fields in let __array_read_index_35 = index in HxArray.get (Obj.magic __array_read_receiver_34) __array_read_index_35 in HxString.equals __string_eq_left_32 __string_eq_right_33 then ignore (let __assign_36 = Obj.magic (Obj.magic (storageDestination (Obj.magic (let __array_read_receiver_37 = types in let __array_read_index_38 = index in HxArray.get (Obj.magic __array_read_receiver_37) __array_read_index_38)) (Obj.magic (TypedBackendObjectAccess.fieldDestination field)))) in (
+          expected := __assign_36;
+          __assign_36
         )) else ()
       )) done);
-      let rendered = (emit (Obj.magic (let __array_read_receiver_36 = values in let __array_read_index_37 = index in HxArray.get (Obj.magic __array_read_receiver_36) __array_read_index_37)) : string) in let tempResult = ref (HxString.hx_null_string : string) in (
-        ignore (if Backend_ocaml_Stage3OcamlNumericWidening.convertsToFloat (Obj.magic (let __array_read_receiver_38 = types in let __array_read_index_39 = index in HxArray.get (Obj.magic __array_read_receiver_38) __array_read_index_39)) (Obj.magic (!expected)) then let __assign_40 = (store (Obj.magic (!expected)) (Backend_ocaml_Stage3OcamlNumericWidening.toFloatDestination (Obj.magic (let __array_read_receiver_41 = types in let __array_read_index_42 = index in HxArray.get (Obj.magic __array_read_receiver_41) __array_read_index_42)) (Obj.magic (!expected)) (rendered : string) : string) : string) in (
-          tempResult := __assign_40;
-          __assign_40
-        ) else let __assign_43 = (store (Obj.magic (let __array_read_receiver_44 = types in let __array_read_index_45 = index in HxArray.get (Obj.magic __array_read_receiver_44) __array_read_index_45)) (rendered : string) : string) in (
+      let rendered = (emit (Obj.magic (let __array_read_receiver_39 = values in let __array_read_index_40 = index in HxArray.get (Obj.magic __array_read_receiver_39) __array_read_index_40)) : string) in let tempResult = ref (HxString.hx_null_string : string) in (
+        ignore (if Backend_ocaml_Stage3OcamlNumericWidening.convertsToFloat (Obj.magic (let __array_read_receiver_41 = types in let __array_read_index_42 = index in HxArray.get (Obj.magic __array_read_receiver_41) __array_read_index_42)) (Obj.magic (!expected)) then let __assign_43 = (store (Obj.magic (!expected)) (Backend_ocaml_Stage3OcamlNumericWidening.toFloatDestination (Obj.magic (let __array_read_receiver_44 = types in let __array_read_index_45 = index in HxArray.get (Obj.magic __array_read_receiver_44) __array_read_index_45)) (Obj.magic (!expected)) (rendered : string) : string) : string) in (
           tempResult := __assign_43;
           __assign_43
+        ) else let __assign_46 = (store (Obj.magic (let __array_read_receiver_47 = types in let __array_read_index_48 = index in HxArray.get (Obj.magic __array_read_receiver_47) __array_read_index_48)) (rendered : string) : string) in (
+          tempResult := __assign_46;
+          __assign_46
         ));
         !tempResult
       )
-    ) in let __callable_origin_47 = __callback_input_46 in (__callable_origin_47, Obj.repr (ref ())) in let _g = Obj.magic (let __represented_array_48 = HxArray.create () in __represented_array_48) in let _g1 = ref 0 in let _g2 = HxArray.length fields in (
-      ignore (while !_g1 < _g2 do ignore (let index = let __old_49 = !_g1 in let __new_50 = HxInt.add __old_49 1 in (
-        ignore (_g1 := __new_50);
-        __old_49
-      ) in let __array_receiver_51 = Obj.magic _g in let __array_arg_0_52 = (let __string_part_59 = "HxAnon.set (Obj.repr " in let __string_part_60 = HxString.toStdString hx_object in let __string_part_61 = ") " in let __string_part_62 = HxString.toStdString (let __call_callee_53 = quote in let __call_arg_0_54 = let __array_read_receiver_55 = fields in let __array_read_index_56 = index in HxArray.get (Obj.magic __array_read_receiver_55) __array_read_index_56 in __call_callee_53 __call_arg_0_54) in let __string_part_63 = " (" in let __string_part_64 = HxString.toStdString (let __call_callee_57 = stored in let __call_arg_0_58 = index in Stdlib.fst __call_callee_57 __call_arg_0_58) in let __string_part_65 = "); " in (((((__string_part_59 ^ __string_part_60) ^ __string_part_61) ^ __string_part_62) ^ __string_part_63) ^ __string_part_64) ^ __string_part_65 : string) in HxArray.push __array_receiver_51 __array_arg_0_52) done);
-      let tempArray2 = Obj.magic _g in let writes = Obj.magic tempArray2 in let __string_part_66 = "(let " in let __string_part_67 = HxString.toStdString hx_object in let __string_part_68 = " = HxAnon.create () in " in let __string_part_69 = HxString.toStdString (HxArray.join writes "" (fun x -> x)) in let __string_part_70 = HxString.toStdString hx_object in let __string_part_71 = ")" in ((((__string_part_66 ^ __string_part_67) ^ __string_part_68) ^ __string_part_69) ^ __string_part_70) ^ __string_part_71
+    ) in let __callable_origin_50 = __callback_input_49 in (__callable_origin_50, Obj.repr (ref ())) in let _g = Obj.magic (let __represented_array_51 = HxArray.create () in __represented_array_51) in let _g1 = ref 0 in let _g2 = HxArray.length fields in (
+      ignore (while !_g1 < _g2 do ignore (let index = let __old_52 = !_g1 in let __new_53 = HxInt.add __old_52 1 in (
+        ignore (_g1 := __new_53);
+        __old_52
+      ) in let __array_receiver_54 = Obj.magic _g in let __array_arg_0_55 = (let __string_part_62 = "HxAnon.set (Obj.repr " in let __string_part_63 = HxString.toStdString hx_object in let __string_part_64 = ") " in let __string_part_65 = HxString.toStdString (let __call_callee_56 = quote in let __call_arg_0_57 = let __array_read_receiver_58 = fields in let __array_read_index_59 = index in HxArray.get (Obj.magic __array_read_receiver_58) __array_read_index_59 in __call_callee_56 __call_arg_0_57) in let __string_part_66 = " (" in let __string_part_67 = HxString.toStdString (let __call_callee_60 = stored in let __call_arg_0_61 = index in Stdlib.fst __call_callee_60 __call_arg_0_61) in let __string_part_68 = "); " in (((((__string_part_62 ^ __string_part_63) ^ __string_part_64) ^ __string_part_65) ^ __string_part_66) ^ __string_part_67) ^ __string_part_68 : string) in HxArray.push __array_receiver_54 __array_arg_0_55) done);
+      let tempArray2 = Obj.magic _g in let writes = Obj.magic tempArray2 in let __string_part_69 = "(let " in let __string_part_70 = HxString.toStdString hx_object in let __string_part_71 = " = HxAnon.create () in " in let __string_part_72 = HxString.toStdString (HxArray.join writes "" (fun x -> x)) in let __string_part_73 = HxString.toStdString hx_object in let __string_part_74 = ")" in ((((__string_part_69 ^ __string_part_70) ^ __string_part_71) ^ __string_part_72) ^ __string_part_73) ^ __string_part_74
     )
   )
 )
@@ -167,42 +170,42 @@ let literal = fun occurrence emit names quote -> let tempArray = ref (Obj.magic 
 let access = fun occurrence emit names quote -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (let _g = Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).kind) in match _g with
     | TypedBackendObjectAccess.Read -> let tempString = ref (HxString.hx_null_string : string) in (
-      ignore (if TyType.isFunction (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).resultType)) () then let __assign_72 = let __string_part_75 = "HxMethodDispatch.structural_field (Obj.repr (" in let __string_part_76 = HxString.toStdString (emit (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).receiver))) in let __string_part_77 = ")) " in let __string_part_78 = HxString.toStdString (let __call_callee_73 = quote in let __call_arg_0_74 = (Obj.magic occurrence : TypedBackendObjectAccess.t).field in __call_callee_73 __call_arg_0_74) in let __string_part_79 = " " in let __string_part_80 = string_of_int (HxArray.length (TyType.getFunctionArguments (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).resultType)) ())) in ((((__string_part_75 ^ __string_part_76) ^ __string_part_77) ^ __string_part_78) ^ __string_part_79) ^ __string_part_80 in (
-        tempString := __assign_72;
-        __assign_72
-      ) else let __assign_81 = let __string_part_84 = "HxAnon.get (Obj.repr (" in let __string_part_85 = HxString.toStdString (emit (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).receiver))) in let __string_part_86 = ")) " in let __string_part_87 = HxString.toStdString (let __call_callee_82 = quote in let __call_arg_0_83 = (Obj.magic occurrence : TypedBackendObjectAccess.t).field in __call_callee_82 __call_arg_0_83) in ((__string_part_84 ^ __string_part_85) ^ __string_part_86) ^ __string_part_87 in (
-        tempString := __assign_81;
-        __assign_81
+      ignore (if TyType.isFunction (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).resultType)) () then let __assign_75 = let __string_part_78 = "HxMethodDispatch.structural_field (Obj.repr (" in let __string_part_79 = HxString.toStdString (emit (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).receiver))) in let __string_part_80 = ")) " in let __string_part_81 = HxString.toStdString (let __call_callee_76 = quote in let __call_arg_0_77 = (Obj.magic occurrence : TypedBackendObjectAccess.t).field in __call_callee_76 __call_arg_0_77) in let __string_part_82 = " " in let __string_part_83 = string_of_int (HxArray.length (TyType.getFunctionArguments (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).resultType)) ())) in ((((__string_part_78 ^ __string_part_79) ^ __string_part_80) ^ __string_part_81) ^ __string_part_82) ^ __string_part_83 in (
+        tempString := __assign_75;
+        __assign_75
+      ) else let __assign_84 = let __string_part_87 = "HxAnon.get (Obj.repr (" in let __string_part_88 = HxString.toStdString (emit (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).receiver))) in let __string_part_89 = ")) " in let __string_part_90 = HxString.toStdString (let __call_callee_85 = quote in let __call_arg_0_86 = (Obj.magic occurrence : TypedBackendObjectAccess.t).field in __call_callee_85 __call_arg_0_86) in ((__string_part_87 ^ __string_part_88) ^ __string_part_89) ^ __string_part_90 in (
+        tempString := __assign_84;
+        __assign_84
       ));
-      let stored = !tempString in if TyType.isUnknown (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).resultType)) () then let __assign_88 = (("(" ^ HxString.toStdString stored) ^ ")" : string) in (
-        tempResult := __assign_88;
-        __assign_88
-      ) else let __assign_89 = (read (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).resultType)) (stored : string) : string) in (
-        tempResult := __assign_89;
-        __assign_89
+      let stored = !tempString in if TyType.isUnknown (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).resultType)) () then let __assign_91 = (("(" ^ HxString.toStdString stored) ^ ")" : string) in (
+        tempResult := __assign_91;
+        __assign_91
+      ) else let __assign_92 = (read (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).resultType)) (stored : string) : string) in (
+        tempResult := __assign_92;
+        __assign_92
       )
     )
     | TypedBackendObjectAccess.Write -> (
       ignore (if (Obj.magic occurrence : TypedBackendObjectAccess.t).value == Obj.magic (HxRuntime.hx_null) || (Obj.magic occurrence : TypedBackendObjectAccess.t).valueType == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "object assignment lost its typed operand") ["Dynamic"] else ());
       let hx_object = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_object" : string) : string) in let value = (Backend_ocaml_Stage3OcamlLocalNames.internalName (Obj.magic names) ("__hx_field_value" : string) : string) in let destination = Obj.magic (storageDestination (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).valueType)) (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).placeType))) in let converts = Backend_ocaml_Stage3OcamlNumericWidening.convertsToFloat (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).valueType)) (Obj.magic destination) in let rendered = (emit (Obj.obj (HxEnum.unbox_or_obj "HxExpr" ((Obj.magic occurrence : TypedBackendObjectAccess.t).value))) : string) in let tempString1 = ref (HxString.hx_null_string : string) in (
-        ignore (if converts then let __assign_90 = (Backend_ocaml_Stage3OcamlNumericWidening.toFloatDestination (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).valueType)) (Obj.magic destination) (rendered : string) : string) in (
-          tempString1 := __assign_90;
-          __assign_90
-        ) else let __assign_91 = (rendered : string) in (
-          tempString1 := __assign_91;
-          __assign_91
+        ignore (if converts then let __assign_93 = (Backend_ocaml_Stage3OcamlNumericWidening.toFloatDestination (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).valueType)) (Obj.magic destination) (rendered : string) : string) in (
+          tempString1 := __assign_93;
+          __assign_93
+        ) else let __assign_94 = (rendered : string) in (
+          tempString1 := __assign_94;
+          __assign_94
         ));
         let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-          ignore (if converts then let __assign_92 = Obj.magic destination in (
-            tempTyType := __assign_92;
-            __assign_92
-          ) else let __assign_93 = Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).valueType) in (
-            tempTyType := __assign_93;
-            __assign_93
+          ignore (if converts then let __assign_95 = Obj.magic destination in (
+            tempTyType := __assign_95;
+            __assign_95
+          ) else let __assign_96 = Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).valueType) in (
+            tempTyType := __assign_96;
+            __assign_96
           ));
-          let __assign_94 = (let __string_part_97 = "(let " in let __string_part_98 = HxString.toStdString hx_object in let __string_part_99 = " = (" in let __string_part_100 = HxString.toStdString (emit (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).receiver))) in let __string_part_101 = ") in let " in let __string_part_102 = HxString.toStdString value in let __string_part_103 = " = (" in let __string_part_104 = HxString.toStdString (!tempString1) in let __string_part_105 = ") in HxAnon.set (Obj.repr " in let __string_part_106 = HxString.toStdString hx_object in let __string_part_107 = ") " in let __string_part_108 = HxString.toStdString (let __call_callee_95 = quote in let __call_arg_0_96 = (Obj.magic occurrence : TypedBackendObjectAccess.t).field in __call_callee_95 __call_arg_0_96) in let __string_part_109 = " (" in let __string_part_110 = HxString.toStdString (store (Obj.magic (!tempTyType)) (value : string)) in let __string_part_111 = "); " in let __string_part_112 = HxString.toStdString value in let __string_part_113 = ")" in (((((((((((((((__string_part_97 ^ __string_part_98) ^ __string_part_99) ^ __string_part_100) ^ __string_part_101) ^ __string_part_102) ^ __string_part_103) ^ __string_part_104) ^ __string_part_105) ^ __string_part_106) ^ __string_part_107) ^ __string_part_108) ^ __string_part_109) ^ __string_part_110) ^ __string_part_111) ^ __string_part_112) ^ __string_part_113 : string) in (
-            tempResult := __assign_94;
-            __assign_94
+          let __assign_97 = (let __string_part_100 = "(let " in let __string_part_101 = HxString.toStdString hx_object in let __string_part_102 = " = (" in let __string_part_103 = HxString.toStdString (emit (Obj.magic ((Obj.magic occurrence : TypedBackendObjectAccess.t).receiver))) in let __string_part_104 = ") in let " in let __string_part_105 = HxString.toStdString value in let __string_part_106 = " = (" in let __string_part_107 = HxString.toStdString (!tempString1) in let __string_part_108 = ") in HxAnon.set (Obj.repr " in let __string_part_109 = HxString.toStdString hx_object in let __string_part_110 = ") " in let __string_part_111 = HxString.toStdString (let __call_callee_98 = quote in let __call_arg_0_99 = (Obj.magic occurrence : TypedBackendObjectAccess.t).field in __call_callee_98 __call_arg_0_99) in let __string_part_112 = " (" in let __string_part_113 = HxString.toStdString (store (Obj.magic (!tempTyType)) (value : string)) in let __string_part_114 = "); " in let __string_part_115 = HxString.toStdString value in let __string_part_116 = ")" in (((((((((((((((__string_part_100 ^ __string_part_101) ^ __string_part_102) ^ __string_part_103) ^ __string_part_104) ^ __string_part_105) ^ __string_part_106) ^ __string_part_107) ^ __string_part_108) ^ __string_part_109) ^ __string_part_110) ^ __string_part_111) ^ __string_part_112) ^ __string_part_113) ^ __string_part_114) ^ __string_part_115) ^ __string_part_116 : string) in (
+            tempResult := __assign_97;
+            __assign_97
           )
         )
       )

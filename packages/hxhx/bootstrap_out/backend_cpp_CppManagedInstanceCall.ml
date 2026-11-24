@@ -74,7 +74,8 @@ let render = fun input indent -> let projection = Obj.magic (Backend_cpp_CppMana
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then let __assign_32 = true in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 11 then let __assign_32 = true in (
           tempBool := __assign_32;
           __assign_32
         ) else let __assign_33 = false in (

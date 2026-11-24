@@ -57,7 +57,8 @@ let bindingKeyword = fun projectedName value catalog -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47 with
       | 33 -> let _g = Obj.magic (let __enum_param_4 = value in if __enum_param_4 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_4 with
         | HxExpr.ECast (__enum_param_3, _) -> __enum_param_3
         | _ -> failwith "Unexpected enum parameter") in (
@@ -135,7 +136,8 @@ let bindingKeyword = fun projectedName value catalog -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then (
         ignore (let __enum_param_17 = lambda in if __enum_param_17 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_17 with
           | HxExpr.ELambda (__enum_param_16, _, _) -> __enum_param_16
           | _ -> failwith "Unexpected enum parameter");
@@ -205,7 +207,8 @@ let bindingKeyword = fun projectedName value catalog -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g = (match expression with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g = (match expression with
             | HxExpr.EIdent __enum_param_26 -> __enum_param_26
             | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in if let __string_eq_left_27 = name in let __string_eq_right_28 = projectedName in HxString.equals __string_eq_left_27 __string_eq_right_28 then ignore (let __assign_29 = true in (
             selfRead := __assign_29;

@@ -52,7 +52,8 @@ let select = fun input -> (try let call = Obj.obj (HxAnon.get input "call") in l
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then let __assign_1 = true in (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 11 then let __assign_1 = true in (
     tempBool := __assign_1;
     __assign_1
   ) else let __assign_2 = false in (

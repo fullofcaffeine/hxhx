@@ -64,7 +64,8 @@ let infer = fun input -> (try let tempShortCircuit = ref (false : bool) in (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 2 then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 2 then (
       ignore (match _g with
         | HxExpr.ESourceFor (__enum_param_4, _, _, _) -> __enum_param_4
         | _ -> failwith "Unexpected enum parameter");

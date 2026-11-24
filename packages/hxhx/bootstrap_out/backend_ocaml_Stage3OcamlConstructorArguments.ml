@@ -75,7 +75,8 @@ let values = fun occurrence -> let arguments = Obj.magic (TypedBackendConstructo
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g4 = Obj.magic (match _g3 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g4 = Obj.magic (match _g3 with
       | HxExpr.ECall (__enum_param_85, _) -> __enum_param_85
       | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g3 with
       | HxExpr.ECall (_, __enum_param_86) -> __enum_param_86
@@ -126,7 +127,8 @@ let values = fun occurrence -> let arguments = Obj.magic (TypedBackendConstructo
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
       | HxExpr.EIdent __enum_param_87 -> __enum_param_87
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_88 = _g6 in let __string_eq_right_89 = "__hxhx_spread" in HxString.equals __string_eq_left_88 __string_eq_right_89 then if HxArray.length _g5 = 1 then let _g7 = Obj.magic (let __array_read_receiver_90 = _g5 in let __array_read_index_91 = 0 in HxArray.get (Obj.magic __array_read_receiver_90) __array_read_index_91) in let value = Obj.magic _g7 in let __assign_92 = Obj.magic value in (
       tempHxExpr := __assign_92;

@@ -33,10 +33,11 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
         __assign_85
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
         ignore _p3;
+        ignore _p4;
         let yes = Obj.magic _g2 in let no = _g1 in let tempNumber = ref (0 : int) in (
           ignore (if no == Obj.magic (HxRuntime.hx_null) then let __assign_86 = 0 in (
             tempNumber := __assign_86;
@@ -103,7 +104,8 @@ let rec validate = fun statement -> let tempResult = ref (0 : int) in (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 32 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 32 then (
           ignore (match _g2 with
             | HxExpr.ERange (__enum_param_89, _) -> __enum_param_89
             | _ -> failwith "Unexpected enum parameter");
@@ -291,7 +293,8 @@ let plan = fun facts body isEnumBox referenceCarrier -> (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then ignore ((
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then ignore ((
     ignore (match _g with
       | HxExpr.ELambda (__enum_param_45, _, _) -> __enum_param_45
       | _ -> failwith "Unexpected enum parameter");
@@ -420,7 +423,8 @@ let render = fun input -> let selected = plan (Obj.magic (Obj.obj (HxAnon.get in
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g1 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g1 = Obj.magic (match _g with
       | HxExpr.ELambda (__enum_param_1, _, _) -> __enum_param_1
       | _ -> failwith "Unexpected enum parameter") in (
       ignore (match _g with

@@ -123,7 +123,8 @@ let isEarlyFunction = fun self (hx_initializer : TypedBackendFieldInitializerPro
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47 with
         | 33 -> ignore ((
           ignore (let __enum_param_30 = Obj.magic (!value) in if __enum_param_30 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_30 with
             | HxExpr.ECast (__enum_param_29, _) -> __enum_param_29
@@ -213,7 +214,8 @@ let earlyNativeBinding = fun self (hx_initializer : TypedBackendFieldInitializer
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g4 = (match _g1 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g4 = (match _g1 with
               | HxExpr.EString __enum_param_52 -> __enum_param_52
               | _ -> failwith "Unexpected enum parameter" : string) in if (match _g2 with
               | HxExpr.EParenthesized (_, _) -> 0
@@ -262,7 +264,8 @@ let earlyNativeBinding = fun self (hx_initializer : TypedBackendFieldInitializer
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g5 = (match _g2 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g5 = (match _g2 with
               | HxExpr.EString __enum_param_53 -> __enum_param_53
               | _ -> failwith "Unexpected enum parameter" : string) in if (match _g3 with
               | HxExpr.EParenthesized (_, _) -> 0
@@ -311,7 +314,8 @@ let earlyNativeBinding = fun self (hx_initializer : TypedBackendFieldInitializer
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then let _g6 = match _g3 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then let _g6 = match _g3 with
               | HxExpr.EInt __enum_param_54 -> __enum_param_54
               | _ -> failwith "Unexpected enum parameter" in let arity = _g6 in let library = (_g4 : string) in let primitive = (_g5 : string) in let __assign_55 = Obj.magic (let __anonymous_value_56 = HxAnon.create () in (
               let __anonymous_field_value_57 = library in ignore (HxAnon.set __anonymous_value_56 "library" (Obj.repr __anonymous_field_value_57));

@@ -65,7 +65,8 @@ let markErasedDynamicArgIdent = fun self (expr : HxExpr.hxexpr) (dynamicArgs : b
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g = (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g = (match expr with
     | HxExpr.EIdent __enum_param_88 -> __enum_param_88
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let local = (name : string) in if HxMap.exists_string (Obj.magic dynamicArgs) (local : string) then ignore (HxMap.set_string (Obj.magic used) (local : string) true) else ()) else ignore ())
 ))
@@ -126,7 +127,8 @@ let rec collectErasedDynamicArgUsageNamesFromExpr = fun self (expr : HxExpr.hxex
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then ignore (let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then ignore (let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_23, _) -> __enum_param_23
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_24) -> __enum_param_24
@@ -177,7 +179,8 @@ let rec collectErasedDynamicArgUsageNamesFromExpr = fun self (expr : HxExpr.hxex
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
     | HxExpr.EIdent __enum_param_25 -> __enum_param_25
     | _ -> failwith "Unexpected enum parameter" : string) in match _g4 with
     | "Std" -> ignore (let hx_method = (_g3 : string) in let args = Obj.magic _g1 in if ((let __string_eq_left_30 = hx_method in let __string_eq_right_31 = "isOfType" in HxString.equals __string_eq_left_30 __string_eq_right_31) || (let __string_eq_left_32 = hx_method in let __string_eq_right_33 = "is" in HxString.equals __string_eq_left_32 __string_eq_right_33)) && HxArray.length args > 0 then ignore ((
@@ -373,8 +376,9 @@ let rec collectErasedDynamicArgUsageNamesFromStmt = fun self (stmt : HxStmt.hxst
       let init = _g3 in if init != Obj.magic (HxRuntime.hx_null) then ignore (collectErasedDynamicArgUsageNamesFromExpr (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) (Obj.magic dynamicArgs) (Obj.magic used)) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectErasedDynamicArgUsageNamesFromExpr (Obj.magic self) (Obj.magic cond) (Obj.magic dynamicArgs) (Obj.magic used));
       ignore (collectErasedDynamicArgUsageNamesFromStmt (Obj.magic self) (Obj.magic thenBranch) (Obj.magic dynamicArgs) (Obj.magic used));
@@ -542,7 +546,8 @@ let rec collectClosureVectorEvidenceFromExpr = fun self (expr : HxExpr.hxexpr) (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_154 -> __enum_param_154
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_155 = _g3 in let __string_eq_right_156 = "push" in HxString.equals __string_eq_left_155 __string_eq_right_156 then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (let __array_read_receiver_157 = _g1 in let __array_read_index_158 = 0 in HxArray.get (Obj.magic __array_read_receiver_157) __array_read_index_158) in let value = Obj.magic _g5 in let name = (_g4 : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore (let local = (name : string) in (
       ignore (if not (HxMap.exists_string (Obj.magic pushedValues) (local : string)) then ignore (HxMap.set_string (Obj.magic pushedValues) (local : string) (let __arr_159 = HxArray.create () in __arr_159)) else ());
@@ -632,7 +637,8 @@ let rec collectClosureVectorEvidenceFromExpr = fun self (expr : HxExpr.hxexpr) (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_178 -> __enum_param_178
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let index = Obj.magic _g3 in let args = Obj.magic _g1 in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore (let local = (name : string) in (
       ignore (if not (HxMap.exists_string (Obj.magic callArgTypes) (local : string)) then ignore (HxMap.set_string (Obj.magic callArgTypes) (local : string) (let __arr_179 = HxArray.create () in __arr_179)) else ());
@@ -865,7 +871,8 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_284 -> __enum_param_284
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_285 = _g2 in let __string_eq_right_286 = "__hxhx_optional_lambda" in HxString.equals __string_eq_left_285 __string_eq_right_286 then if HxArray.length _g1 = 2 then let _g3 = Obj.magic (let __array_read_receiver_287 = _g1 in let __array_read_index_288 = 0 in HxArray.get (Obj.magic __array_read_receiver_287) __array_read_index_288) in let _g4 = Obj.magic (let __array_read_receiver_289 = _g1 in let __array_read_index_290 = 1 in HxArray.get (Obj.magic __array_read_receiver_289) __array_read_index_290) in if (match _g3 with
       | HxExpr.EParenthesized (_, _) -> 0
@@ -914,7 +921,8 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g5 = Obj.magic (match _g3 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g5 = Obj.magic (match _g3 with
       | HxExpr.ELambda (__enum_param_291, _, _) -> __enum_param_291
       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
       | HxExpr.ELambda (_, __enum_param_292, _) -> __enum_param_292
@@ -969,7 +977,8 @@ let closureVectorPushedValueType = fun self (value : HxExpr.hxexpr) (callShapes 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
         ignore (match _g4 with
           | HxExpr.EArrayDecl __enum_param_294 -> __enum_param_294
           | _ -> failwith "Unexpected enum parameter");
@@ -1068,7 +1077,8 @@ let rec collectClosureVectorPushedTypesFromExpr = fun self (expr : HxExpr.hxexpr
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then ignore (let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then ignore (let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_234, _) -> __enum_param_234
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_235) -> __enum_param_235
@@ -1119,7 +1129,8 @@ let rec collectClosureVectorPushedTypesFromExpr = fun self (expr : HxExpr.hxexpr
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
     | HxExpr.EIdent __enum_param_236 -> __enum_param_236
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_237 = _g3 in let __string_eq_right_238 = "push" in HxString.equals __string_eq_left_237 __string_eq_right_238 then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (let __array_read_receiver_239 = _g1 in let __array_read_index_240 = 0 in HxArray.get (Obj.magic __array_read_receiver_239) __array_read_index_240) in let value = Obj.magic _g5 in let name = (_g4 : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore (let local = (name : string) in (
     ignore (if not (HxMap.exists_string (Obj.magic pushedTypes) (local : string)) then ignore (HxMap.set_string (Obj.magic pushedTypes) (local : string) (let __represented_array_241 = HxArray.create () in __represented_array_241)) else ());
@@ -1335,7 +1346,8 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g3 = (match _g2 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g3 = (match _g2 with
             | HxExpr.EIdent __enum_param_315 -> __enum_param_315
             | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_316 = _g3 in let __string_eq_right_317 = "__hxhx_optional_lambda" in HxString.equals __string_eq_left_316 __string_eq_right_317 then if HxArray.length _g1 = 2 then let _g4 = Obj.magic (let __array_read_receiver_318 = _g1 in let __array_read_index_319 = 0 in HxArray.get (Obj.magic __array_read_receiver_318) __array_read_index_319) in let _g5 = Obj.magic (let __array_read_receiver_320 = _g1 in let __array_read_index_321 = 1 in HxArray.get (Obj.magic __array_read_receiver_320) __array_read_index_321) in if (match _g4 with
             | HxExpr.EParenthesized (_, _) -> 0
@@ -1384,7 +1396,8 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g6 = Obj.magic (match _g4 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g6 = Obj.magic (match _g4 with
             | HxExpr.ELambda (__enum_param_322, _, _) -> __enum_param_322
             | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g4 with
             | HxExpr.ELambda (_, __enum_param_323, _) -> __enum_param_323
@@ -1439,7 +1452,8 @@ let closureVectorElementType = fun self (values : HxExpr.hxexpr HxArray.t) (call
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
               ignore (match _g5 with
                 | HxExpr.EArrayDecl __enum_param_325 -> __enum_param_325
                 | _ -> failwith "Unexpected enum parameter");
@@ -1586,7 +1600,8 @@ let isEmptyArrayExpr = fun self (init : Obj.t) -> (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47 with
       | 22 -> let _g = (let __enum_param_364 = init in if __enum_param_364 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_364 with
         | HxExpr.ENew (__enum_param_363, _) -> __enum_param_363
         | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (let __enum_param_366 = init in if __enum_param_366 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_366 with
@@ -1638,10 +1653,11 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
     ignore _p4;
     let name = (_g : string) in let typeHint = (_g1 : string) in let init = _g2 in if isUnhintedEmptyArray (Obj.magic self) (typeHint : string) init then ignore (HxMap.set_string (Obj.magic candidates) (name : string) true) else ignore ()
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore ((
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
     let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
       ignore _p3;
+      ignore _p4;
       let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in (
         ignore (collectClosureVectorLocalCandidatesFromStmt (Obj.magic self) (Obj.magic thenBranch) (Obj.magic candidates));
         if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (collectClosureVectorLocalCandidatesFromStmt (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (Obj.magic candidates)) else ()
@@ -1784,7 +1800,8 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then ignore (let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then ignore (let _g2 = (match _g with
       | HxExpr.EBinop (__enum_param_127, _, _) -> __enum_param_127
       | _ -> failwith "Unexpected enum parameter" : string) in let _g3 = Obj.magic (match _g with
       | HxExpr.EBinop (_, __enum_param_128, _) -> __enum_param_128
@@ -1837,7 +1854,8 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g5 = (match _g3 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g5 = (match _g3 with
       | HxExpr.EIdent __enum_param_132 -> __enum_param_132
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g5 : string) in let init = Obj.magic _g4 in if isEmptyArrayExpr (Obj.magic self) (Obj.repr init) then ignore (HxMap.set_string (Obj.magic candidates) (name : string) true) else ignore ()) else ignore ()) else ignore ()) else ignore ()
   ))
@@ -1867,8 +1885,9 @@ let rec collectClosureVectorEvidenceFromStmt = fun self (stmt : HxStmt.hxstmt) (
       let local = (name : string) in if not (HxMap.exists_string (Obj.magic candidates) (local : string)) || not (isUnhintedEmptyArray (Obj.magic self) (typeHint : string) init) then ignore (let localType = ((Obj.obj (HxAnon.get ((Obj.magic self : t).api) "cppLocalTypeHint") : _ -> _ -> _ -> _) (typeHint : string) init scope : string) in if (let __string_receiver_137 = localType in HxString.length __string_receiver_137) > 0 then ignore (let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (local : string) localType) else ()) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectClosureVectorEvidenceFromExpr (Obj.magic self) (Obj.magic cond) scope (Obj.magic candidates) (Obj.magic pushedValues) (Obj.magic callArgTypes));
       ignore (collectClosureVectorEvidenceFromStmt (Obj.magic self) (Obj.magic thenBranch) scope (Obj.magic candidates) (Obj.magic pushedValues) (Obj.magic callArgTypes));
@@ -1991,8 +2010,9 @@ let rec collectClosureVectorPushedTypesFromStmt = fun self (stmt : HxStmt.hxstmt
       let local = (name : string) in if not (HxMap.exists_string (Obj.magic candidates) (local : string)) || not (isUnhintedEmptyArray (Obj.magic self) (typeHint : string) init) then ignore (let localType = ((Obj.obj (HxAnon.get ((Obj.magic self : t).api) "cppLocalTypeHint") : _ -> _ -> _ -> _) (typeHint : string) init scope : string) in if (let __string_receiver_221 = localType in HxString.length __string_receiver_221) > 0 then ignore (let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (local : string) localType) else ()) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectClosureVectorPushedTypesFromExpr (Obj.magic self) (Obj.magic cond) scope (Obj.magic candidates) (Obj.magic callArgTypes) (Obj.magic pushedTypes));
       ignore (collectClosureVectorPushedTypesFromStmt (Obj.magic self) (Obj.magic thenBranch) scope (Obj.magic candidates) (Obj.magic callArgTypes) (Obj.magic pushedTypes));
@@ -2263,7 +2283,8 @@ let mapClassNameFromNewExpr = fun self (expr : Obj.t) -> let tempResult = ref (H
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then let _g = (let __enum_param_468 = expr in if __enum_param_468 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_468 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then let _g = (let __enum_param_468 = expr in if __enum_param_468 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_468 with
     | HxExpr.ENew (__enum_param_467, _) -> __enum_param_467
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (let __enum_param_470 = expr in if __enum_param_470 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_470 with
@@ -2470,7 +2491,8 @@ let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxe
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then ignore (let _g2 = Obj.magic (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then ignore (let _g2 = Obj.magic (match _g with
         | HxExpr.EField (__enum_param_405, _) -> __enum_param_405
         | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
         | HxExpr.EField (_, __enum_param_406) -> __enum_param_406
@@ -2521,7 +2543,8 @@ let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxe
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_407 -> __enum_param_407
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_408 = _g3 in let __string_eq_right_409 = "set" in HxString.equals __string_eq_left_408 __string_eq_right_409 then ignore (if HxArray.length _g1 = 2 then ignore (let _g5 = Obj.magic (let __array_read_receiver_410 = _g1 in let __array_read_index_411 = 0 in HxArray.get (Obj.magic __array_read_receiver_410) __array_read_index_411) in let _g6 = Obj.magic (let __array_read_receiver_412 = _g1 in let __array_read_index_413 = 1 in HxArray.get (Obj.magic __array_read_receiver_412) __array_read_index_413) in let key = Obj.magic _g5 in let value = Obj.magic _g6 in let name = (_g4 : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore ((
         ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic key) scope (Obj.magic candidates));
@@ -2696,8 +2719,9 @@ let rec collectStringMapLocalTypeOverridesFromStmt = fun self (stmt : HxStmt.hxs
       )
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectStringMapLocalTypeOverridesFromExpr (Obj.magic self) (Obj.magic cond) scope (Obj.magic candidates));
       ignore (collectStringMapLocalTypeOverridesFromStmt (Obj.magic self) (Obj.magic thenBranch) scope (Obj.magic candidates));
@@ -2926,7 +2950,8 @@ let rec qualifiedEnumCarrierCppTypeImpl = fun expr scope api2 -> let tempResult 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_540, _) -> __enum_param_540
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_541) -> __enum_param_541

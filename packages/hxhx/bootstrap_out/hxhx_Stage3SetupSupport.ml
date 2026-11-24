@@ -607,19 +607,53 @@ let projectClassPaths = fun input -> let cwd = (Obj.obj (HxAnon.get input "cwd")
   )
 )
 
+let upstreamTargetDefines = fun backendTargetDefine -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string HxMap.string_map) in (
+  ignore (match backendTargetDefine with
+    | "js" -> let _g = HxMap.create_string () in (
+      ignore (HxMap.set_string (Obj.magic _g) ("target.name" : string) "js");
+      ignore (HxMap.set_string (Obj.magic _g) ("target.unicode" : string) "1");
+      ignore (HxMap.set_string (Obj.magic _g) ("target.utf16" : string) "1");
+      ignore (HxMap.set_string (Obj.magic _g) ("target.atomics" : string) "1");
+      let __assign_363 = _g in (
+        tempResult := __assign_363;
+        __assign_363
+      )
+    )
+    | "ocaml" -> let _g = HxMap.create_string () in (
+      ignore (HxMap.set_string (Obj.magic _g) ("target.name" : string) "cross");
+      ignore (HxMap.set_string (Obj.magic _g) ("target.static" : string) "1");
+      ignore (HxMap.set_string (Obj.magic _g) ("target.sys" : string) "1");
+      ignore (HxMap.set_string (Obj.magic _g) ("target.threaded" : string) "1");
+      ignore (HxMap.set_string (Obj.magic _g) ("target.unicode" : string) "1");
+      ignore (HxMap.set_string (Obj.magic _g) ("target.utf16" : string) "1");
+      let __assign_364 = _g in (
+        tempResult := __assign_364;
+        __assign_364
+      )
+    )
+    | _ -> let __assign_362 = HxMap.create_string () in (
+      tempResult := __assign_362;
+      __assign_362
+    ));
+  !tempResult
+)
+
 let buildDefinesMap = fun allDefines backendTargetDefine backendId -> let definesMap = Obj.magic (HxDefineMap.fromRawDefines (Obj.magic allDefines)) in (
   ignore (HxMap.set_string (Obj.magic definesMap) ("sys" : string) "1");
   ignore (HxMap.set_string (Obj.magic definesMap) (backendTargetDefine : string) "1");
-  ignore (if (let __string_eq_left_362 = backendTargetDefine in let __string_eq_right_363 = "ocaml" in HxString.equals __string_eq_left_362 __string_eq_right_363) && not (HxMap.exists_string (Obj.magic definesMap) ("ocaml_output" : string)) then ignore (HxMap.set_string (Obj.magic definesMap) ("ocaml_output" : string) "1") else ());
-  let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in (
-    ignore (while !_g < HxArray.length _g1 do ignore (let n = (let __array_read_receiver_364 = _g1 in let __array_read_index_365 = !_g in HxArray.get (Obj.magic __array_read_receiver_364) __array_read_index_365 : string) in (
-      ignore (let __old_366 = !_g in let __new_367 = HxInt.add __old_366 1 in (
-        ignore (_g := __new_367);
-        __new_367
-      ));
-      let value = let __call_arg_0_368 = n in Hxhx_macro_MacroState.definedValue __call_arg_0_368 in HxMap.set_string (Obj.magic definesMap) (n : string) value
-    )) done);
-    ignore (if (let __string_eq_left_369 = backendId in let __string_eq_right_370 = "ocaml-stage3" in HxString.equals __string_eq_left_369 __string_eq_right_370) || (let __string_eq_left_371 = backendId in let __string_eq_right_372 = "ocaml-native" in HxString.equals __string_eq_left_371 __string_eq_right_372) then ignore (let profile = (Backend_OcamlProfile.fromDefineValue (HxMap.get_string (Obj.magic definesMap) ("ocaml_profile" : string) : string) : string) in HxMap.set_string (Obj.magic definesMap) ("ocaml_profile" : string) profile) else ());
-    definesMap
+  let this1 = upstreamTargetDefines (backendTargetDefine : string) in let tempKeyValueIterator = HxIterator.of_array (Obj.magic (HxMap.pairs_string this1)) in let _g = tempKeyValueIterator in (
+    ignore (while let __iterator_receiver_365 = _g in HxIterator.hasNext __iterator_receiver_365 do ignore (let _g2 = let __iterator_receiver_366 = _g in HxIterator.next __iterator_receiver_366 in let name = (let __structural_receiver_367 = _g2 in Stdlib.fst __structural_receiver_367 : string) in let value = (let __structural_receiver_368 = _g2 in Stdlib.snd __structural_receiver_368 : string) in if not (HxMap.exists_string (Obj.magic definesMap) (name : string)) then ignore (HxMap.set_string (Obj.magic definesMap) (name : string) value) else ()) done);
+    ignore (if (let __string_eq_left_369 = backendTargetDefine in let __string_eq_right_370 = "ocaml" in HxString.equals __string_eq_left_369 __string_eq_right_370) && not (HxMap.exists_string (Obj.magic definesMap) ("ocaml_output" : string)) then ignore (HxMap.set_string (Obj.magic definesMap) ("ocaml_output" : string) "1") else ());
+    let _g = ref 0 in let _g1 = Obj.magic (Hxhx_macro_MacroState.listDefineNames ()) in (
+      ignore (while !_g < HxArray.length _g1 do ignore (let n = (let __array_read_receiver_371 = _g1 in let __array_read_index_372 = !_g in HxArray.get (Obj.magic __array_read_receiver_371) __array_read_index_372 : string) in (
+        ignore (let __old_373 = !_g in let __new_374 = HxInt.add __old_373 1 in (
+          ignore (_g := __new_374);
+          __new_374
+        ));
+        let value = let __call_arg_0_375 = n in Hxhx_macro_MacroState.definedValue __call_arg_0_375 in HxMap.set_string (Obj.magic definesMap) (n : string) value
+      )) done);
+      ignore (if (let __string_eq_left_376 = backendId in let __string_eq_right_377 = "ocaml-stage3" in HxString.equals __string_eq_left_376 __string_eq_right_377) || (let __string_eq_left_378 = backendId in let __string_eq_right_379 = "ocaml-native" in HxString.equals __string_eq_left_378 __string_eq_right_379) then ignore (let profile = (Backend_OcamlProfile.fromDefineValue (HxMap.get_string (Obj.magic definesMap) ("ocaml_profile" : string) : string) : string) in HxMap.set_string (Obj.magic definesMap) ("ocaml_profile" : string) profile) else ());
+      definesMap
+    )
   )
 )

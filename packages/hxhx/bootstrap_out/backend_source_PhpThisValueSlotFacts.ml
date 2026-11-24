@@ -93,7 +93,8 @@ let rec expressionNeedsValueSlot = fun expression -> let tempResult = ref (false
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_37 = true in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_37 = true in (
       tempResult := __assign_37;
       __assign_37
     ) else let callee = Obj.magic _g in let arguments = Obj.magic _g1 in let __assign_38 = expressionNeedsValueSlot (Obj.magic callee) || expressionListNeedsValueSlot (Obj.magic arguments) in (
@@ -180,7 +181,8 @@ let rec expressionNeedsValueSlot = fun expression -> let tempResult = ref (false
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let op = Obj.magic _g in if (let __enum_eq_left_43 = op in let __enum_eq_right_44 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_43) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_44)) || (let __enum_eq_left_45 = op in let __enum_eq_right_46 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_45) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_46)) then let __assign_47 = true in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let op = Obj.magic _g in if (let __enum_eq_left_43 = op in let __enum_eq_right_44 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_43) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_44)) || (let __enum_eq_left_45 = op in let __enum_eq_right_46 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_45) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_46)) then let __assign_47 = true in (
         tempResult := __assign_47;
         __assign_47
       ) else let inner = Obj.magic _g2 in let __assign_48 = expressionNeedsValueSlot (Obj.magic inner) in (
@@ -238,7 +240,8 @@ let rec expressionNeedsValueSlot = fun expression -> let tempResult = ref (false
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let op = (_g : string) in if (let __call_arg_0_50 = op in isAssignmentOperator __call_arg_0_50) || (let __string_eq_left_51 = op in let __string_eq_right_52 = "??=" in HxString.equals __string_eq_left_51 __string_eq_right_52) || (let __string_eq_left_53 = op in let __string_eq_right_54 = ">>>=" in HxString.equals __string_eq_left_53 __string_eq_right_54) then let __assign_55 = true in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let op = (_g : string) in if (let __call_arg_0_50 = op in isAssignmentOperator __call_arg_0_50) || (let __string_eq_left_51 = op in let __string_eq_right_52 = "??=" in HxString.equals __string_eq_left_51 __string_eq_right_52) || (let __string_eq_left_53 = op in let __string_eq_right_54 = ">>>=" in HxString.equals __string_eq_left_53 __string_eq_right_54) then let __assign_55 = true in (
       tempResult := __assign_55;
       __assign_55
     ) else let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_56 = expressionNeedsValueSlot (Obj.magic left) || expressionNeedsValueSlot (Obj.magic right) in (
@@ -352,8 +355,9 @@ and statementNeedsValueSlot = fun statement -> let tempResult = ref (false : boo
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
       ignore _p3;
+      ignore _p4;
       let condition = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let __assign_13 = expressionNeedsValueSlot (Obj.magic condition) || statementNeedsValueSlot (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && statementNeedsValueSlot (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
         tempResult := __assign_13;
         __assign_13

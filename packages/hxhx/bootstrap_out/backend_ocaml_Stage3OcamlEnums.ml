@@ -272,7 +272,8 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_227 = true in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_227 = true in (
                     tempShortCircuit := __assign_227;
                     __assign_227
                   ) else let __assign_228 = false in (
@@ -353,7 +354,8 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_245 = true in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_245 = true in (
                     tempShortCircuit1 := __assign_245;
                     __assign_245
                   ) else let __assign_246 = false in (
@@ -422,7 +424,8 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_260 = true in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_260 = true in (
                     tempShortCircuit2 := __assign_260;
                     __assign_260
                   ) else let __assign_261 = false in (
@@ -492,7 +495,8 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_274 = true in (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_274 = true in (
                       tempShortCircuit3 := __assign_274;
                       __assign_274
                     ) else let __assign_275 = false in (
@@ -573,7 +577,8 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_292 = true in (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_292 = true in (
                       tempShortCircuit4 := __assign_292;
                       __assign_292
                     ) else let __assign_293 = false in (
@@ -642,7 +647,8 @@ let call = fun self (selected : Obj.t) (emit : HxExpr.hxexpr -> string) (names :
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_307 = true in (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_307 = true in (
                       tempShortCircuit5 := __assign_307;
                       __assign_307
                     ) else let __assign_308 = false in (

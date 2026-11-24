@@ -477,7 +477,7 @@ and parseObject = fun self () -> (try (
           ignore (expectCode (Obj.magic self) 58);
           ignore (skipWhitespace (Obj.magic self) ());
           let value = parseValue (Obj.magic self) () in (
-            ignore (let __reflect_arg_0_21 = obj in let __reflect_arg_1_22 = HxString.toStdString key in let __reflect_arg_2_23 = Obj.repr value in HxAnon.set __reflect_arg_0_21 __reflect_arg_1_22 __reflect_arg_2_23);
+            ignore (let __reflect_arg_0_21 = obj in let __reflect_arg_1_22 = HxString.toStdString key in let __reflect_arg_2_23 = value in HxAnon.set __reflect_arg_0_21 __reflect_arg_1_22 __reflect_arg_2_23);
             ignore (skipWhitespace (Obj.magic self) ());
             ignore (if consumeIf (Obj.magic self) 125 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr obj)) else ());
             expectCode (Obj.magic self) 44

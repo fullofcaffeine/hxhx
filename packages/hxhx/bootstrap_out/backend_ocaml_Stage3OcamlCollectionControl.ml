@@ -56,7 +56,8 @@ let validate = fun expression lookup -> ignore (TypedBackendSourceWalk.expressio
   | HxExpr.EDiscardThen (_, _) -> 43
   | HxExpr.ESourceGroup (_, _) -> 44
   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-  | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then ignore (let _g = Obj.magic (match value with
+  | HxExpr.EPrivateAccess (_, _) -> 46
+  | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then ignore (let _g = Obj.magic (match value with
   | HxExpr.ELoweredControl (__enum_param_5, _, _, _) -> __enum_param_5
   | _ -> failwith "Unexpected enum parameter") in let _g1 = (match value with
   | HxExpr.ELoweredControl (_, __enum_param_6, _, _) -> __enum_param_6
@@ -133,7 +134,8 @@ let validate = fun expression lookup -> ignore (TypedBackendSourceWalk.expressio
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 32 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 32 then (
           ignore (match iterable with
             | HxExpr.ERange (__enum_param_17, _) -> __enum_param_17
             | _ -> failwith "Unexpected enum parameter");
@@ -229,7 +231,8 @@ let append = fun occurrence emit names -> (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g1 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g1 = Obj.magic (match _g with
       | HxExpr.ELoweredControl (__enum_param_35, _, _, _) -> __enum_param_35
       | _ -> failwith "Unexpected enum parameter") in let _g2 = (match _g with
       | HxExpr.ELoweredControl (_, __enum_param_36, _, _) -> __enum_param_36

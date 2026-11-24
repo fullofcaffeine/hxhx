@@ -66,7 +66,8 @@ let rec exprCallsLocal = fun expr local -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47 with
       | 0 -> let _g = Obj.magic (let __enum_param_35 = expr in if __enum_param_35 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_35 with
         | HxExpr.EParenthesized (__enum_param_34, _) -> __enum_param_34
         | _ -> failwith "Unexpected enum parameter") in (
@@ -140,7 +141,8 @@ let rec exprCallsLocal = fun expr local -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
         | HxExpr.EIdent __enum_param_48 -> __enum_param_48
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in let __assign_49 = (let __string_eq_left_50 = name in let __string_eq_right_51 = local in HxString.equals __string_eq_left_50 __string_eq_right_51) || exprListCallsLocal (Obj.magic args) (local : string) in (
         tempResult := __assign_49;
@@ -368,8 +370,9 @@ and stmtCallsLocal = fun stmt local -> let tempResult = ref (false : bool) in (
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
       ignore _p3;
+      ignore _p4;
       let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let __assign_9 = exprCallsLocal (Obj.repr cond) (local : string) || stmtCallsLocal (Obj.magic thenBranch) (local : string) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtCallsLocal (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (local : string) in (
         tempResult := __assign_9;
         __assign_9

@@ -8,7 +8,7 @@ let render = fun arguments body expression -> let statements = Obj.magic (TypedC
   ignore (if HxArray.length statements = 1 then let _g = Obj.magic (let __array_read_receiver_1 = statements in let __array_read_index_2 = 0 in HxArray.get (Obj.magic __array_read_receiver_1) __array_read_index_2) in if (match _g with
     | HxStmt.SBlock (_, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
-    | HxStmt.SIf (_, _, _, _) -> 2
+    | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
     | HxStmt.SWhile (_, _, _) -> 5

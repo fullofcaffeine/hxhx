@@ -96,7 +96,8 @@ let rec primitiveLiteralExprCppType = fun expr -> let tempResult = ref (Obj.magi
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47 with
     | 0 -> let _g = Obj.magic (let __enum_param_70 = expr in if __enum_param_70 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_70 with
       | HxExpr.EParenthesized (__enum_param_69, _) -> __enum_param_69
       | _ -> failwith "Unexpected enum parameter") in (

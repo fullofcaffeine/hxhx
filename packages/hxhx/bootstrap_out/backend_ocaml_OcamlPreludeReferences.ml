@@ -106,7 +106,8 @@ let rec expression = fun self (node : Obj.t) -> ignore (ignore (try ignore ((
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47 with
           | 12 -> ignore (let _g = (let __enum_param_23 = node in if __enum_param_23 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_23 with
             | HxExpr.EIdent __enum_param_22 -> __enum_param_22
             | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in if name != HxString.hx_null_string && (let __string_receiver_24 = name in HxString.length __string_receiver_24) > 0 && not (isLocal (Obj.magic self) (name : string)) then ignore (let this1 = (Obj.magic self : t).idents in (
@@ -166,7 +167,8 @@ let rec expression = fun self (node : Obj.t) -> ignore (ignore (try ignore ((
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g2 = (match _g with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g2 = (match _g with
               | HxExpr.EIdent __enum_param_29 -> __enum_param_29
               | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in if isLocal (Obj.magic self) (name : string) then ignore () else ignore (reference (Obj.magic self) (Backend_ocaml_OcamlLocalCallDependency.calleeName (Obj.obj (HxEnum.unbox_or_obj "HxExpr" node)) : string))) else ignore (reference (Obj.magic self) (Backend_ocaml_OcamlLocalCallDependency.calleeName (Obj.obj (HxEnum.unbox_or_obj "HxExpr" node)) : string))
           ))
@@ -187,7 +189,7 @@ let rec statement = fun self (node : Obj.t) -> ignore (ignore (try ignore ((
     ) else if (let __enum_idx_8 = node in if __enum_idx_8 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_8 with
       | HxStmt.SBlock (_, _) -> 0
       | HxStmt.SVar (_, _, _, _, _) -> 1
-      | HxStmt.SIf (_, _, _, _) -> 2
+      | HxStmt.SIf (_, _, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
       | HxStmt.SWhile (_, _, _) -> 5

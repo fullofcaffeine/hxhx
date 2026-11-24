@@ -119,7 +119,8 @@ let untypedValue = fun facts value names -> (try let tempShortCircuit = ref (fal
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 35 then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 35 then (
       ignore (match _g with
         | HxExpr.EUntyped __enum_param_16 -> __enum_param_16
         | _ -> failwith "Unexpected enum parameter");

@@ -12,13 +12,13 @@ let isStandardLibrary = fun self (owner : MacroExpandedProgram.t) (hx_module : T
   ignore (if Obj.repr owner != Obj.repr ((Obj.magic self : t).program) then HxType.hx_throw_typed_rtti (Obj.repr "feature source catalog belongs to another typed program") ["Dynamic"] else ());
   let _this = Obj.magic ((Obj.magic self : t).standardModules) in let tempBool = HxMap.exists_object (Obj.magic _this) hx_module in (
     ignore (if not (tempBool) then HxType.hx_throw_typed_rtti (Obj.repr "feature source catalog does not own this typed module") ["Dynamic"] else ());
-    let _this = Obj.magic ((Obj.magic self : t).standardModules) in let tempResult = HxMap.get_object (Obj.magic _this) hx_module in HxRuntime.nullable_bool_unwrap tempResult
+    let _this = Obj.magic ((Obj.magic self : t).standardModules) in let tempResult = HxMap.get_object (Obj.magic _this) hx_module in let __nullable_bool_29 = tempResult in if __nullable_bool_29 == HxRuntime.hx_null then false else HxRuntime.unbox_bool_or_obj __nullable_bool_29
   )
 )
 
 let absolute = fun (path : string) -> ((
-  ignore (if path == HxString.hx_null_string || not (let __call_arg_0_29 = path in Haxe_io_Path.isAbsolute __call_arg_0_29) then HxType.hx_throw_typed_rtti (Obj.repr "feature source classification requires absolute configured paths") ["Dynamic"] else ());
-  let __call_arg_0_30 = path in Haxe_io_Path.normalize __call_arg_0_30
+  ignore (if path == HxString.hx_null_string || not (let __call_arg_0_30 = path in Haxe_io_Path.isAbsolute __call_arg_0_30) then HxType.hx_throw_typed_rtti (Obj.repr "feature source classification requires absolute configured paths") ["Dynamic"] else ());
+  let __call_arg_0_31 = path in Haxe_io_Path.normalize __call_arg_0_31
 ) : string)
 
 let create = fun input -> let self = ({ __hx_type = HxType.instance_marker "TypedFeatureSourceCatalog"; program = Obj.magic HxRuntime.hx_null; standardModules = Obj.magic HxRuntime.hx_null } : t) in (

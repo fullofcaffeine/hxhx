@@ -820,6 +820,11 @@ let rec exprKind = fun expr -> let tempResult = ref (HxString.hx_null_string : s
         tempResult := __assign_361;
         __assign_361
       )
+    )
+    | HxExpr.ERegexLiteral (_p0, _p1) -> (
+      ignore _p0;
+      ignore _p1;
+      HxType.hx_throw_typed_rtti (Obj.repr "regex literal syntax must be lowered before this stage") ["Dynamic"]
     ));
   !tempResult
 )

@@ -20,7 +20,7 @@ let wait = fun self (timeout : Obj.t) -> let tempResult = ref (false : bool) in 
   ignore (if timeout == HxRuntime.hx_null then let __assign_3 = HxThread.lock_wait ((Obj.magic self : t).handle) in (
     tempResult := __assign_3;
     __assign_3
-  ) else let __assign_4 = HxThread.lock_wait_timeout ((Obj.magic self : t).handle) (let __nullable_float_5 = timeout in if __nullable_float_5 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_5) in (
+  ) else let __assign_4 = HxThread.lock_wait_timeout ((Obj.magic self : t).handle) (let __nullable_float_5 = timeout in if __nullable_float_5 == HxRuntime.hx_null then 0. else if Obj.is_int __nullable_float_5 then float_of_int (Obj.obj __nullable_float_5) else Obj.obj __nullable_float_5) in (
     tempResult := __assign_4;
     __assign_4
   ));

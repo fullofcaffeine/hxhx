@@ -222,26 +222,26 @@ let requireClass = fun self (owner : TypedBackendClassProjection.t) -> let _this
   node
 )
 
-let declarationRank = fun self (owner : TypedBackendClassProjection.t) -> let _this = Obj.magic ((Obj.magic self : t).declarationRanks) in let key = (Obj.obj (HxAnon.get (requireClass (Obj.magic self) (Obj.magic owner)) "identity") : string) in let tempResult = HxMap.get_string (Obj.magic _this) (key : string) in HxRuntime.nullable_int_unwrap tempResult
+let declarationRank = fun self (owner : TypedBackendClassProjection.t) -> let _this = Obj.magic ((Obj.magic self : t).declarationRanks) in let key = (Obj.obj (HxAnon.get (requireClass (Obj.magic self) (Obj.magic owner)) "identity") : string) in let tempResult = HxMap.get_string (Obj.magic _this) (key : string) in let __nullable_int_61 = tempResult in if __nullable_int_61 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_61
 
 let requireRuntimeClass = fun self (identity : string) -> let _this = Obj.magic ((Obj.magic self : t).byIdentity) in let tempMaybeJsClassInheritanceNode = HxMap.get_string (Obj.magic _this) (identity : string) in let node = tempMaybeJsClassInheritanceNode in let facts = Obj.magic (TypedBackendClassGraph.findClassFacts (Obj.magic ((Obj.magic self : t).graph)) (identity : string)) in let tempShortCircuit = ref (false : bool) in (
-  ignore (if node == Obj.magic (HxRuntime.hx_null) || facts == Obj.magic (HxRuntime.hx_null) then let __assign_61 = true in (
-    tempShortCircuit := __assign_61;
-    __assign_61
+  ignore (if node == Obj.magic (HxRuntime.hx_null) || facts == Obj.magic (HxRuntime.hx_null) then let __assign_62 = true in (
+    tempShortCircuit := __assign_62;
+    __assign_62
   ) else let tempBool = ref (false : bool) in let _g = Obj.magic (TypedBackendClassSemanticFacts.getNominalKind (Obj.magic facts) ()) in (
     ignore (if (match _g with
       | TypedBackendClassSemanticFacts.ClassInstance -> 0
       | TypedBackendClassSemanticFacts.EnumValue -> 1
-      | TypedBackendClassSemanticFacts.AbstractValue _ -> 2) = 0 then let __assign_62 = true in (
-      tempBool := __assign_62;
-      __assign_62
-    ) else let __assign_63 = false in (
+      | TypedBackendClassSemanticFacts.AbstractValue _ -> 2) = 0 then let __assign_63 = true in (
       tempBool := __assign_63;
       __assign_63
-    ));
-    let __assign_64 = not (!tempBool) in (
-      tempShortCircuit := __assign_64;
+    ) else let __assign_64 = false in (
+      tempBool := __assign_64;
       __assign_64
+    ));
+    let __assign_65 = not (!tempBool) in (
+      tempShortCircuit := __assign_65;
+      __assign_65
     )
   ));
   ignore (if !tempShortCircuit then HxType.hx_throw_typed_rtti (Obj.repr ("JavaScript runtime type has no exact class provider: " ^ HxString.toStdString identity)) ["Dynamic"] else ());
@@ -258,23 +258,23 @@ let interfaceReferences = fun self (owner : TypedBackendClassProjection.t) -> (t
   ignore (if (match _g with
     | TypedBackendClassSemanticFacts.ClassInstance -> 0
     | TypedBackendClassSemanticFacts.EnumValue -> 1
-    | TypedBackendClassSemanticFacts.AbstractValue _ -> 2) = 0 then let __assign_65 = true in (
-    tempBool := __assign_65;
-    __assign_65
-  ) else let __assign_66 = false in (
+    | TypedBackendClassSemanticFacts.AbstractValue _ -> 2) = 0 then let __assign_66 = true in (
     tempBool := __assign_66;
     __assign_66
+  ) else let __assign_67 = false in (
+    tempBool := __assign_67;
+    __assign_67
   ));
-  ignore (if not (!tempBool) || TypedBackendClassSemanticFacts.getIsExtern (Obj.magic facts) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_67 = HxArray.create () in __represented_array_67))) else ());
-  let _g = Obj.magic (let __represented_array_68 = HxArray.create () in __represented_array_68) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedBackendClassGraph.requireAssignableTypes (Obj.magic ((Obj.magic self : t).graph)) (identity : string) (Obj.repr (fun fact -> not (TypedBackendClassSemanticFacts.getIsExtern (Obj.magic fact) ())))) in (
-    ignore (while !_g1 < HxArray.length _g2 do ignore (let node = let __array_read_receiver_69 = _g2 in let __array_read_index_70 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_69) __array_read_index_70 in (
-      ignore (let __old_71 = !_g1 in let __new_72 = HxInt.add __old_71 1 in (
-        ignore (_g1 := __new_72);
-        __new_72
+  ignore (if not (!tempBool) || TypedBackendClassSemanticFacts.getIsExtern (Obj.magic facts) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __represented_array_68 = HxArray.create () in __represented_array_68))) else ());
+  let _g = Obj.magic (let __represented_array_69 = HxArray.create () in __represented_array_69) in let _g1 = ref 0 in let _g2 = Obj.magic (TypedBackendClassGraph.requireAssignableTypes (Obj.magic ((Obj.magic self : t).graph)) (identity : string) (Obj.repr (fun fact -> not (TypedBackendClassSemanticFacts.getIsExtern (Obj.magic fact) ())))) in (
+    ignore (while !_g1 < HxArray.length _g2 do ignore (let node = let __array_read_receiver_70 = _g2 in let __array_read_index_71 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_70) __array_read_index_71 in (
+      ignore (let __old_72 = !_g1 in let __new_73 = HxInt.add __old_72 1 in (
+        ignore (_g1 := __new_73);
+        __new_73
       ));
-      if HxRuntime.unbox_bool_or_obj (HxAnon.get node "isInterface") then ignore (let __array_receiver_73 = Obj.magic _g in let __array_arg_0_74 = (Obj.obj (HxAnon.get (requireRuntimeClass (Obj.magic self) (Obj.obj (HxAnon.get node "classIdentity") : string)) "reference") : string) in HxArray.push __array_receiver_73 __array_arg_0_74) else ()
+      if HxRuntime.unbox_bool_or_obj (HxAnon.get node "isInterface") then ignore (let __array_receiver_74 = Obj.magic _g in let __array_arg_0_75 = (Obj.obj (HxAnon.get (requireRuntimeClass (Obj.magic self) (Obj.obj (HxAnon.get node "classIdentity") : string)) "reference") : string) in HxArray.push __array_receiver_74 __array_arg_0_75) else ()
     )) done);
     let tempResult = Obj.magic _g in tempResult
   )
 ) with
-  | HxRuntime.Hx_return __ret_75 -> (Obj.obj __ret_75 : string HxArray.t) : string HxArray.t)
+  | HxRuntime.Hx_return __ret_76 -> (Obj.obj __ret_76 : string HxArray.t) : string HxArray.t)

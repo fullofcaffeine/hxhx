@@ -357,7 +357,7 @@ let validate = fun manifest -> (try (
                       ignore (if not (let __call_arg_0_112 = entry in let __call_arg_1_113 = ".cmxs" in StringTools.endsWith __call_arg_0_112 __call_arg_1_113) && not (let __call_arg_0_114 = entry in let __call_arg_1_115 = ".cma" in StringTools.endsWith __call_arg_0_114 __call_arg_1_115) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "backend.entry must end with `.cmxs` or `.cma` for kind `ocaml-dynlink`")) else ());
                       Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
                     )
-                    | _ -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_109 = "unsupported backend kind `" in let __string_part_110 = "<unsupported>" in let __string_part_111 = "`" in (__string_part_109 ^ __string_part_110) ^ __string_part_111)))
+                    | _ -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_109 = "unsupported backend kind `" in let __string_part_110 = HxString.toStdString (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind")) in let __string_part_111 = "`" in (__string_part_109 ^ __string_part_110) ^ __string_part_111)))
                 )
               )
             )

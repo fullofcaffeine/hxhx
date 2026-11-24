@@ -188,17 +188,20 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
               )
             )
           )
-          | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+          | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
             ignore _p0;
             ignore _p1;
             ignore _p2;
-            let _g4 = Obj.magic _p3 in let pos = Obj.magic _g4 in let __assign_94 = Obj.magic (let __anon_95 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_95 "kind" (Obj.repr "SIf"));
-              ignore (HxAnon.set __anon_95 "pos" (Obj.repr pos));
-              __anon_95
-            )) in (
-              tempStruct := __assign_94;
-              __assign_94
+            let _g4 = Obj.magic _p3 in (
+              ignore _p4;
+              let pos = Obj.magic _g4 in let __assign_94 = Obj.magic (let __anon_95 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_95 "kind" (Obj.repr "SIf"));
+                ignore (HxAnon.set __anon_95 "pos" (Obj.repr pos));
+                __anon_95
+              )) in (
+                tempStruct := __assign_94;
+                __assign_94
+              )
             )
           )
           | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> (
@@ -419,8 +422,9 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
                     )
                   )
                 )
-                | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+                | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
                   ignore _p3;
+                  ignore _p4;
                   ignore _g;
                   ignore _g1;
                   let elseBranch = _g2 in let tempString4 = ref (HxString.hx_null_string : string) in (

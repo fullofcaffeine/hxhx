@@ -56,7 +56,7 @@ let emit = fun backend program context -> (try (
         __assign_33
       ));
       ignore (if !tempBool1 then ignore (let value = Obj.repr "stage3_driver=dispatch_after_asDispatchValue" in HxSys.printlnValue value) else ());
-      ignore (if let __isOfTypeValue_42 = Obj.repr dispatchValue in HxType.isOfType __isOfTypeValue_42 (HxType.class_ "backend.js.JsBackend") then let tempBool2 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+      ignore (if let __isOfTypeValue_42 = dispatchValue in HxType.isOfType __isOfTypeValue_42 (HxType.class_ "backend.js.JsBackend") then let tempBool2 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
         ignore (if raw == HxString.hx_null_string then let __assign_43 = false in (
           tempBool2 := __assign_43;
           __assign_43
@@ -67,7 +67,7 @@ let emit = fun backend program context -> (try (
         ignore (if !tempBool2 then ignore (let value = Obj.repr "stage3_driver=dispatch_branch_js" in HxSys.printlnValue value) else ());
         let jsBackend = Obj.magic (Obj.obj (Obj.repr dispatchValue)) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_js_JsBackend.emitBridge (Obj.magic jsBackend) (Obj.magic program) (Obj.magic context))))
       ) else ());
-      ignore (if let __isOfTypeValue_55 = Obj.repr dispatchValue in HxType.isOfType __isOfTypeValue_55 (HxType.class_ "backend.ocaml.OcamlStage3Backend") then let tempBool3 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+      ignore (if let __isOfTypeValue_55 = dispatchValue in HxType.isOfType __isOfTypeValue_55 (HxType.class_ "backend.ocaml.OcamlStage3Backend") then let tempBool3 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
         ignore (if raw == HxString.hx_null_string then let __assign_56 = false in (
           tempBool3 := __assign_56;
           __assign_56
@@ -78,7 +78,7 @@ let emit = fun backend program context -> (try (
         ignore (if !tempBool3 then ignore (let value = Obj.repr "stage3_driver=dispatch_branch_ocaml" in HxSys.printlnValue value) else ());
         let ocamlBackend = Obj.magic (Obj.obj (Obj.repr dispatchValue)) in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Backend_ocaml_OcamlStage3Backend.emitBridge (Obj.magic ocamlBackend) (Obj.magic program) (Obj.magic context))))
       ) else ());
-      ignore (if let __isOfTypeValue_68 = Obj.repr dispatchValue in HxType.isOfType __isOfTypeValue_68 (HxType.class_ "backend.TargetCoreBackend") then let tempBool4 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
+      ignore (if let __isOfTypeValue_68 = dispatchValue in HxType.isOfType __isOfTypeValue_68 (HxType.class_ "backend.TargetCoreBackend") then let tempBool4 = ref (false : bool) in let raw = (HxSys.getEnv ("HXHX_TRACE_STAGE3_DRIVER" : string) : string) in (
         ignore (if raw == HxString.hx_null_string then let __assign_69 = false in (
           tempBool4 := __assign_69;
           __assign_69

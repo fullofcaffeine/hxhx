@@ -10,7 +10,7 @@ let project = fun input context -> let tempResult = ref (Obj.magic (HxRuntime.hx
   ignore (if (match input with
     | HxStmt.SBlock (_, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
-    | HxStmt.SIf (_, _, _, _) -> 2
+    | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
     | HxStmt.SWhile (_, _, _) -> 5
@@ -78,7 +78,8 @@ let project = fun input context -> let tempResult = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g2 = Obj.magic (match expression with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g2 = Obj.magic (match expression with
         | HxExpr.ELoweredControl (__enum_param_3, _, _, _) -> __enum_param_3
         | _ -> failwith "Unexpected enum parameter") in (
         ignore (match expression with
@@ -171,7 +172,8 @@ let project = fun input context -> let tempResult = ref (Obj.magic (HxRuntime.hx
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then (
           ignore (match expression2 with
             | HxExpr.ELoweredControl (__enum_param_11, _, _, _) -> __enum_param_11
             | _ -> failwith "Unexpected enum parameter");

@@ -21,7 +21,7 @@ let captureProblem = fun label action problems -> ignore (try ignore (let __call
   | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
   | HxRuntime.Hx_exception (__exn_v_220, __exn_tags_221) -> if HxRuntime.tags_has __exn_tags_221 "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_220) : Haxe_io_Error.error) in (
     ignore error;
-    ignore (let __array_receiver_207 = Obj.magic problems in let __array_arg_0_208 = (let __string_part_209 = HxString.toStdString label in let __string_part_210 = ": " in let __string_part_211 = HxString.toStdString (HxDynamic.toStdString (Obj.repr error)) in (__string_part_209 ^ __string_part_210) ^ __string_part_211 : string) in HxArray.push __array_receiver_207 __array_arg_0_208)
+    ignore (let __array_receiver_207 = Obj.magic problems in let __array_arg_0_208 = (let __string_part_209 = HxString.toStdString label in let __string_part_210 = ": " in let __string_part_211 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error))) in (__string_part_209 ^ __string_part_210) ^ __string_part_211 : string) in HxArray.push __array_receiver_207 __array_arg_0_208)
   ) else if true then let error = (if HxRuntime.tags_has __exn_tags_221 "haxe.Exception" then Obj.obj __exn_v_220 else Obj.magic (Haxe_ValueException.create __exn_v_220 (Obj.magic (HxRuntime.hx_null)) __exn_v_220) : Haxe_Exception.t) in (
     ignore error;
     ignore (let __array_receiver_212 = Obj.magic problems in let __array_arg_0_213 = (let __string_part_214 = HxString.toStdString label in let __string_part_215 = ": " in let __string_part_216 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in (__string_part_214 ^ __string_part_215) ^ __string_part_216 : string) in HxArray.push __array_receiver_212 __array_arg_0_213)
@@ -31,7 +31,7 @@ let captureProblem = fun label action problems -> ignore (try ignore (let __call
   ) else HxRuntime.hx_throw_typed __exn_v_220 __exn_tags_221
   | __exn_222 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_222)) : Haxe_io_Error.error) in (
     ignore error;
-    ignore (let __array_receiver_207 = Obj.magic problems in let __array_arg_0_208 = (let __string_part_209 = HxString.toStdString label in let __string_part_210 = ": " in let __string_part_211 = HxString.toStdString (HxDynamic.toStdString (Obj.repr error)) in (__string_part_209 ^ __string_part_210) ^ __string_part_211 : string) in HxArray.push __array_receiver_207 __array_arg_0_208)
+    ignore (let __array_receiver_207 = Obj.magic problems in let __array_arg_0_208 = (let __string_part_209 = HxString.toStdString label in let __string_part_210 = ": " in let __string_part_211 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error))) in (__string_part_209 ^ __string_part_210) ^ __string_part_211 : string) in HxArray.push __array_receiver_207 __array_arg_0_208)
   ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_222) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_222) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_222)) : Haxe_Exception.t) in (
     ignore error;
     ignore (let __array_receiver_212 = Obj.magic problems in let __array_arg_0_213 = (let __string_part_214 = HxString.toStdString label in let __string_part_215 = ": " in let __string_part_216 = HxString.toStdString ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) ()) in (__string_part_214 ^ __string_part_215) ^ __string_part_216 : string) in HxArray.push __array_receiver_212 __array_arg_0_213)
@@ -510,7 +510,7 @@ let publish = fun self () -> ignore (ignore ((
       | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_44, __exn_tags_45) -> if HxRuntime.tags_has __exn_tags_45 "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_44) : Haxe_io_Error.error) in (
         ignore error;
-        ignore (let __assign_40 = Obj.magic (HxDynamic.toStdString (Obj.repr error) : string) in (
+        ignore (let __assign_40 = Obj.magic (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string) in (
           failure := __assign_40;
           __assign_40
         ))
@@ -529,7 +529,7 @@ let publish = fun self () -> ignore (ignore ((
       ) else HxRuntime.hx_throw_typed __exn_v_44 __exn_tags_45
       | __exn_46 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_46)) : Haxe_io_Error.error) in (
         ignore error;
-        ignore (let __assign_40 = Obj.magic (HxDynamic.toStdString (Obj.repr error) : string) in (
+        ignore (let __assign_40 = Obj.magic (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string) in (
           failure := __assign_40;
           __assign_40
         ))

@@ -328,7 +328,7 @@ let runOne = fun args requestContext -> (try let requestOutput = Obj.magic ((Obj
                                   | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
                                   | HxRuntime.Hx_exception (__exn_v_115, __exn_tags_116) -> if HxRuntime.tags_has __exn_tags_116 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_115) : Haxe_io_Error.error) in (
                                     ignore e;
-                                    let msg = let __string_part_110 = "could not prepare request output: " in let __string_part_111 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_110 ^ __string_part_111 in (
+                                    let msg = let __string_part_110 = "could not prepare request output: " in let __string_part_111 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_110 ^ __string_part_111 in (
                                       ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ("hxhx(stage3): " ^ HxString.toStdString msg : string));
                                       let tempResult7 = 2 in Stdlib.raise (HxRuntime.Hx_return (Obj.repr tempResult7))
                                     )
@@ -347,7 +347,7 @@ let runOne = fun args requestContext -> (try let requestOutput = Obj.magic ((Obj
                                   ) else HxRuntime.hx_throw_typed __exn_v_115 __exn_tags_116
                                   | __exn_117 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_117)) : Haxe_io_Error.error) in (
                                     ignore e;
-                                    let msg = let __string_part_110 = "could not prepare request output: " in let __string_part_111 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_110 ^ __string_part_111 in (
+                                    let msg = let __string_part_110 = "could not prepare request output: " in let __string_part_111 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_110 ^ __string_part_111 in (
                                       ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ("hxhx(stage3): " ^ HxString.toStdString msg : string));
                                       let tempResult7 = 2 in Stdlib.raise (HxRuntime.Hx_return (Obj.repr tempResult7))
                                     )
@@ -1508,7 +1508,7 @@ let runOne = fun args requestContext -> (try let requestOutput = Obj.magic ((Obj
                                                                                                             ignore e;
                                                                                                             (
                                                                                                               ignore (let __call_callee_469 = closeMacroSession in __call_callee_469 ());
-                                                                                                              let msg = let __string_part_470 = "output sealing failed: " in let __string_part_471 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_470 ^ __string_part_471 in (
+                                                                                                              let msg = let __string_part_470 = "output sealing failed: " in let __string_part_471 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_470 ^ __string_part_471 in (
                                                                                                                 ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ("hxhx(stage3): " ^ HxString.toStdString msg : string));
                                                                                                                 let tempResult56 = 2 in Stdlib.raise (HxRuntime.Hx_return (Obj.repr tempResult56))
                                                                                                               )
@@ -1534,7 +1534,7 @@ let runOne = fun args requestContext -> (try let requestOutput = Obj.magic ((Obj
                                                                                                             ignore e;
                                                                                                             (
                                                                                                               ignore (let __call_callee_469 = closeMacroSession in __call_callee_469 ());
-                                                                                                              let msg = let __string_part_470 = "output sealing failed: " in let __string_part_471 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_470 ^ __string_part_471 in (
+                                                                                                              let msg = let __string_part_470 = "output sealing failed: " in let __string_part_471 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_470 ^ __string_part_471 in (
                                                                                                                 ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic requestOutput) ("hxhx(stage3): " ^ HxString.toStdString msg : string));
                                                                                                                 let tempResult56 = 2 in Stdlib.raise (HxRuntime.Hx_return (Obj.repr tempResult56))
                                                                                                               )

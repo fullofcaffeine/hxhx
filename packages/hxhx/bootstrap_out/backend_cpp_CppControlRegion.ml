@@ -61,7 +61,8 @@ let isFunctionBody = fun body -> let tempResult = ref (false : bool) in (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g = Obj.magic (match body with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g = Obj.magic (match body with
     | HxExpr.ELoweredControl (__enum_param_1, _, _, _) -> __enum_param_1
     | _ -> failwith "Unexpected enum parameter") in (
     ignore (match body with
@@ -216,7 +217,8 @@ let rec renderEntries = fun entries target result indent scope services loop -> 
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then ignore (let _g8 = Obj.magic (match _g7 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then ignore (let _g8 = Obj.magic (match _g7 with
               | HxExpr.ELoweredControl (__enum_param_267, _, _, _) -> __enum_param_267
               | _ -> failwith "Unexpected enum parameter") in let _g9 = (match _g7 with
               | HxExpr.ELoweredControl (_, __enum_param_268, _, _) -> __enum_param_268
@@ -332,7 +334,8 @@ let rec renderEntries = fun entries target result indent scope services loop -> 
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then ignore (let _g7 = Obj.magic (match _g6 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then ignore (let _g7 = Obj.magic (match _g6 with
             | HxExpr.ELoweredControl (__enum_param_315, _, _, _) -> __enum_param_315
             | _ -> failwith "Unexpected enum parameter") in let _g8 = (match _g6 with
             | HxExpr.ELoweredControl (_, __enum_param_316, _, _) -> __enum_param_316
@@ -435,7 +438,8 @@ let rec renderEntries = fun entries target result indent scope services loop -> 
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g7 = Obj.magic (match _g6 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g7 = Obj.magic (match _g6 with
               | HxExpr.ELoweredControl (__enum_param_345, _, _, _) -> __enum_param_345
               | _ -> failwith "Unexpected enum parameter") in let _g8 = (match _g6 with
               | HxExpr.ELoweredControl (_, __enum_param_346, _, _) -> __enum_param_346
@@ -530,7 +534,8 @@ let rec renderEntries = fun entries target result indent scope services loop -> 
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then ignore (let _g10 = Obj.magic (match _g9 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then ignore (let _g10 = Obj.magic (match _g9 with
                 | HxExpr.ELoweredControl (__enum_param_367, _, _, _) -> __enum_param_367
                 | _ -> failwith "Unexpected enum parameter") in let _g11 = (match _g9 with
                 | HxExpr.ELoweredControl (_, __enum_param_368, _, _) -> __enum_param_368
@@ -627,7 +632,8 @@ let rec renderEntries = fun entries target result indent scope services loop -> 
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then ignore (let _g8 = Obj.magic (match body with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then ignore (let _g8 = Obj.magic (match body with
                 | HxExpr.ELoweredControl (__enum_param_391, _, _, _) -> __enum_param_391
                 | _ -> failwith "Unexpected enum parameter") in let _g9 = (match body with
                 | HxExpr.ELoweredControl (_, __enum_param_392, _, _) -> __enum_param_392
@@ -735,7 +741,8 @@ let rec renderEntries = fun entries target result indent scope services loop -> 
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g5 = Obj.magic (match entry with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g5 = Obj.magic (match entry with
               | HxExpr.ELoweredControl (__enum_param_429, _, _, _) -> __enum_param_429
               | _ -> failwith "Unexpected enum parameter") in (
               ignore (match entry with
@@ -859,7 +866,8 @@ let renderFunction = fun body result scope services -> (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g = Obj.magic (match body with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g = Obj.magic (match body with
       | HxExpr.ELoweredControl (__enum_param_11, _, _, _) -> __enum_param_11
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match body with
       | HxExpr.ELoweredControl (_, __enum_param_12, _, _) -> __enum_param_12
@@ -948,7 +956,8 @@ let renderInitializer = fun projection destination indent services -> (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g = Obj.magic (match body with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g = Obj.magic (match body with
       | HxExpr.ELoweredControl (__enum_param_18, _, _, _) -> __enum_param_18
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match body with
       | HxExpr.ELoweredControl (_, __enum_param_19, _, _) -> __enum_param_19
@@ -1044,18 +1053,19 @@ let rec renderRootStatements = fun projection statements target result indent sc
             __assign_58
           )
         )
-        | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g2 = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g3 = _p2 in (
+        | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g2 = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g3 = _p2 in (
           ignore _p3;
+          ignore _p4;
           let condition = Obj.magic _g2 in let yes = Obj.magic _g1 in let no = _g3 in let branch = Obj.magic (let __represented_array_59 = HxArray.create () in let __represented_array_element_0_60 = let __string_part_61 = HxString.toStdString indent in let __string_part_62 = "if (" in let __string_part_63 = HxString.toStdString ((Obj.obj (HxAnon.get services "returnValue") : _ -> _ -> _) (Obj.magic condition) ("bool" : string)) in let __string_part_64 = ") {" in ((__string_part_61 ^ __string_part_62) ^ __string_part_63) ^ __string_part_64 in (
             ignore (HxArray.push __represented_array_59 __represented_array_element_0_60);
             __represented_array_59
-          )) in let _g5 = ref 0 in let _g6 = Obj.magic (let __transport_arg_65 = scope in let __transport_arg_67 = fun () -> renderRootStatements (Obj.magic projection) (Obj.magic (let __arr_66 = HxArray.create () in (
+          )) in let _g6 = ref 0 in let _g7 = Obj.magic (let __transport_arg_65 = scope in let __transport_arg_67 = fun () -> renderRootStatements (Obj.magic projection) (Obj.magic (let __arr_66 = HxArray.create () in (
             ignore (HxArray.push __arr_66 yes);
             __arr_66
           ))) (target : string) (Obj.magic result) (HxString.toStdString indent ^ "  " : string) scope services (loop : string) in Backend_cpp_CppLocalScope.isolate __transport_arg_65 __transport_arg_67) in (
-            ignore (while !_g5 < HxArray.length _g6 do ignore (let line = (let __array_read_receiver_68 = _g6 in let __array_read_index_69 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_68) __array_read_index_69 : string) in (
-              ignore (let __old_70 = !_g5 in let __new_71 = HxInt.add __old_70 1 in (
-                ignore (_g5 := __new_71);
+            ignore (while !_g6 < HxArray.length _g7 do ignore (let line = (let __array_read_receiver_68 = _g7 in let __array_read_index_69 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_68) __array_read_index_69 : string) in (
+              ignore (let __old_70 = !_g6 in let __new_71 = HxInt.add __old_70 1 in (
+                ignore (_g6 := __new_71);
                 __new_71
               ));
               let __array_receiver_72 = Obj.magic branch in let __array_arg_0_73 = (line : string) in HxArray.push __array_receiver_72 __array_arg_0_73
@@ -1063,13 +1073,13 @@ let rec renderRootStatements = fun projection statements target result indent sc
             ignore (let __array_receiver_74 = Obj.magic branch in let __array_arg_0_75 = (HxString.toStdString indent ^ "}" : string) in HxArray.push __array_receiver_74 __array_arg_0_75);
             ignore (if no != Obj.magic (HxRuntime.hx_null) then ignore ((
               ignore (let __array_receiver_76 = Obj.magic branch in let __array_arg_0_77 = (HxString.toStdString indent ^ "else {" : string) in HxArray.push __array_receiver_76 __array_arg_0_77);
-              let _g5 = ref 0 in let _g6 = Obj.magic (let __transport_arg_78 = scope in let __transport_arg_80 = fun () -> renderRootStatements (Obj.magic projection) (Obj.magic (let __arr_79 = HxArray.create () in (
+              let _g6 = ref 0 in let _g7 = Obj.magic (let __transport_arg_78 = scope in let __transport_arg_80 = fun () -> renderRootStatements (Obj.magic projection) (Obj.magic (let __arr_79 = HxArray.create () in (
                 ignore (HxArray.push __arr_79 no);
                 __arr_79
               ))) (target : string) (Obj.magic result) (HxString.toStdString indent ^ "  " : string) scope services (loop : string) in Backend_cpp_CppLocalScope.isolate __transport_arg_78 __transport_arg_80) in (
-                ignore (while !_g5 < HxArray.length _g6 do ignore (let line = (let __array_read_receiver_81 = _g6 in let __array_read_index_82 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_81) __array_read_index_82 : string) in (
-                  ignore (let __old_83 = !_g5 in let __new_84 = HxInt.add __old_83 1 in (
-                    ignore (_g5 := __new_84);
+                ignore (while !_g6 < HxArray.length _g7 do ignore (let line = (let __array_read_receiver_81 = _g7 in let __array_read_index_82 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_81) __array_read_index_82 : string) in (
+                  ignore (let __old_83 = !_g6 in let __new_84 = HxInt.add __old_83 1 in (
+                    ignore (_g6 := __new_84);
                     __new_84
                   ));
                   let __array_receiver_85 = Obj.magic branch in let __array_arg_0_86 = (line : string) in HxArray.push __array_receiver_85 __array_arg_0_86
@@ -1122,7 +1132,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
             ignore (if (match statement with
               | HxStmt.SBlock (_, _) -> 0
               | HxStmt.SVar (_, _, _, _, _) -> 1
-              | HxStmt.SIf (_, _, _, _) -> 2
+              | HxStmt.SIf (_, _, _, _, _) -> 2
               | HxStmt.SForIn (_, _, _, _) -> 3
               | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
               | HxStmt.SWhile (_, _, _) -> 5
@@ -1200,7 +1210,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
             ignore (if (match statement with
               | HxStmt.SBlock (_, _) -> 0
               | HxStmt.SVar (_, _, _, _, _) -> 1
-              | HxStmt.SIf (_, _, _, _) -> 2
+              | HxStmt.SIf (_, _, _, _, _) -> 2
               | HxStmt.SForIn (_, _, _, _) -> 3
               | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
               | HxStmt.SWhile (_, _, _) -> 5
@@ -1301,7 +1311,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
               ignore (if (match statement with
                 | HxStmt.SBlock (_, _) -> 0
                 | HxStmt.SVar (_, _, _, _, _) -> 1
-                | HxStmt.SIf (_, _, _, _) -> 2
+                | HxStmt.SIf (_, _, _, _, _) -> 2
                 | HxStmt.SForIn (_, _, _, _) -> 3
                 | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
                 | HxStmt.SWhile (_, _, _) -> 5
@@ -1343,7 +1353,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
               ignore (if (match statement with
                 | HxStmt.SBlock (_, _) -> 0
                 | HxStmt.SVar (_, _, _, _, _) -> 1
-                | HxStmt.SIf (_, _, _, _) -> 2
+                | HxStmt.SIf (_, _, _, _, _) -> 2
                 | HxStmt.SForIn (_, _, _, _) -> 3
                 | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
                 | HxStmt.SWhile (_, _, _) -> 5
@@ -1417,7 +1427,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
         | _ -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_45 = "managed root statement requires exact control projection for " in let __string_part_46 = HxString.toStdString (let __enum_ctor_44 = Obj.repr statement in if __enum_ctor_44 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_44 with
           | HxStmt.SBlock (_, _) -> "SBlock"
           | HxStmt.SVar (_, _, _, _, _) -> "SVar"
-          | HxStmt.SIf (_, _, _, _) -> "SIf"
+          | HxStmt.SIf (_, _, _, _, _) -> "SIf"
           | HxStmt.SForIn (_, _, _, _) -> "SForIn"
           | HxStmt.SForKeyValue (_, _, _, _, _) -> "SForKeyValue"
           | HxStmt.SWhile (_, _, _) -> "SWhile"

@@ -57,7 +57,8 @@ let isKnownNonMap = fun expression cppType scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then (
     ignore (match expression with
       | HxExpr.ENew (__enum_param_19, _) -> __enum_param_19
       | _ -> failwith "Unexpected enum parameter");

@@ -615,7 +615,7 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
   ignore (if (match stmt with
     | HxStmt.SBlock (_, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
-    | HxStmt.SIf (_, _, _, _) -> 2
+    | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
     | HxStmt.SWhile (_, _, _) -> 5
@@ -682,7 +682,8 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g2 = Obj.magic (match _g with
       | HxExpr.ECall (__enum_param_441, _) -> __enum_param_441
       | _ -> failwith "Unexpected enum parameter") in (
       ignore (match _g with
@@ -735,7 +736,8 @@ let isSuperConstructorCall = fun stmt -> let tempResult = ref (false : bool) in 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then let __assign_443 = true in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 11 then let __assign_443 = true in (
         tempResult := __assign_443;
         __assign_443
       ) else let __assign_444 = false in (
@@ -3906,7 +3908,7 @@ let emit__impl = fun (self : t) (program : MacroExpandedProgram.t) (context : Ba
 )
 
 let create = fun () -> let self = let __hx_method_class = HxType.instance_marker "backend.js.JsTargetCore" in (
-  HxMethodDispatch.ensure __hx_method_class "sha256:d82b7d2da91f73eea3326e193300fc2c3c0eedaf3bc6dcdbedbfa0c7a7d7b1e6" 3 (fun () -> [("method-dispatch:50f8134b774ad2926900a788fcfff9019ad6a74911e81d4d7fa5065ed15b8b17", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : MacroExpandedProgram.t) (__hx_method_arg1 : Backend_BackendContext.t) -> (emit__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : Backend_EmitResult.t)))); ("method-dispatch:dca89f8bbb4b28a8436b5ed3d72fbbf16aa71a8474c8e84e31845713bee1eba0", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (coreId__impl __hx_method_self () : string))))]);
+  HxMethodDispatch.ensure __hx_method_class "sha256:7e9c82ffcc20ddd483e7fca1b871b7214a7e817997274d9c1867202766611b33" 3 (fun () -> [("method-dispatch:50f8134b774ad2926900a788fcfff9019ad6a74911e81d4d7fa5065ed15b8b17", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : MacroExpandedProgram.t) (__hx_method_arg1 : Backend_BackendContext.t) -> (emit__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : Backend_EmitResult.t)))); ("method-dispatch:dca89f8bbb4b28a8436b5ed3d72fbbf16aa71a8474c8e84e31845713bee1eba0", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (coreId__impl __hx_method_self () : string))))]);
   ({ __hx_type = __hx_method_class; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t)
 ) in (
   ignore ((
@@ -3917,6 +3919,6 @@ let create = fun () -> let self = let __hx_method_class = HxType.instance_marker
 )
 
 let __empty = fun () -> let __hx_method_class = HxType.instance_marker "backend.js.JsTargetCore" in (
-  HxMethodDispatch.ensure __hx_method_class "sha256:d82b7d2da91f73eea3326e193300fc2c3c0eedaf3bc6dcdbedbfa0c7a7d7b1e6" 3 (fun () -> [("method-dispatch:50f8134b774ad2926900a788fcfff9019ad6a74911e81d4d7fa5065ed15b8b17", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : MacroExpandedProgram.t) (__hx_method_arg1 : Backend_BackendContext.t) -> (emit__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : Backend_EmitResult.t)))); ("method-dispatch:dca89f8bbb4b28a8436b5ed3d72fbbf16aa71a8474c8e84e31845713bee1eba0", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (coreId__impl __hx_method_self () : string))))]);
+  HxMethodDispatch.ensure __hx_method_class "sha256:7e9c82ffcc20ddd483e7fca1b871b7214a7e817997274d9c1867202766611b33" 3 (fun () -> [("method-dispatch:50f8134b774ad2926900a788fcfff9019ad6a74911e81d4d7fa5065ed15b8b17", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun (__hx_method_arg0 : MacroExpandedProgram.t) (__hx_method_arg1 : Backend_BackendContext.t) -> (emit__impl __hx_method_self __hx_method_arg0 __hx_method_arg1 : Backend_EmitResult.t)))); ("method-dispatch:dca89f8bbb4b28a8436b5ed3d72fbbf16aa71a8474c8e84e31845713bee1eba0", (fun (__hx_method_receiver : Obj.t) -> let __hx_method_self = (Obj.obj __hx_method_receiver : t) in Obj.repr (fun () -> (coreId__impl __hx_method_self () : string))))]);
   ({ __hx_type = __hx_method_class; coreId = (fun o () -> Obj.magic (coreId__impl (Obj.magic o) (Obj.magic ()))); emit = (fun o a0 a1 -> Obj.magic (emit__impl (Obj.magic o) (Obj.magic a0) (Obj.magic a1))) } : t)
 )

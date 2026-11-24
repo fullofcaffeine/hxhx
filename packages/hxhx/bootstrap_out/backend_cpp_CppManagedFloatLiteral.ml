@@ -27,7 +27,7 @@ let rec value = fun expression -> let tempResult = ref (HxRuntime.hx_null : Obj.
       | HxUnaryFixity.Postfix -> 1) = 0 then let inner = Obj.magic _g2 in let number = value (Obj.magic inner) in if number == HxRuntime.hx_null then let __assign_4 = Obj.magic (HxRuntime.hx_null) in (
       tempResult := __assign_4;
       __assign_4
-    ) else let __assign_5 = Obj.magic (Obj.repr (-.(let __nullable_float_6 = number in if __nullable_float_6 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_6))) in (
+    ) else let __assign_5 = Obj.magic (Obj.repr (-.(let __nullable_float_6 = number in if __nullable_float_6 == HxRuntime.hx_null then 0. else if Obj.is_int __nullable_float_6 then float_of_int (Obj.obj __nullable_float_6) else Obj.obj __nullable_float_6))) in (
       tempResult := __assign_5;
       __assign_5
     ) else let __assign_7 = Obj.magic (HxRuntime.hx_null) in (

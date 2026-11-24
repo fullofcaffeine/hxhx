@@ -120,7 +120,8 @@ let body = fun projection statements -> (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expression with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expression with
         | HxExpr.ECall (__enum_param_5, _) -> __enum_param_5
         | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expression with
         | HxExpr.ECall (_, __enum_param_6) -> __enum_param_6
@@ -171,7 +172,8 @@ let body = fun projection statements -> (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
         | HxExpr.EField (__enum_param_7, _) -> __enum_param_7
         | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
         | HxExpr.EField (_, __enum_param_8) -> __enum_param_8
