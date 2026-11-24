@@ -100,8 +100,25 @@ class HxParser {
 	**/
 	final authoredSyntax:Bool;
 
+	/**
+		Authored parsing of a module also re-parses scanner bodies (abstract members) with
+		parsers it does not create directly. While `withAuthoredSyntax` runs, every new parser
+		is authored. Only `ParserStage.parseAuthored` opens it.
+	**/
+	static var authoredDepth = 0;
+
+	public static function withAuthoredSyntax<T>(run:() -> T):T {
+		authoredDepth++;
+		final result = try run() catch (error:Dynamic) {
+			authoredDepth--;
+			throw error;
+		}
+		authoredDepth--;
+		return result;
+	}
+
 	public function new(source:String, authoredSyntax:Bool = false) {
-		this.authoredSyntax = authoredSyntax;
+		this.authoredSyntax = authoredSyntax || authoredDepth > 0;
 		this.source = source == null ? "" : source;
 		lex = new HxLexer(source);
 		cur = lex.next();
@@ -3679,13 +3696,14 @@ class HxParser {
 		}
 
 		// Stage 3 expansion: lower `return if (cond) { expr } else { expr }` into a statement-level
-		// `if` with explicit returns in each branch.
+		// `if` with explicit returns in each branch. Authored parsing keeps upstream's
+		// `EReturn(EIf)` instead: the `if` is parsed as an expression below (haxe_ocaml-ac5i9.5).
 		//
 		// Why
 		// - Upstream-ish code (e.g. utest) uses `return if (...) ... else ...` heavily.
 		// - Our expression parser doesn't model `if`-expressions yet, but we can preserve
 		//   semantics at the statement layer for bring-up typing.
-		if (cur.kind.match(TKeyword(KIf))) {
+		if (!authoredSyntax && cur.kind.match(TKeyword(KIf))) {
 			bump(); // 'if'
 			expect(TLParen, "'('");
 			final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
