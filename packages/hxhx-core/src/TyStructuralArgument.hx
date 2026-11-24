@@ -36,7 +36,10 @@ function compatibility(index:TyperIndex, expected:TyType, actual:TyType, ?parame
 	final generic = parameters != null && parameters.length > 0;
 	// A record whose fields still hold open types (`{args: [], ret: null}` stored in a local)
 	// unifies like upstream's monomorphs: each open component binds to the parameter's field
-	// type (`FFun(func)` in upstream tests/unit UnitBuilder.hx, haxe_ocaml-u5s68).
+	// type (`FFun(func)` in upstream tests/unit UnitBuilder.hx, haxe_ocaml-u5s68). A `Dynamic`
+	// component unifies with any field type upstream too, also as a type argument
+	// (`Array<Dynamic>` with `Array<FunctionArg>`); a local function's body sees those open
+	// fields as `Dynamic`.
 	final openRecord = source.isAnonymous() && hasOpenComponent(source) && !generic;
 	if (!target.isAnonymous()
 		|| target.hasUnknownComponent()
@@ -55,9 +58,9 @@ function compatibility(index:TyperIndex, expected:TyType, actual:TyType, ?parame
 	return TyStructuralConstraint.constrain(index, solver, sourceTerm, target) ? Compatible : Incompatible;
 }
 
-/** Whether `type` holds a component that `openComponents` opens: an unknown or a `null` literal. */
+/** Whether `type` holds a component that `openComponents` opens: an unknown, `Dynamic`, or a `null` literal. */
 private function hasOpenComponent(type:TyType):Bool {
-	if (type.isUnknown() || type.isNullLiteral())
+	if (type.isUnknown() || type.isDynamic() || type.isNullLiteral())
 		return true;
 	if (type.isNullable())
 		return hasOpenComponent(type.unwrapNull());
@@ -69,11 +72,11 @@ private function hasOpenComponent(type:TyType):Bool {
 }
 
 /**
-	`TyInferenceSolver.fromType`, except that each unknown component becomes a fresh variable of
-	this private solver, so the proof can bind it without touching the caller's inference.
+	`TyInferenceSolver.fromType`, except that each unknown or `Dynamic` component becomes a fresh
+	variable of this private solver, so the proof can bind it without touching the caller's inference.
  */
 private function openComponents(solver:TyInferenceSolver, type:TyType):TyInferenceTerm {
-	if (type.isUnknown())
+	if (type.isUnknown() || type.isDynamic())
 		return solver.fresh();
 	// Upstream types a `null` field value as `Null<Unknown>`.
 	if (type.isNullLiteral())

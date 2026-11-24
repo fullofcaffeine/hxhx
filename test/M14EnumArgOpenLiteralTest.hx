@@ -11,8 +11,9 @@ import hxhx.Stage3Compiler;
 	unknown component, so the call failed with "No compatible method signature for FFun". That
 	was Gate 1 Lite's first failure once constant-argument macros worked.
 
-	- `Main` (the UnitBuilder shape, a record whose only open field is `ret: null`, and a plain
-	  `Function` parameter) must type; upstream prints `expected.stdout`.
+	- `Main` (the UnitBuilder shape, a record whose only open field is `ret: null`, a plain
+	  `Function` parameter, and UnitBuilder's shape inside a local function, where hxhx sees the
+	  open fields as `Dynamic`) must type; upstream prints `expected.stdout`.
 	- `Wrong` (an open record whose `expr` is an `Int`) must still fail, as upstream reports
 	  `Int should be haxe.macro.Expr`.
 **/
