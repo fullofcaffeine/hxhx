@@ -85,21 +85,39 @@ class M14Stage3ExprMacroPassDriverTest {
 
 		// The upstream unit-suite shape: a module-level `main` calls a package-qualified macro as a `for`
 		// iterable and a same-package macro as a statement; their owner loads only when the pass selects
-		// them. Both calls must be selected, never typed as ordinary calls (which reports "value loop
-		// requires a resolved iterator protocol"). Upstream Haxe 4.3.7 runs both macros:
-		// `haxe -cp test/fixtures/expr_macro_pass_driver -main suite.SuiteMain --interp` prints `specs`
-		// and `issues:suite.issues`. hxhx cannot pass String parameters yet, so today each selected
-		// call is reported and the compile fails.
+		// them, and their parameters are String constants. Both calls must be selected, never typed as
+		// ordinary calls (which reports "value loop requires a resolved iterator protocol"), and both
+		// declarations and arguments must be accepted for the plugin. Upstream Haxe 4.3.7 runs both
+		// macros: `haxe -cp test/fixtures/expr_macro_pass_driver -main suite.SuiteMain --interp` prints
+		// `specs` and `issues:suite.issues`. A compilation-server request (this test) does not load
+		// plugins, so here the calls stop at that reason; `npm run test:macro-runtime:project-module`
+		// runs them with a native hxhx and compares the program output with upstream.
 		final suite = compile("suite.SuiteMain");
 		final suiteOutput = suite.stdout + suite.stderr;
 		require(suite.code != 0 && suiteOutput.indexOf("resolved iterator protocol") < 0,
 			"the upstream-shaped macro calls were typed as ordinary calls:\n" + suiteOutput);
 		for (declaration in ["suite.SpecBuilder.names", "suite.SpecBuilder.register"])
-			require(suite.stdout.indexOf("expression macro " + declaration + " was not executed: ") >= 0,
-				"the module-level main did not select "
+			require(suite.stdout.indexOf("expression macro "
 				+ declaration
-				+ ":\n"
+				+ " was not executed: the compilation server does not load project macro plugins yet") >= 0,
+				"the String-parameter macro "
+				+ declaration
+				+ " did not reach the project macro plugin:\n"
 				+ suiteOutput);
+
+		// A wrong argument for a constant parameter fails the compile with upstream's message, whether or not
+		// a plugin could run the macro (upstream lines carry `line: characters a-b`, which hxhx cannot give yet).
+		for (entry in [
+			{main: "suite.NonConstant", lines: ["haxe.macro.Expr should be String", "... For function argument 'basePath'"]},
+			{main: "suite.WrongConstant", lines: ["Int should be String", "... For function argument 'basePath'"]},
+			{main: "suite.MissingArgument", lines: ["Not enough arguments, expected pack:String"]}
+		]) {
+			final result = compile(entry.main);
+			final output = result.stdout + result.stderr;
+			require(result.code != 0 && output.indexOf("was not executed") < 0, entry.main + " did not fail at its macro arguments:\n" + output);
+			for (line in entry.lines)
+				require(output.indexOf(line) >= 0, entry.main + " did not report `" + line + "`:\n" + output);
+		}
 
 		// hxhx's own bundled-source macro (its file in this checkout) is the one scoped project-macro exception until it
 		// runs through the plugin path. A project class with the same name gets no exception.

@@ -24,6 +24,8 @@ import sys.io.File;
 	   build once, and keeps the previous build for compiles that may still load it.
 	6. A lock older than 30 minutes is stale; the next rebuild keeps only itself and the build the
 	   previous receipt named, removing older builds and a partial directory of an interrupted build.
+	7. Macros with constant parameters (`test/fixtures/project-macro-constant-args`) and an inferred
+	   result build; the generated adapters decode each constant argument.
 
 	Loading the plugin needs an OCaml-native hxhx; `scripts/hxhx/run-project-macro-module-smoke.sh`
 	covers that end to end.
@@ -66,11 +68,12 @@ class M14ProjectMacroPluginCacheTest {
 		final cacheRoot = root + "/cache";
 		final progress = new Array<String>();
 		final version = ocamlVersion();
-		function request(?dune:String, ?ocaml:String, ?lockTimeout:Float):ProjectMacroPluginRequest {
+		function request(?dune:String, ?ocaml:String, ?lockTimeout:Float, ?declarations:Array<String>, ?sources:String):ProjectMacroPluginRequest {
+			final sourceDirectory = sources == null ? src : sources;
 			return {
-				declarations: ["Identity.preserve"],
-				macroClassPaths: [src],
-				classPaths: [src],
+				declarations: declarations == null ? ["Identity.preserve"] : declarations,
+				macroClassPaths: [sourceDirectory],
+				classPaths: [sourceDirectory],
 				defines: [],
 				cwd: repo,
 				supportClassPath: repo + "/packages/hxhx-core/src",
@@ -208,6 +211,24 @@ class M14ProjectMacroPluginCacheTest {
 		require(!FileSystem.exists(cold.activation.artifactPath), "builds older than the previous one were kept");
 		require(FileSystem.exists(edited.activation.artifactPath), "the previous build was removed");
 		require(!FileSystem.exists(keyDirectory + "/build-interrupted"), "a partial build directory of an interrupted build was kept");
+
+		// 7. Macros whose parameters are constants (`String`, `Int`, `Float`, `Bool`), and one whose result
+		// is left to inference, build into a plugin whose adapters decode each constant argument.
+		final constants = ProjectMacroPluginCache.ensure(request(null, null, null, ["Values.describe", "Values.shout"],
+			repo + "/test/fixtures/project-macro-constant-args/src"));
+		require(FileSystem.exists(constants.activation.artifactPath), "the constant-parameter plugin is missing: " + constants.activation.artifactPath);
+		final entry = File.getContent(haxe.io.Path.join([
+			haxe.io.Path.directory(constants.activation.artifactPath),
+			"..",
+			"..",
+			"hxhx_plugin_entry.ml"
+		]));
+		for (decoder in ["stringArgument", "intArgument", "floatArgument", "boolArgument"])
+			require(entry.indexOf("Hxhxmacrohost_MacroDeclarationPlugin." + decoder + " (HxBootArray.get") >= 0,
+				"the plugin entry does not decode constants with "
+				+ decoder
+				+ ":\n"
+				+ entry);
 
 		Sys.println("project_macro_plugin_cold_seconds=" + Math.round(coldSeconds * 10) / 10);
 		Sys.println("project_macro_plugin_warm_seconds=" + Math.round(warmSeconds * 1000) / 1000);

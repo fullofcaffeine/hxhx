@@ -185,7 +185,9 @@ class InProcMacroSession {
 		When no loaded project-macro plugin registered that key, the call stays `Unavailable` and the
 		caller reports it as unexecuted. Otherwise:
 
-		1. export each authored argument to `haxe.macro.Expr` (`MacroSyntaxExport`),
+		1. export each authored argument of an `Expr` parameter to `haxe.macro.Expr` (`MacroSyntaxExport`);
+		   send the checked constant of a `String`, `Int`, `Float`, or `Bool` parameter as `EConst`
+		   (`ProjectMacroArguments`), which the plugin adapter turns into the value,
 		2. encode them (`MacroSyntaxWire`) and call the plugin's generated adapter, which runs the
 		   real macro method compiled into the plugin,
 		3. decode the returned expression and import it as parser syntax (`MacroSyntaxImport`).
@@ -203,8 +205,21 @@ class InProcMacroSession {
 		try {
 			final positions = new MacroSyntaxPositions(request.getFilePath());
 			final exporter = new MacroSyntaxExport(positions);
-			final authored = request.getArguments();
-			final arguments = [for (index in 0...authored.length) exporter.argument(authored[index], index)];
+			final source = declaration.getSourceDeclaration();
+			if (source == null)
+				throw "the declaration has no source declaration";
+			final bound = ProjectMacroArguments.bind(key, source, request.getArguments(), request.getFilePath());
+			// The macro receives a constant's value, never its syntax, so the position is only a valid placeholder.
+			final constantPosition:haxe.macro.Expr.Position = {file: request.getFilePath(), min: 0, max: 0};
+			final arguments:Array<haxe.macro.Expr> = [
+				for (index in 0...bound.length)
+					switch bound[index] {
+						case Syntax(expression):
+							exporter.argument(expression, index);
+						case Constant(value):
+							{expr: value, pos: constantPosition};
+					}
+			];
 			final response = NativeMacroModuleHost.runDeclaration(key, MacroSyntaxWire.encodeArguments(arguments));
 			if (MacroSyntaxWire.isFailure(response))
 				throw "the macro failed: " + MacroSyntaxWire.decodeFailure(response);

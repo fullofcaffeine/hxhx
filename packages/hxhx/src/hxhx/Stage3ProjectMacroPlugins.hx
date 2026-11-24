@@ -315,6 +315,8 @@ private class ProjectMacroCallDispatch {
 			"` has no source declaration" : backend.ocaml.Stage3OcamlMacroPluginEntry.unsupportedDeclarationShape(key, source);
 		if (unsupported != null)
 			return Unavailable(unsupported);
+		// A wrong argument is a compile error at the call (as upstream), whether or not a plugin can run it.
+		hxhx.macro.ProjectMacroArguments.bind(key, source, request.getArguments(), request.getFilePath());
 		if (unavailableReason != null)
 			return Unavailable(unavailableReason);
 		if (recording) {

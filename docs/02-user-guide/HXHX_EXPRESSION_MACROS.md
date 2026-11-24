@@ -66,9 +66,12 @@ that cannot be built, the external-host mode (which has no structured dispatch m
 
 ```
 expr_macros_unexecuted=1
-expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: project macro declaration `macros.Macros.items` parameter `n` must be a required haxe.macro.Expr; other parameter kinds are not supported yet
-hxhx(stage3): Main.hx: expression macro macros.Macros.items was not executed: project macro declaration `macros.Macros.items` parameter `n` must be a required haxe.macro.Expr; other parameter kinds are not supported yet
+expr_macro_unexecuted[0]=Main.hx: macros.Macros.items: project macro declaration `macros.Macros.items` parameter `n` is optional; optional and default-value parameters are not supported yet
+hxhx(stage3): Main.hx: expression macro macros.Macros.items was not executed: project macro declaration `macros.Macros.items` parameter `n` is optional; optional and default-value parameters are not supported yet
 ```
+
+A wrong argument for a constant parameter (next section) is a different error: the compile fails at the call even
+when a plugin could run the macro, as in upstream Haxe.
 
 One declaration is exempt for now: hxhx's own `CompilerBundledSourcesMacro.files()` (only the one in the hxhx
 checkout, `packages/hxhx-core/src/CompilerBundledSourcesMacro.hx`), which embeds standard-library
@@ -92,6 +95,31 @@ Important constraints:
   - we do **not** type-check the returned expression snippet yet; we just parse it into the bootstrap `HxExpr` subset;
   - the returned snippet must be parsable by `HxParser.parseExprText` (tiny expression grammar).
 
+### Constant arguments
+
+Upstream Haxe 4.3.7 gives a macro the syntax of an argument only when the parameter type is `haxe.macro.Expr`. For any
+other parameter type, the argument must be a constant, and the macro receives its value. hxhx follows this rule for
+`String`, `Int`, `Float`, and `Bool` parameters:
+
+- A constant is a string, integer, float, `true`, or `false` literal, optionally in parentheses. A negative literal
+  such as `-1` is a constant; `-(1)` is not.
+- An `Int` constant can fill a `Float` parameter.
+- An argument that is not a constant fails the compile with upstream's message, for example
+  `haxe.macro.Expr should be String` and `... For function argument 'basePath'`. A constant of the wrong type gives
+  `Int should be String`. A missing argument gives `Not enough arguments, expected pack:String`, and an extra one
+  gives `Too many arguments`.
+- hxhx prints the call file but not upstream's line and character range, because argument syntax has no exact
+  positions yet (`haxe_ocaml-9sj5p.2`).
+
+Not supported yet, each with its own error: `null`, array, and object constants; optional and default-value
+parameters; rest parameters; and other parameter types. A single-quoted string that contains `$` is reported as a
+non-constant, because the parser has already turned it into a concatenation. Upstream passes its raw text.
+
+The argument still travels to the plugin as an `Expr` (`EConst`). The generated adapter turns it into the value with
+`hxhxmacrohost.MacroDeclarationPlugin.stringArgument` (or `intArgument`, `floatArgument`, `boolArgument`), so the
+plugin wire format and ABI do not change. Fixtures: `test/fixtures/project-macro-constant-args` and
+`test/fixtures/expr_macro_pass_driver/suite`.
+
 ### Project macro plugins (in-process)
 
 A project macro runs from a *project macro plugin*: an OCaml library that hxhx compiles from the project's macro classes
@@ -107,8 +135,9 @@ hxhx --hxhx-stage3 -cp src -main Main
 
 What happens, in order:
 
-1. The pre-typing pass finds the calls whose callee is a supported macro declaration (a static `macro` method whose
-   parameters are all required `Expr` values and whose result is `Expr`), here `Identity.preserve`.
+1. The pre-typing pass finds the calls whose callee is a supported macro declaration, here `Identity.preserve`. A
+   supported declaration is a static `macro` method. Its result is `Expr`, declared or inferred. Each parameter is
+   required and is declared `Expr`, `String`, `Int`, `Float`, or `Bool` (see "Constant arguments" above).
 2. hxhx computes a cache key from everything it knows before building: the digest of its own executable and its OCaml
    version, the plugin ABI versions, the declarations, the classpaths, the `-D` defines, the working directory, and the
    OCaml runtime sources the plugin is built with.
