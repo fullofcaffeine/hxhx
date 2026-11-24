@@ -77,6 +77,18 @@ class ModuleLoader extends LazyTypeLoader {
 	final visitedSourceFiles = new haxe.ds.StringMap<Bool>();
 	final typeNotFoundTried:haxe.ds.StringMap<Bool>;
 
+	/**
+		The compile error of each source file that failed to parse, by source file key.
+
+		Why
+		- Upstream Haxe 4.3.7 reports a parse error when typing loads the module. Dropping
+		  the module instead made the typer fail later at the use site with an unrelated
+		  message (haxe_ocaml-kq23l).
+		- Dependency expansion follows source-text heuristics that can reach a module
+		  upstream never loads, so only a typing demand reports the error.
+	**/
+	final parseFailures = new haxe.ds.StringMap<String>();
+
 	// Newly loaded modules (drained by the Stage3 driver).
 	final pending:Array<ResolvedModule>;
 	final signatureStates = new haxe.ds.StringMap<SignaturePreparationState>();
@@ -234,7 +246,7 @@ class ModuleLoader extends LazyTypeLoader {
 	/** Discover source headers without recursively publishing another module's signatures. */
 	function declarationHeadersAvailable(path:String, context:TyTypeResolutionContext):Null<TyTypeDeclaration> {
 		var hit = index.resolveTypeDeclaration(path, context, module -> {
-			loadModuleHeadersByPath(module);
+			loadModuleHeadersByPath(module, true);
 		});
 		if (hit != null)
 			return hit;
@@ -245,7 +257,7 @@ class ModuleLoader extends LazyTypeLoader {
 					continue;
 				typeNotFoundTried.set(candidate, true);
 				if (invokeOnMissingType(candidate)) {
-					loadModuleHeadersByPath(candidate);
+					loadModuleHeadersByPath(candidate, true);
 					hit = index.resolveTypeDeclaration(path, context);
 					if (hit != null)
 						return hit;
@@ -466,7 +478,11 @@ class ModuleLoader extends LazyTypeLoader {
 			prepareSignatureDependencies(module);
 	}
 
-	function loadModuleHeadersByPath(modulePath:String):Null<ResolvedModule> {
+	/**
+		Load one module's headers. When `demanded` (typing asked for this module), a parse
+		failure of its source is thrown as a compile error; otherwise the module is skipped.
+	**/
+	function loadModuleHeadersByPath(modulePath:String, demanded = false):Null<ResolvedModule> {
 		if (modulePath == null || modulePath.length == 0)
 			return null;
 		if (visited.exists(modulePath))
@@ -483,6 +499,12 @@ class ModuleLoader extends LazyTypeLoader {
 		// Resolve every new lookup before checking the source. Its observation must
 		// still record whether a direct file shadows a secondary-type fallback.
 		final selectedFileKey = CompilerSourceResolver.sourceFileKey(filePath);
+		final failure = parseFailures.get(selectedFileKey);
+		if (failure != null) {
+			if (demanded)
+				throw failure;
+			return null;
+		}
 		if (visitedSourceFiles.exists(selectedFileKey)) {
 			visited.set(modulePath, true);
 			return null;
@@ -499,16 +521,26 @@ class ModuleLoader extends LazyTypeLoader {
 		final effectiveDefines = moduleDefines(modulePath, filePath);
 		final conditional = HxConditionalCompilation.filterSourceObserved(source, effectiveDefines);
 		final filtered = conditional.getFilteredSource();
+		var parseError:Null<String> = null;
 		final parsed = try {
 			sourceProvider.parseFilteredSource({originalSource: source, filteredSource: filtered, filePath: filePath});
-		} catch (_:HxParseError) {
+		} catch (error:HxParseError) {
+			parseError = error.message + " (" + error.pos.toString() + ")";
 			null;
-		} catch (_:String) {
+		} catch (error:String) {
+			parseError = error;
 			null;
 		}
 		if (parsed == null) {
 			if (trace)
 				Sys.println("loader_load parse_failed module=" + modulePath + " file=" + filePath);
+			// The eager resolver reports the same failure as `parse_failed <file>: <message>`.
+			final failure = "parse_failed " + filePath + ": " + (parseError == null ? "the parser returned no module" : parseError);
+			parseFailures.set(selectedFileKey, failure);
+			// A later lookup of this module must reach the recorded failure.
+			visited.remove(modulePath);
+			if (demanded)
+				throw failure;
 			return null;
 		}
 
