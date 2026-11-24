@@ -168,7 +168,7 @@ function checkRuntimeTypeCoverage(packageJson, plan, expected) {
 function main() {
   checkCommandFailureReporting()
   const plan = loadPlan(repoRoot)
-  assert(plan.aggregateCommands.length === 357, `expected 357 npm test commands, found ${plan.aggregateCommands.length}`)
+  assert(plan.aggregateCommands.length === 358, `expected 358 npm test commands, found ${plan.aggregateCommands.length}`)
 
   const expectedAggregateJobs = [
     'guards',
@@ -199,7 +199,7 @@ function main() {
     'compiler-focused-4': 7,
     'compiler-focused-cpp-closure-storage': 2,
     'compiler-focused-5': 19,
-    'compiler-focused-macro-plugins': 5,
+    'compiler-focused-macro-plugins': 6,
     'compiler-focused-6': 13,
     'compiler-focused-7': 4,
     'compiler-focused-8': 14,
