@@ -25,286 +25,286 @@ let rec nullableExpression = fun value transform -> let tempResult = ref (Obj.ma
 )
 and expressionNode = fun value transform -> let tempHxExpr = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
   ignore (match value with
-    | HxExpr.EParenthesized (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in let position = Obj.magic _g1 in let __assign_122 = Obj.magic (let __enum_arg_123 = Obj.magic (expressionNode (Obj.magic inner) transform) in let __enum_arg_124 = Obj.magic position in HxExpr.EParenthesized (Stdlib.Sys.opaque_identity __enum_arg_123, __enum_arg_124)) in (
-      tempHxExpr := __assign_122;
-      __assign_122
+    | HxExpr.EParenthesized (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in let position = Obj.magic _g1 in let __assign_123 = Obj.magic (let __enum_arg_124 = Obj.magic (expressionNode (Obj.magic inner) transform) in let __enum_arg_125 = Obj.magic position in HxExpr.EParenthesized (Stdlib.Sys.opaque_identity __enum_arg_124, __enum_arg_125)) in (
+      tempHxExpr := __assign_123;
+      __assign_123
     )
-    | HxExpr.ESourceTry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let catches = Obj.magic _g in let bodies = Obj.magic _g1 in let position = Obj.magic _g2 in let _g3 = Obj.magic (let __arr_125 = HxArray.create () in __arr_125) in let _g4 = ref 0 in (
-      ignore (while !_g4 < HxArray.length bodies do ignore (let body__local = Obj.magic (let __array_read_receiver_126 = bodies in let __array_read_index_127 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_126) __array_read_index_127) in (
-        ignore (let __old_128 = !_g4 in let __new_129 = HxInt.add __old_128 1 in (
-          ignore (_g4 := __new_129);
-          __new_129
+    | HxExpr.ESourceTry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let catches = Obj.magic _g in let bodies = Obj.magic _g1 in let position = Obj.magic _g2 in let _g3 = Obj.magic (let __arr_126 = HxArray.create () in __arr_126) in let _g4 = ref 0 in (
+      ignore (while !_g4 < HxArray.length bodies do ignore (let body__local = Obj.magic (let __array_read_receiver_127 = bodies in let __array_read_index_128 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_127) __array_read_index_128) in (
+        ignore (let __old_129 = !_g4 in let __new_130 = HxInt.add __old_129 1 in (
+          ignore (_g4 := __new_130);
+          __new_130
         ));
-        let __array_receiver_130 = Obj.magic _g3 in let __array_arg_0_131 = Obj.magic (expressionNode (Obj.magic body__local) transform) in HxArray.push __array_receiver_130 __array_arg_0_131
+        let __array_receiver_131 = Obj.magic _g3 in let __array_arg_0_132 = Obj.magic (expressionNode (Obj.magic body__local) transform) in HxArray.push __array_receiver_131 __array_arg_0_132
       )) done);
-      let tempArray = Obj.magic _g3 in let __assign_132 = Obj.magic (let __enum_arg_134 = Obj.magic (let __array_receiver_133 = Obj.magic catches in HxArray.copy __array_receiver_133) in let __enum_arg_135 = Obj.magic tempArray in let __enum_arg_136 = Obj.magic position in HxExpr.ESourceTry (Stdlib.Sys.opaque_identity __enum_arg_134, __enum_arg_135, __enum_arg_136)) in (
-        tempHxExpr := __assign_132;
-        __assign_132
+      let tempArray = Obj.magic _g3 in let __assign_133 = Obj.magic (let __enum_arg_135 = Obj.magic (let __array_receiver_134 = Obj.magic catches in HxArray.copy __array_receiver_134) in let __enum_arg_136 = Obj.magic tempArray in let __enum_arg_137 = Obj.magic position in HxExpr.ESourceTry (Stdlib.Sys.opaque_identity __enum_arg_135, __enum_arg_136, __enum_arg_137)) in (
+        tempHxExpr := __assign_133;
+        __assign_133
       )
     )
-    | HxExpr.ESourceFor (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let binding = Obj.magic _g in let iterable = Obj.magic _g1 in let body__local = Obj.magic _g2 in let position = Obj.magic _g3 in let __assign_137 = Obj.magic (let __enum_arg_138 = Obj.magic binding in let __enum_arg_139 = Obj.magic (expressionNode (Obj.magic iterable) transform) in let __enum_arg_140 = Obj.magic (expressionNode (Obj.magic body__local) transform) in let __enum_arg_141 = Obj.magic position in HxExpr.ESourceFor (Stdlib.Sys.opaque_identity __enum_arg_138, __enum_arg_139, __enum_arg_140, __enum_arg_141)) in (
-      tempHxExpr := __assign_137;
-      __assign_137
+    | HxExpr.ESourceFor (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let binding = Obj.magic _g in let iterable = Obj.magic _g1 in let body__local = Obj.magic _g2 in let position = Obj.magic _g3 in let __assign_138 = Obj.magic (let __enum_arg_139 = Obj.magic binding in let __enum_arg_140 = Obj.magic (expressionNode (Obj.magic iterable) transform) in let __enum_arg_141 = Obj.magic (expressionNode (Obj.magic body__local) transform) in let __enum_arg_142 = Obj.magic position in HxExpr.ESourceFor (Stdlib.Sys.opaque_identity __enum_arg_139, __enum_arg_140, __enum_arg_141, __enum_arg_142)) in (
+      tempHxExpr := __assign_138;
+      __assign_138
     )
-    | HxExpr.ELoweredControl (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let kind = Obj.magic _g in let target = (_g1 : string) in let children = Obj.magic _g2 in let position = Obj.magic _g3 in let _g4 = Obj.magic (let __arr_142 = HxArray.create () in __arr_142) in let _g5 = ref 0 in (
-      ignore (while !_g5 < HxArray.length children do ignore (let child = Obj.magic (let __array_read_receiver_143 = children in let __array_read_index_144 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_143) __array_read_index_144) in (
-        ignore (let __old_145 = !_g5 in let __new_146 = HxInt.add __old_145 1 in (
-          ignore (_g5 := __new_146);
-          __new_146
+    | HxExpr.ELoweredControl (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let kind = Obj.magic _g in let target = (_g1 : string) in let children = Obj.magic _g2 in let position = Obj.magic _g3 in let _g4 = Obj.magic (let __arr_143 = HxArray.create () in __arr_143) in let _g5 = ref 0 in (
+      ignore (while !_g5 < HxArray.length children do ignore (let child = Obj.magic (let __array_read_receiver_144 = children in let __array_read_index_145 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_144) __array_read_index_145) in (
+        ignore (let __old_146 = !_g5 in let __new_147 = HxInt.add __old_146 1 in (
+          ignore (_g5 := __new_147);
+          __new_147
         ));
-        let __array_receiver_147 = Obj.magic _g4 in let __array_arg_0_148 = Obj.magic (expressionNode (Obj.magic child) transform) in HxArray.push __array_receiver_147 __array_arg_0_148
+        let __array_receiver_148 = Obj.magic _g4 in let __array_arg_0_149 = Obj.magic (expressionNode (Obj.magic child) transform) in HxArray.push __array_receiver_148 __array_arg_0_149
       )) done);
-      let tempArray1 = Obj.magic _g4 in let __assign_149 = Obj.magic (let __enum_arg_150 = Obj.magic kind in let __enum_arg_151 = (target : string) in let __enum_arg_152 = Obj.magic tempArray1 in let __enum_arg_153 = Obj.magic position in HxExpr.ELoweredControl (Stdlib.Sys.opaque_identity __enum_arg_150, __enum_arg_151, __enum_arg_152, __enum_arg_153)) in (
-        tempHxExpr := __assign_149;
-        __assign_149
+      let tempArray1 = Obj.magic _g4 in let __assign_150 = Obj.magic (let __enum_arg_151 = Obj.magic kind in let __enum_arg_152 = (target : string) in let __enum_arg_153 = Obj.magic tempArray1 in let __enum_arg_154 = Obj.magic position in HxExpr.ELoweredControl (Stdlib.Sys.opaque_identity __enum_arg_151, __enum_arg_152, __enum_arg_153, __enum_arg_154)) in (
+        tempHxExpr := __assign_150;
+        __assign_150
       )
     )
-    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let field = (_g1 : string) in let __assign_154 = Obj.magic (let __enum_arg_155 = Obj.magic (expressionNode (Obj.magic receiver) transform) in let __enum_arg_156 = (field : string) in HxExpr.EField (Stdlib.Sys.opaque_identity __enum_arg_155, __enum_arg_156)) in (
-      tempHxExpr := __assign_154;
-      __assign_154
+    | HxExpr.EField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let field = (_g1 : string) in let __assign_155 = Obj.magic (let __enum_arg_156 = Obj.magic (expressionNode (Obj.magic receiver) transform) in let __enum_arg_157 = (field : string) in HxExpr.EField (Stdlib.Sys.opaque_identity __enum_arg_156, __enum_arg_157)) in (
+      tempHxExpr := __assign_155;
+      __assign_155
     )
-    | HxExpr.ENullSafeField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let field = (_g1 : string) in let __assign_157 = Obj.magic (let __enum_arg_158 = Obj.magic (expressionNode (Obj.magic receiver) transform) in let __enum_arg_159 = (field : string) in HxExpr.ENullSafeField (Stdlib.Sys.opaque_identity __enum_arg_158, __enum_arg_159)) in (
-      tempHxExpr := __assign_157;
-      __assign_157
+    | HxExpr.ENullSafeField (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let receiver = Obj.magic _g in let field = (_g1 : string) in let __assign_158 = Obj.magic (let __enum_arg_159 = Obj.magic (expressionNode (Obj.magic receiver) transform) in let __enum_arg_160 = (field : string) in HxExpr.ENullSafeField (Stdlib.Sys.opaque_identity __enum_arg_159, __enum_arg_160)) in (
+      tempHxExpr := __assign_158;
+      __assign_158
     )
-    | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let callee = Obj.magic _g in let arguments = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_160 = HxArray.create () in __arr_160) in let _g3 = ref 0 in (
-      ignore (while !_g3 < HxArray.length arguments do ignore (let argument = Obj.magic (let __array_read_receiver_161 = arguments in let __array_read_index_162 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_161) __array_read_index_162) in (
-        ignore (let __old_163 = !_g3 in let __new_164 = HxInt.add __old_163 1 in (
-          ignore (_g3 := __new_164);
-          __new_164
+    | HxExpr.ECall (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let callee = Obj.magic _g in let arguments = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_161 = HxArray.create () in __arr_161) in let _g3 = ref 0 in (
+      ignore (while !_g3 < HxArray.length arguments do ignore (let argument = Obj.magic (let __array_read_receiver_162 = arguments in let __array_read_index_163 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_162) __array_read_index_163) in (
+        ignore (let __old_164 = !_g3 in let __new_165 = HxInt.add __old_164 1 in (
+          ignore (_g3 := __new_165);
+          __new_165
         ));
-        let __array_receiver_165 = Obj.magic _g2 in let __array_arg_0_166 = Obj.magic (expressionNode (Obj.magic argument) transform) in HxArray.push __array_receiver_165 __array_arg_0_166
+        let __array_receiver_166 = Obj.magic _g2 in let __array_arg_0_167 = Obj.magic (expressionNode (Obj.magic argument) transform) in HxArray.push __array_receiver_166 __array_arg_0_167
       )) done);
-      let tempArray2 = Obj.magic _g2 in let __assign_167 = Obj.magic (let __enum_arg_168 = Obj.magic (expressionNode (Obj.magic callee) transform) in let __enum_arg_169 = Obj.magic tempArray2 in HxExpr.ECall (Stdlib.Sys.opaque_identity __enum_arg_168, __enum_arg_169)) in (
-        tempHxExpr := __assign_167;
-        __assign_167
+      let tempArray2 = Obj.magic _g2 in let __assign_168 = Obj.magic (let __enum_arg_169 = Obj.magic (expressionNode (Obj.magic callee) transform) in let __enum_arg_170 = Obj.magic tempArray2 in HxExpr.ECall (Stdlib.Sys.opaque_identity __enum_arg_169, __enum_arg_170)) in (
+        tempHxExpr := __assign_168;
+        __assign_168
       )
     )
     | HxExpr.EMacroExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let inner = Obj.magic _g in let wrappers = Obj.magic _g1 in let tempArray3 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if wrappers == Obj.magic (HxRuntime.hx_null) then let __assign_170 = Obj.magic (let __represented_array_171 = HxArray.create () in __represented_array_171) in (
-        tempArray3 := __assign_170;
-        __assign_170
-      ) else let __assign_172 = Obj.magic (let __array_receiver_173 = Obj.magic wrappers in HxArray.copy __array_receiver_173) in (
-        tempArray3 := __assign_172;
-        __assign_172
+      ignore (if wrappers == Obj.magic (HxRuntime.hx_null) then let __assign_171 = Obj.magic (let __represented_array_172 = HxArray.create () in __represented_array_172) in (
+        tempArray3 := __assign_171;
+        __assign_171
+      ) else let __assign_173 = Obj.magic (let __array_receiver_174 = Obj.magic wrappers in HxArray.copy __array_receiver_174) in (
+        tempArray3 := __assign_173;
+        __assign_173
       ));
-      let __assign_174 = Obj.magic (let __enum_arg_175 = Obj.magic (expressionNode (Obj.magic inner) transform) in let __enum_arg_176 = Obj.magic (!tempArray3) in HxExpr.EMacroExpr (Stdlib.Sys.opaque_identity __enum_arg_175, __enum_arg_176)) in (
-        tempHxExpr := __assign_174;
-        __assign_174
+      let __assign_175 = Obj.magic (let __enum_arg_176 = Obj.magic (expressionNode (Obj.magic inner) transform) in let __enum_arg_177 = Obj.magic (!tempArray3) in HxExpr.EMacroExpr (Stdlib.Sys.opaque_identity __enum_arg_176, __enum_arg_177)) in (
+        tempHxExpr := __assign_175;
+        __assign_175
       )
     )
     | HxExpr.ELambda (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let arguments = Obj.magic _g in let lambdaBody = Obj.magic _g1 in let signature = Obj.magic _g2 in let tempArray4 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_177 = Obj.magic (let __represented_array_178 = HxArray.create () in __represented_array_178) in (
-        tempArray4 := __assign_177;
-        __assign_177
-      ) else let __assign_179 = Obj.magic (let __array_receiver_180 = Obj.magic arguments in HxArray.copy __array_receiver_180) in (
-        tempArray4 := __assign_179;
-        __assign_179
+      ignore (if arguments == Obj.magic (HxRuntime.hx_null) then let __assign_178 = Obj.magic (let __represented_array_179 = HxArray.create () in __represented_array_179) in (
+        tempArray4 := __assign_178;
+        __assign_178
+      ) else let __assign_180 = Obj.magic (let __array_receiver_181 = Obj.magic arguments in HxArray.copy __array_receiver_181) in (
+        tempArray4 := __assign_180;
+        __assign_180
       ));
-      let __assign_181 = Obj.magic (let __enum_arg_182 = Obj.magic (!tempArray4) in let __enum_arg_183 = Obj.magic (expressionNode (Obj.magic lambdaBody) transform) in let __enum_arg_184 = Obj.magic signature in HxExpr.ELambda (Stdlib.Sys.opaque_identity __enum_arg_182, __enum_arg_183, __enum_arg_184)) in (
-        tempHxExpr := __assign_181;
-        __assign_181
+      let __assign_182 = Obj.magic (let __enum_arg_183 = Obj.magic (!tempArray4) in let __enum_arg_184 = Obj.magic (expressionNode (Obj.magic lambdaBody) transform) in let __enum_arg_185 = Obj.magic signature in HxExpr.ELambda (Stdlib.Sys.opaque_identity __enum_arg_183, __enum_arg_184, __enum_arg_185)) in (
+        tempHxExpr := __assign_182;
+        __assign_182
       )
     )
     | HxExpr.ESwitch (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let scrutinee = Obj.magic _g in let patterns = Obj.magic _g1 in let expressions = Obj.magic _g2 in let tempArray5 = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
-      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_185 = Obj.magic (let __arr_186 = HxArray.create () in __arr_186) in (
-        tempArray5 := __assign_185;
-        __assign_185
-      ) else let __assign_187 = Obj.magic (let __array_receiver_188 = Obj.magic patterns in HxArray.copy __array_receiver_188) in (
-        tempArray5 := __assign_187;
-        __assign_187
+      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_186 = Obj.magic (let __arr_187 = HxArray.create () in __arr_187) in (
+        tempArray5 := __assign_186;
+        __assign_186
+      ) else let __assign_188 = Obj.magic (let __array_receiver_189 = Obj.magic patterns in HxArray.copy __array_receiver_189) in (
+        tempArray5 := __assign_188;
+        __assign_188
       ));
       let tempArray6 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-        ignore (if expressions == Obj.magic (HxRuntime.hx_null) then let __assign_189 = Obj.magic (let __arr_190 = HxArray.create () in __arr_190) in (
-          tempArray6 := __assign_189;
-          __assign_189
-        ) else let _g3 = Obj.magic (let __arr_191 = HxArray.create () in __arr_191) in let _g4 = ref 0 in (
-          ignore (while !_g4 < HxArray.length expressions do ignore (let item = Obj.magic (let __array_read_receiver_192 = expressions in let __array_read_index_193 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_192) __array_read_index_193) in (
-            ignore (let __old_194 = !_g4 in let __new_195 = HxInt.add __old_194 1 in (
-              ignore (_g4 := __new_195);
-              __new_195
+        ignore (if expressions == Obj.magic (HxRuntime.hx_null) then let __assign_190 = Obj.magic (let __arr_191 = HxArray.create () in __arr_191) in (
+          tempArray6 := __assign_190;
+          __assign_190
+        ) else let _g3 = Obj.magic (let __arr_192 = HxArray.create () in __arr_192) in let _g4 = ref 0 in (
+          ignore (while !_g4 < HxArray.length expressions do ignore (let item = Obj.magic (let __array_read_receiver_193 = expressions in let __array_read_index_194 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_193) __array_read_index_194) in (
+            ignore (let __old_195 = !_g4 in let __new_196 = HxInt.add __old_195 1 in (
+              ignore (_g4 := __new_196);
+              __new_196
             ));
-            let __array_receiver_196 = Obj.magic _g3 in let __array_arg_0_197 = Obj.magic (expressionNode (Obj.magic item) transform) in HxArray.push __array_receiver_196 __array_arg_0_197
+            let __array_receiver_197 = Obj.magic _g3 in let __array_arg_0_198 = Obj.magic (expressionNode (Obj.magic item) transform) in HxArray.push __array_receiver_197 __array_arg_0_198
           )) done);
-          let __assign_198 = Obj.magic _g3 in (
-            tempArray6 := __assign_198;
-            __assign_198
+          let __assign_199 = Obj.magic _g3 in (
+            tempArray6 := __assign_199;
+            __assign_199
           )
         ));
-        let __assign_199 = Obj.magic (let __enum_arg_200 = Obj.magic (expressionNode (Obj.magic scrutinee) transform) in let __enum_arg_201 = Obj.magic (!tempArray5) in let __enum_arg_202 = Obj.magic (!tempArray6) in HxExpr.ESwitch (Stdlib.Sys.opaque_identity __enum_arg_200, __enum_arg_201, __enum_arg_202)) in (
-          tempHxExpr := __assign_199;
-          __assign_199
+        let __assign_200 = Obj.magic (let __enum_arg_201 = Obj.magic (expressionNode (Obj.magic scrutinee) transform) in let __enum_arg_202 = Obj.magic (!tempArray5) in let __enum_arg_203 = Obj.magic (!tempArray6) in HxExpr.ESwitch (Stdlib.Sys.opaque_identity __enum_arg_201, __enum_arg_202, __enum_arg_203)) in (
+          tempHxExpr := __assign_200;
+          __assign_200
         )
       )
     )
-    | HxExpr.ENew (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let typePath = (_g : string) in let arguments = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_203 = HxArray.create () in __arr_203) in let _g3 = ref 0 in (
-      ignore (while !_g3 < HxArray.length arguments do ignore (let argument = Obj.magic (let __array_read_receiver_204 = arguments in let __array_read_index_205 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_204) __array_read_index_205) in (
-        ignore (let __old_206 = !_g3 in let __new_207 = HxInt.add __old_206 1 in (
-          ignore (_g3 := __new_207);
-          __new_207
+    | HxExpr.ENew (_p0, _p1) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let typePath = (_g : string) in let arguments = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_204 = HxArray.create () in __arr_204) in let _g3 = ref 0 in (
+      ignore (while !_g3 < HxArray.length arguments do ignore (let argument = Obj.magic (let __array_read_receiver_205 = arguments in let __array_read_index_206 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_205) __array_read_index_206) in (
+        ignore (let __old_207 = !_g3 in let __new_208 = HxInt.add __old_207 1 in (
+          ignore (_g3 := __new_208);
+          __new_208
         ));
-        let __array_receiver_208 = Obj.magic _g2 in let __array_arg_0_209 = Obj.magic (expressionNode (Obj.magic argument) transform) in HxArray.push __array_receiver_208 __array_arg_0_209
+        let __array_receiver_209 = Obj.magic _g2 in let __array_arg_0_210 = Obj.magic (expressionNode (Obj.magic argument) transform) in HxArray.push __array_receiver_209 __array_arg_0_210
       )) done);
-      let tempArray7 = Obj.magic _g2 in let __assign_210 = Obj.magic (let __enum_arg_211 = (typePath : string) in let __enum_arg_212 = Obj.magic tempArray7 in HxExpr.ENew (Stdlib.Sys.opaque_identity __enum_arg_211, __enum_arg_212)) in (
-        tempHxExpr := __assign_210;
-        __assign_210
+      let tempArray7 = Obj.magic _g2 in let __assign_211 = Obj.magic (let __enum_arg_212 = (typePath : string) in let __enum_arg_213 = Obj.magic tempArray7 in HxExpr.ENew (Stdlib.Sys.opaque_identity __enum_arg_212, __enum_arg_213)) in (
+        tempHxExpr := __assign_211;
+        __assign_211
       )
     )
-    | HxExpr.EUnop (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = Obj.magic _g in let fixity = Obj.magic _g1 in let inner = Obj.magic _g2 in let __assign_213 = Obj.magic (let __enum_arg_214 = Obj.magic op in let __enum_arg_215 = Obj.magic fixity in let __enum_arg_216 = Obj.magic (expressionNode (Obj.magic inner) transform) in HxExpr.EUnop (Stdlib.Sys.opaque_identity __enum_arg_214, __enum_arg_215, __enum_arg_216)) in (
-      tempHxExpr := __assign_213;
-      __assign_213
+    | HxExpr.EUnop (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = Obj.magic _g in let fixity = Obj.magic _g1 in let inner = Obj.magic _g2 in let __assign_214 = Obj.magic (let __enum_arg_215 = Obj.magic op in let __enum_arg_216 = Obj.magic fixity in let __enum_arg_217 = Obj.magic (expressionNode (Obj.magic inner) transform) in HxExpr.EUnop (Stdlib.Sys.opaque_identity __enum_arg_215, __enum_arg_216, __enum_arg_217)) in (
+      tempHxExpr := __assign_214;
+      __assign_214
     )
-    | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = (_g : string) in let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_217 = Obj.magic (let __enum_arg_218 = (op : string) in let __enum_arg_219 = Obj.magic (expressionNode (Obj.magic left) transform) in let __enum_arg_220 = Obj.magic (expressionNode (Obj.magic right) transform) in HxExpr.EBinop (Stdlib.Sys.opaque_identity __enum_arg_218, __enum_arg_219, __enum_arg_220)) in (
-      tempHxExpr := __assign_217;
-      __assign_217
+    | HxExpr.EBinop (_p0, _p1, _p2) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let op = (_g : string) in let left = Obj.magic _g1 in let right = Obj.magic _g2 in let __assign_218 = Obj.magic (let __enum_arg_219 = (op : string) in let __enum_arg_220 = Obj.magic (expressionNode (Obj.magic left) transform) in let __enum_arg_221 = Obj.magic (expressionNode (Obj.magic right) transform) in HxExpr.EBinop (Stdlib.Sys.opaque_identity __enum_arg_219, __enum_arg_220, __enum_arg_221)) in (
+      tempHxExpr := __assign_218;
+      __assign_218
     )
-    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let condition = Obj.magic _g in let thenExpression = Obj.magic _g1 in let elseExpression = Obj.magic _g2 in let __assign_221 = Obj.magic (let __enum_arg_222 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_223 = Obj.magic (expressionNode (Obj.magic thenExpression) transform) in let __enum_arg_224 = Obj.magic (expressionNode (Obj.magic elseExpression) transform) in HxExpr.ETernary (Stdlib.Sys.opaque_identity __enum_arg_222, __enum_arg_223, __enum_arg_224)) in (
-      tempHxExpr := __assign_221;
-      __assign_221
+    | HxExpr.ETernary (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let condition = Obj.magic _g in let thenExpression = Obj.magic _g1 in let elseExpression = Obj.magic _g2 in let __assign_222 = Obj.magic (let __enum_arg_223 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_224 = Obj.magic (expressionNode (Obj.magic thenExpression) transform) in let __enum_arg_225 = Obj.magic (expressionNode (Obj.magic elseExpression) transform) in HxExpr.ETernary (Stdlib.Sys.opaque_identity __enum_arg_223, __enum_arg_224, __enum_arg_225)) in (
+      tempHxExpr := __assign_222;
+      __assign_222
     )
-    | HxExpr.ESourceIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let condition = Obj.magic _g in let whenTrue = Obj.magic _g1 in let whenFalse = _g2 in let position = Obj.magic _g3 in let __assign_225 = Obj.magic (let __enum_arg_226 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_227 = Obj.magic (expressionNode (Obj.magic whenTrue) transform) in let __enum_arg_228 = nullableExpression whenFalse transform in let __enum_arg_229 = Obj.magic position in HxExpr.ESourceIf (Stdlib.Sys.opaque_identity __enum_arg_226, __enum_arg_227, __enum_arg_228, __enum_arg_229)) in (
-      tempHxExpr := __assign_225;
-      __assign_225
+    | HxExpr.ESourceIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let condition = Obj.magic _g in let whenTrue = Obj.magic _g1 in let whenFalse = _g2 in let position = Obj.magic _g3 in let __assign_226 = Obj.magic (let __enum_arg_227 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_228 = Obj.magic (expressionNode (Obj.magic whenTrue) transform) in let __enum_arg_229 = nullableExpression whenFalse transform in let __enum_arg_230 = Obj.magic position in HxExpr.ESourceIf (Stdlib.Sys.opaque_identity __enum_arg_227, __enum_arg_228, __enum_arg_229, __enum_arg_230)) in (
+      tempHxExpr := __assign_226;
+      __assign_226
     )
-    | HxExpr.EThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let thrown = Obj.magic _g in let position = Obj.magic _g1 in let __assign_230 = Obj.magic (let __enum_arg_231 = Obj.magic (expressionNode (Obj.magic thrown) transform) in let __enum_arg_232 = Obj.magic position in HxExpr.EThrow (Stdlib.Sys.opaque_identity __enum_arg_231, __enum_arg_232)) in (
-      tempHxExpr := __assign_230;
-      __assign_230
+    | HxExpr.EThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let thrown = Obj.magic _g in let position = Obj.magic _g1 in let __assign_231 = Obj.magic (let __enum_arg_232 = Obj.magic (expressionNode (Obj.magic thrown) transform) in let __enum_arg_233 = Obj.magic position in HxExpr.EThrow (Stdlib.Sys.opaque_identity __enum_arg_232, __enum_arg_233)) in (
+      tempHxExpr := __assign_231;
+      __assign_231
     )
     | HxExpr.EAnon (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let fieldNames = Obj.magic _g in let fieldValues = Obj.magic _g1 in let tempArray8 = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if fieldNames == Obj.magic (HxRuntime.hx_null) then let __assign_233 = Obj.magic (let __represented_array_234 = HxArray.create () in __represented_array_234) in (
-        tempArray8 := __assign_233;
-        __assign_233
-      ) else let __assign_235 = Obj.magic (let __array_receiver_236 = Obj.magic fieldNames in HxArray.copy __array_receiver_236) in (
-        tempArray8 := __assign_235;
-        __assign_235
+      ignore (if fieldNames == Obj.magic (HxRuntime.hx_null) then let __assign_234 = Obj.magic (let __represented_array_235 = HxArray.create () in __represented_array_235) in (
+        tempArray8 := __assign_234;
+        __assign_234
+      ) else let __assign_236 = Obj.magic (let __array_receiver_237 = Obj.magic fieldNames in HxArray.copy __array_receiver_237) in (
+        tempArray8 := __assign_236;
+        __assign_236
       ));
       let tempArray9 = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr HxArray.t) in (
-        ignore (if fieldValues == Obj.magic (HxRuntime.hx_null) then let __assign_237 = Obj.magic (let __arr_238 = HxArray.create () in __arr_238) in (
-          tempArray9 := __assign_237;
-          __assign_237
-        ) else let _g2 = Obj.magic (let __arr_239 = HxArray.create () in __arr_239) in let _g3 = ref 0 in (
-          ignore (while !_g3 < HxArray.length fieldValues do ignore (let fieldValue = Obj.magic (let __array_read_receiver_240 = fieldValues in let __array_read_index_241 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_240) __array_read_index_241) in (
-            ignore (let __old_242 = !_g3 in let __new_243 = HxInt.add __old_242 1 in (
-              ignore (_g3 := __new_243);
-              __new_243
+        ignore (if fieldValues == Obj.magic (HxRuntime.hx_null) then let __assign_238 = Obj.magic (let __arr_239 = HxArray.create () in __arr_239) in (
+          tempArray9 := __assign_238;
+          __assign_238
+        ) else let _g2 = Obj.magic (let __arr_240 = HxArray.create () in __arr_240) in let _g3 = ref 0 in (
+          ignore (while !_g3 < HxArray.length fieldValues do ignore (let fieldValue = Obj.magic (let __array_read_receiver_241 = fieldValues in let __array_read_index_242 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_241) __array_read_index_242) in (
+            ignore (let __old_243 = !_g3 in let __new_244 = HxInt.add __old_243 1 in (
+              ignore (_g3 := __new_244);
+              __new_244
             ));
-            let __array_receiver_244 = Obj.magic _g2 in let __array_arg_0_245 = Obj.magic (expressionNode (Obj.magic fieldValue) transform) in HxArray.push __array_receiver_244 __array_arg_0_245
+            let __array_receiver_245 = Obj.magic _g2 in let __array_arg_0_246 = Obj.magic (expressionNode (Obj.magic fieldValue) transform) in HxArray.push __array_receiver_245 __array_arg_0_246
           )) done);
-          let __assign_246 = Obj.magic _g2 in (
-            tempArray9 := __assign_246;
-            __assign_246
+          let __assign_247 = Obj.magic _g2 in (
+            tempArray9 := __assign_247;
+            __assign_247
           )
         ));
-        let __assign_247 = Obj.magic (let __enum_arg_248 = Obj.magic (!tempArray8) in let __enum_arg_249 = Obj.magic (!tempArray9) in HxExpr.EAnon (Stdlib.Sys.opaque_identity __enum_arg_248, __enum_arg_249)) in (
-          tempHxExpr := __assign_247;
-          __assign_247
+        let __assign_248 = Obj.magic (let __enum_arg_249 = Obj.magic (!tempArray8) in let __enum_arg_250 = Obj.magic (!tempArray9) in HxExpr.EAnon (Stdlib.Sys.opaque_identity __enum_arg_249, __enum_arg_250)) in (
+          tempHxExpr := __assign_248;
+          __assign_248
         )
       )
     )
-    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let guardExpression = _g2 in let yieldExpression = Obj.magic _g3 in let __assign_250 = Obj.magic (let __enum_arg_251 = (name : string) in let __enum_arg_252 = Obj.magic (expressionNode (Obj.magic iterable) transform) in let __enum_arg_253 = nullableExpression guardExpression transform in let __enum_arg_254 = Obj.magic (expressionNode (Obj.magic yieldExpression) transform) in HxExpr.EArrayComprehension (Stdlib.Sys.opaque_identity __enum_arg_251, __enum_arg_252, __enum_arg_253, __enum_arg_254)) in (
-      tempHxExpr := __assign_250;
-      __assign_250
+    | HxExpr.EArrayComprehension (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let guardExpression = _g2 in let yieldExpression = Obj.magic _g3 in let __assign_251 = Obj.magic (let __enum_arg_252 = (name : string) in let __enum_arg_253 = Obj.magic (expressionNode (Obj.magic iterable) transform) in let __enum_arg_254 = nullableExpression guardExpression transform in let __enum_arg_255 = Obj.magic (expressionNode (Obj.magic yieldExpression) transform) in HxExpr.EArrayComprehension (Stdlib.Sys.opaque_identity __enum_arg_252, __enum_arg_253, __enum_arg_254, __enum_arg_255)) in (
+      tempHxExpr := __assign_251;
+      __assign_251
     )
-    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let _g2 = Obj.magic (let __arr_255 = HxArray.create () in __arr_255) in let _g1 = ref 0 in (
-      ignore (while !_g1 < HxArray.length values do ignore (let item = Obj.magic (let __array_read_receiver_256 = values in let __array_read_index_257 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_256) __array_read_index_257) in (
-        ignore (let __old_258 = !_g1 in let __new_259 = HxInt.add __old_258 1 in (
-          ignore (_g1 := __new_259);
-          __new_259
+    | HxExpr.EArrayDecl _p0 -> let _g = Obj.magic _p0 in let values = Obj.magic _g in let _g2 = Obj.magic (let __arr_256 = HxArray.create () in __arr_256) in let _g1 = ref 0 in (
+      ignore (while !_g1 < HxArray.length values do ignore (let item = Obj.magic (let __array_read_receiver_257 = values in let __array_read_index_258 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_257) __array_read_index_258) in (
+        ignore (let __old_259 = !_g1 in let __new_260 = HxInt.add __old_259 1 in (
+          ignore (_g1 := __new_260);
+          __new_260
         ));
-        let __array_receiver_260 = Obj.magic _g2 in let __array_arg_0_261 = Obj.magic (expressionNode (Obj.magic item) transform) in HxArray.push __array_receiver_260 __array_arg_0_261
+        let __array_receiver_261 = Obj.magic _g2 in let __array_arg_0_262 = Obj.magic (expressionNode (Obj.magic item) transform) in HxArray.push __array_receiver_261 __array_arg_0_262
       )) done);
-      let tempArray10 = Obj.magic _g2 in let __assign_262 = Obj.magic (let __enum_arg_263 = Obj.magic tempArray10 in HxExpr.EArrayDecl (Stdlib.Sys.opaque_identity __enum_arg_263)) in (
-        tempHxExpr := __assign_262;
-        __assign_262
+      let tempArray10 = Obj.magic _g2 in let __assign_263 = Obj.magic (let __enum_arg_264 = Obj.magic tempArray10 in HxExpr.EArrayDecl (Stdlib.Sys.opaque_identity __enum_arg_264)) in (
+        tempHxExpr := __assign_263;
+        __assign_263
       )
     )
-    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let array = Obj.magic _g in let index = Obj.magic _g1 in let __assign_264 = Obj.magic (let __enum_arg_265 = Obj.magic (expressionNode (Obj.magic array) transform) in let __enum_arg_266 = Obj.magic (expressionNode (Obj.magic index) transform) in HxExpr.EArrayAccess (Stdlib.Sys.opaque_identity __enum_arg_265, __enum_arg_266)) in (
-      tempHxExpr := __assign_264;
-      __assign_264
+    | HxExpr.EArrayAccess (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let array = Obj.magic _g in let index = Obj.magic _g1 in let __assign_265 = Obj.magic (let __enum_arg_266 = Obj.magic (expressionNode (Obj.magic array) transform) in let __enum_arg_267 = Obj.magic (expressionNode (Obj.magic index) transform) in HxExpr.EArrayAccess (Stdlib.Sys.opaque_identity __enum_arg_266, __enum_arg_267)) in (
+      tempHxExpr := __assign_265;
+      __assign_265
     )
-    | HxExpr.ERange (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in let __assign_267 = Obj.magic (let __enum_arg_268 = Obj.magic (expressionNode (Obj.magic start) transform) in let __enum_arg_269 = Obj.magic (expressionNode (Obj.magic hx_end) transform) in HxExpr.ERange (Stdlib.Sys.opaque_identity __enum_arg_268, __enum_arg_269)) in (
-      tempHxExpr := __assign_267;
-      __assign_267
+    | HxExpr.ERange (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let start = Obj.magic _g in let hx_end = Obj.magic _g1 in let __assign_268 = Obj.magic (let __enum_arg_269 = Obj.magic (expressionNode (Obj.magic start) transform) in let __enum_arg_270 = Obj.magic (expressionNode (Obj.magic hx_end) transform) in HxExpr.ERange (Stdlib.Sys.opaque_identity __enum_arg_269, __enum_arg_270)) in (
+      tempHxExpr := __assign_268;
+      __assign_268
     )
-    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in let __assign_270 = Obj.magic (let __enum_arg_271 = Obj.magic (expressionNode (Obj.magic inner) transform) in let __enum_arg_272 = (typeHint : string) in HxExpr.ECast (Stdlib.Sys.opaque_identity __enum_arg_271, __enum_arg_272)) in (
-      tempHxExpr := __assign_270;
-      __assign_270
+    | HxExpr.ECast (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in let __assign_271 = Obj.magic (let __enum_arg_272 = Obj.magic (expressionNode (Obj.magic inner) transform) in let __enum_arg_273 = (typeHint : string) in HxExpr.ECast (Stdlib.Sys.opaque_identity __enum_arg_272, __enum_arg_273)) in (
+      tempHxExpr := __assign_271;
+      __assign_271
     )
-    | HxExpr.ECheckType (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in let __assign_273 = Obj.magic (let __enum_arg_274 = Obj.magic (expressionNode (Obj.magic inner) transform) in let __enum_arg_275 = (typeHint : string) in HxExpr.ECheckType (Stdlib.Sys.opaque_identity __enum_arg_274, __enum_arg_275)) in (
-      tempHxExpr := __assign_273;
-      __assign_273
+    | HxExpr.ECheckType (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = (_p1 : string) in let inner = Obj.magic _g in let typeHint = (_g1 : string) in let __assign_274 = Obj.magic (let __enum_arg_275 = Obj.magic (expressionNode (Obj.magic inner) transform) in let __enum_arg_276 = (typeHint : string) in HxExpr.ECheckType (Stdlib.Sys.opaque_identity __enum_arg_275, __enum_arg_276)) in (
+      tempHxExpr := __assign_274;
+      __assign_274
     )
-    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_276 = Obj.magic (let __enum_arg_277 = Obj.magic (expressionNode (Obj.magic inner) transform) in HxExpr.EUntyped (Stdlib.Sys.opaque_identity __enum_arg_277)) in (
-      tempHxExpr := __assign_276;
-      __assign_276
+    | HxExpr.EUntyped _p0 -> let _g = Obj.magic _p0 in let inner = Obj.magic _g in let __assign_277 = Obj.magic (let __enum_arg_278 = Obj.magic (expressionNode (Obj.magic inner) transform) in HxExpr.EUntyped (Stdlib.Sys.opaque_identity __enum_arg_278)) in (
+      tempHxExpr := __assign_277;
+      __assign_277
     )
-    | HxExpr.EReturn _p0 -> let _g = _p0 in let inner = _g in let __assign_278 = Obj.magic (let __enum_arg_279 = nullableExpression inner transform in HxExpr.EReturn (Stdlib.Sys.opaque_identity __enum_arg_279)) in (
-      tempHxExpr := __assign_278;
-      __assign_278
+    | HxExpr.EReturn _p0 -> let _g = _p0 in let inner = _g in let __assign_279 = Obj.magic (let __enum_arg_280 = nullableExpression inner transform in HxExpr.EReturn (Stdlib.Sys.opaque_identity __enum_arg_280)) in (
+      tempHxExpr := __assign_279;
+      __assign_279
     )
-    | HxExpr.EVars _p0 -> let _g = Obj.magic _p0 in let declarations = Obj.magic _g in let _g2 = Obj.magic (let __arr_280 = HxArray.create () in __arr_280) in let _g1 = ref 0 in (
-      ignore (while !_g1 < HxArray.length declarations do ignore (let declaration = Obj.magic (let __array_read_receiver_281 = declarations in let __array_read_index_282 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_281) __array_read_index_282) in (
-        ignore (let __old_283 = !_g1 in let __new_284 = HxInt.add __old_283 1 in (
-          ignore (_g1 := __new_284);
-          __new_284
+    | HxExpr.EVars _p0 -> let _g = Obj.magic _p0 in let declarations = Obj.magic _g in let _g2 = Obj.magic (let __arr_281 = HxArray.create () in __arr_281) in let _g1 = ref 0 in (
+      ignore (while !_g1 < HxArray.length declarations do ignore (let declaration = Obj.magic (let __array_read_receiver_282 = declarations in let __array_read_index_283 = !_g1 in HxArray.get (Obj.magic __array_read_receiver_282) __array_read_index_283) in (
+        ignore (let __old_284 = !_g1 in let __new_285 = HxInt.add __old_284 1 in (
+          ignore (_g1 := __new_285);
+          __new_285
         ));
-        let __array_receiver_285 = Obj.magic _g2 in let __array_arg_0_286 = Obj.magic (expressionNode (Obj.magic declaration) transform) in HxArray.push __array_receiver_285 __array_arg_0_286
+        let __array_receiver_286 = Obj.magic _g2 in let __array_arg_0_287 = Obj.magic (expressionNode (Obj.magic declaration) transform) in HxArray.push __array_receiver_286 __array_arg_0_287
       )) done);
-      let tempArray11 = Obj.magic _g2 in let __assign_287 = Obj.magic (let __enum_arg_288 = Obj.magic tempArray11 in HxExpr.EVars (Stdlib.Sys.opaque_identity __enum_arg_288)) in (
-        tempHxExpr := __assign_287;
-        __assign_287
+      let tempArray11 = Obj.magic _g2 in let __assign_288 = Obj.magic (let __enum_arg_289 = Obj.magic tempArray11 in HxExpr.EVars (Stdlib.Sys.opaque_identity __enum_arg_289)) in (
+        tempHxExpr := __assign_288;
+        __assign_288
       )
     )
-    | HxExpr.EVariableDeclaration (_p0, _p1, _p2, _p3, _p4, _p5) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let _g4 = _p4 in let _g5 = _p5 in let name = (_g : string) in let typeHint = (_g1 : string) in let hx_initializer = _g2 in let position = Obj.magic _g3 in let isFinal = _g4 in let isStatic = _g5 in let __assign_289 = Obj.magic (let __enum_arg_290 = (name : string) in let __enum_arg_291 = (typeHint : string) in let __enum_arg_292 = nullableExpression hx_initializer transform in let __enum_arg_293 = Obj.magic position in let __enum_arg_294 = isFinal in let __enum_arg_295 = isStatic in HxExpr.EVariableDeclaration (Stdlib.Sys.opaque_identity __enum_arg_290, __enum_arg_291, __enum_arg_292, __enum_arg_293, __enum_arg_294, __enum_arg_295)) in (
-      tempHxExpr := __assign_289;
-      __assign_289
+    | HxExpr.EVariableDeclaration (_p0, _p1, _p2, _p3, _p4, _p5) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let _g4 = _p4 in let _g5 = _p5 in let name = (_g : string) in let typeHint = (_g1 : string) in let hx_initializer = _g2 in let position = Obj.magic _g3 in let isFinal = _g4 in let isStatic = _g5 in let __assign_290 = Obj.magic (let __enum_arg_291 = (name : string) in let __enum_arg_292 = (typeHint : string) in let __enum_arg_293 = nullableExpression hx_initializer transform in let __enum_arg_294 = Obj.magic position in let __enum_arg_295 = isFinal in let __enum_arg_296 = isStatic in HxExpr.EVariableDeclaration (Stdlib.Sys.opaque_identity __enum_arg_291, __enum_arg_292, __enum_arg_293, __enum_arg_294, __enum_arg_295, __enum_arg_296)) in (
+      tempHxExpr := __assign_290;
+      __assign_290
     )
-    | HxExpr.EWhile (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let condition = Obj.magic _g in let body__local = Obj.magic _g1 in let bodyIsBlock = _g2 in let position = Obj.magic _g3 in let loopKind = Obj.magic _g4 in let _g5 = Obj.magic (let __arr_296 = HxArray.create () in __arr_296) in let _g6 = ref 0 in (
-      ignore (while !_g6 < HxArray.length body__local do ignore (let item = Obj.magic (let __array_read_receiver_297 = body__local in let __array_read_index_298 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_297) __array_read_index_298) in (
-        ignore (let __old_299 = !_g6 in let __new_300 = HxInt.add __old_299 1 in (
-          ignore (_g6 := __new_300);
-          __new_300
+    | HxExpr.EWhile (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let condition = Obj.magic _g in let body__local = Obj.magic _g1 in let bodyIsBlock = _g2 in let position = Obj.magic _g3 in let loopKind = Obj.magic _g4 in let _g5 = Obj.magic (let __arr_297 = HxArray.create () in __arr_297) in let _g6 = ref 0 in (
+      ignore (while !_g6 < HxArray.length body__local do ignore (let item = Obj.magic (let __array_read_receiver_298 = body__local in let __array_read_index_299 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_298) __array_read_index_299) in (
+        ignore (let __old_300 = !_g6 in let __new_301 = HxInt.add __old_300 1 in (
+          ignore (_g6 := __new_301);
+          __new_301
         ));
-        let __array_receiver_301 = Obj.magic _g5 in let __array_arg_0_302 = Obj.magic (expressionNode (Obj.magic item) transform) in HxArray.push __array_receiver_301 __array_arg_0_302
+        let __array_receiver_302 = Obj.magic _g5 in let __array_arg_0_303 = Obj.magic (expressionNode (Obj.magic item) transform) in HxArray.push __array_receiver_302 __array_arg_0_303
       )) done);
-      let tempArray12 = Obj.magic _g5 in let __assign_303 = Obj.magic (let __enum_arg_304 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_305 = Obj.magic tempArray12 in let __enum_arg_306 = bodyIsBlock in let __enum_arg_307 = Obj.magic position in let __enum_arg_308 = Obj.magic loopKind in HxExpr.EWhile (Stdlib.Sys.opaque_identity __enum_arg_304, __enum_arg_305, __enum_arg_306, __enum_arg_307, __enum_arg_308)) in (
-        tempHxExpr := __assign_303;
-        __assign_303
+      let tempArray12 = Obj.magic _g5 in let __assign_304 = Obj.magic (let __enum_arg_305 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_306 = Obj.magic tempArray12 in let __enum_arg_307 = bodyIsBlock in let __enum_arg_308 = Obj.magic position in let __enum_arg_309 = Obj.magic loopKind in HxExpr.EWhile (Stdlib.Sys.opaque_identity __enum_arg_305, __enum_arg_306, __enum_arg_307, __enum_arg_308, __enum_arg_309)) in (
+        tempHxExpr := __assign_304;
+        __assign_304
       )
     )
-    | HxExpr.EDiscardThen (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let effect' = Obj.magic _g in let continuation = Obj.magic _g1 in let __assign_309 = Obj.magic (let __enum_arg_310 = Obj.magic (expressionNode (Obj.magic effect') transform) in let __enum_arg_311 = Obj.magic (expressionNode (Obj.magic continuation) transform) in HxExpr.EDiscardThen (Stdlib.Sys.opaque_identity __enum_arg_310, __enum_arg_311)) in (
-      tempHxExpr := __assign_309;
-      __assign_309
+    | HxExpr.EDiscardThen (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let effect' = Obj.magic _g in let continuation = Obj.magic _g1 in let __assign_310 = Obj.magic (let __enum_arg_311 = Obj.magic (expressionNode (Obj.magic effect') transform) in let __enum_arg_312 = Obj.magic (expressionNode (Obj.magic continuation) transform) in HxExpr.EDiscardThen (Stdlib.Sys.opaque_identity __enum_arg_311, __enum_arg_312)) in (
+      tempHxExpr := __assign_310;
+      __assign_310
     )
-    | HxExpr.ESourceGroup (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let children = Obj.magic _g in let position = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_312 = HxArray.create () in __arr_312) in let _g3 = ref 0 in (
-      ignore (while !_g3 < HxArray.length children do ignore (let child = Obj.magic (let __array_read_receiver_313 = children in let __array_read_index_314 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_313) __array_read_index_314) in (
-        ignore (let __old_315 = !_g3 in let __new_316 = HxInt.add __old_315 1 in (
-          ignore (_g3 := __new_316);
-          __new_316
+    | HxExpr.ESourceGroup (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let children = Obj.magic _g in let position = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_313 = HxArray.create () in __arr_313) in let _g3 = ref 0 in (
+      ignore (while !_g3 < HxArray.length children do ignore (let child = Obj.magic (let __array_read_receiver_314 = children in let __array_read_index_315 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_314) __array_read_index_315) in (
+        ignore (let __old_316 = !_g3 in let __new_317 = HxInt.add __old_316 1 in (
+          ignore (_g3 := __new_317);
+          __new_317
         ));
-        let __array_receiver_317 = Obj.magic _g2 in let __array_arg_0_318 = Obj.magic (expressionNode (Obj.magic child) transform) in HxArray.push __array_receiver_317 __array_arg_0_318
+        let __array_receiver_318 = Obj.magic _g2 in let __array_arg_0_319 = Obj.magic (expressionNode (Obj.magic child) transform) in HxArray.push __array_receiver_318 __array_arg_0_319
       )) done);
-      let tempArray13 = Obj.magic _g2 in let __assign_319 = Obj.magic (let __enum_arg_320 = Obj.magic tempArray13 in let __enum_arg_321 = Obj.magic position in HxExpr.ESourceGroup (Stdlib.Sys.opaque_identity __enum_arg_320, __enum_arg_321)) in (
-        tempHxExpr := __assign_319;
-        __assign_319
+      let tempArray13 = Obj.magic _g2 in let __assign_320 = Obj.magic (let __enum_arg_321 = Obj.magic tempArray13 in let __enum_arg_322 = Obj.magic position in HxExpr.ESourceGroup (Stdlib.Sys.opaque_identity __enum_arg_321, __enum_arg_322)) in (
+        tempHxExpr := __assign_320;
+        __assign_320
       )
     )
-    | HxExpr.ESourceFunction (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let facts = Obj.magic _g in let body__local = Obj.magic _g1 in let defaults = Obj.magic _g2 in let position = Obj.magic _g3 in let _g4 = Obj.magic (let __arr_322 = HxArray.create () in __arr_322) in let _g5 = ref 0 in (
-      ignore (while !_g5 < HxArray.length defaults do ignore (let entry = Obj.magic (let __array_read_receiver_323 = defaults in let __array_read_index_324 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_323) __array_read_index_324) in (
-        ignore (let __old_325 = !_g5 in let __new_326 = HxInt.add __old_325 1 in (
-          ignore (_g5 := __new_326);
-          __new_326
+    | HxExpr.ESourceFunction (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let facts = Obj.magic _g in let body__local = Obj.magic _g1 in let defaults = Obj.magic _g2 in let position = Obj.magic _g3 in let _g4 = Obj.magic (let __arr_323 = HxArray.create () in __arr_323) in let _g5 = ref 0 in (
+      ignore (while !_g5 < HxArray.length defaults do ignore (let entry = Obj.magic (let __array_read_receiver_324 = defaults in let __array_read_index_325 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_324) __array_read_index_325) in (
+        ignore (let __old_326 = !_g5 in let __new_327 = HxInt.add __old_326 1 in (
+          ignore (_g5 := __new_327);
+          __new_327
         ));
-        let __array_receiver_327 = Obj.magic _g4 in let __array_arg_0_328 = Obj.magic (expressionNode (Obj.magic entry) transform) in HxArray.push __array_receiver_327 __array_arg_0_328
+        let __array_receiver_328 = Obj.magic _g4 in let __array_arg_0_329 = Obj.magic (expressionNode (Obj.magic entry) transform) in HxArray.push __array_receiver_328 __array_arg_0_329
       )) done);
-      let tempArray14 = Obj.magic _g4 in let __assign_329 = Obj.magic (let __enum_arg_330 = Obj.magic facts in let __enum_arg_331 = Obj.magic (expressionNode (Obj.magic body__local) transform) in let __enum_arg_332 = Obj.magic tempArray14 in let __enum_arg_333 = Obj.magic position in HxExpr.ESourceFunction (Stdlib.Sys.opaque_identity __enum_arg_330, __enum_arg_331, __enum_arg_332, __enum_arg_333)) in (
-        tempHxExpr := __assign_329;
-        __assign_329
+      let tempArray14 = Obj.magic _g4 in let __assign_330 = Obj.magic (let __enum_arg_331 = Obj.magic facts in let __enum_arg_332 = Obj.magic (expressionNode (Obj.magic body__local) transform) in let __enum_arg_333 = Obj.magic tempArray14 in let __enum_arg_334 = Obj.magic position in HxExpr.ESourceFunction (Stdlib.Sys.opaque_identity __enum_arg_331, __enum_arg_332, __enum_arg_333, __enum_arg_334)) in (
+        tempHxExpr := __assign_330;
+        __assign_330
       )
     )
-    | _ -> let __assign_121 = Obj.magic value in (
-      tempHxExpr := __assign_121;
-      __assign_121
+    | _ -> let __assign_122 = Obj.magic value in (
+      tempHxExpr := __assign_122;
+      __assign_122
     ));
   let rebuilt = Obj.magic (!tempHxExpr) in transform (Obj.magic value) (Obj.magic rebuilt)
 )
@@ -313,162 +313,165 @@ let expressionWithOriginal = fun value transform -> expressionNode (Obj.magic va
 
 let rec statementNode = fun statement transform -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt) in (
   ignore (match statement with
-    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let statements = Obj.magic _g in let position = Obj.magic _g1 in let _g2 = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in let _g3 = ref 0 in (
-      ignore (while !_g3 < HxArray.length statements do ignore (let child = Obj.magic (let __array_read_receiver_14 = statements in let __array_read_index_15 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_14) __array_read_index_15) in (
-        ignore (let __old_16 = !_g3 in let __new_17 = HxInt.add __old_16 1 in (
-          ignore (_g3 := __new_17);
-          __new_17
-        ));
-        let __array_receiver_18 = Obj.magic _g2 in let __array_arg_0_19 = Obj.magic (statementNode (Obj.magic child) transform) in HxArray.push __array_receiver_18 __array_arg_0_19
-      )) done);
-      let tempArray = Obj.magic _g2 in let __assign_20 = Obj.magic (let __enum_arg_21 = Obj.magic tempArray in let __enum_arg_22 = Obj.magic position in HxStmt.SBlock (Stdlib.Sys.opaque_identity __enum_arg_21, __enum_arg_22)) in (
-        tempResult := __assign_20;
-        __assign_20
+    | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
+      ignore _p2;
+      let statements = Obj.magic _g in let position = Obj.magic _g1 in let _g3 = Obj.magic (let __arr_13 = HxArray.create () in __arr_13) in let _g4 = ref 0 in (
+        ignore (while !_g4 < HxArray.length statements do ignore (let child = Obj.magic (let __array_read_receiver_14 = statements in let __array_read_index_15 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_14) __array_read_index_15) in (
+          ignore (let __old_16 = !_g4 in let __new_17 = HxInt.add __old_16 1 in (
+            ignore (_g4 := __new_17);
+            __new_17
+          ));
+          let __array_receiver_18 = Obj.magic _g3 in let __array_arg_0_19 = Obj.magic (statementNode (Obj.magic child) transform) in HxArray.push __array_receiver_18 __array_arg_0_19
+        )) done);
+        let tempArray = Obj.magic _g3 in let __assign_20 = Obj.magic (let __enum_arg_21 = Obj.magic tempArray in let __enum_arg_22 = Obj.magic position in let __enum_arg_23 = HxRuntime.hx_null in HxStmt.SBlock (Stdlib.Sys.opaque_identity __enum_arg_21, __enum_arg_22, __enum_arg_23)) in (
+          tempResult := __assign_20;
+          __assign_20
+        )
       )
     )
     | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let name = (_g : string) in let typeHint = (_g1 : string) in let hx_initializer = _g2 in let position = Obj.magic _g3 in let metadata = Obj.magic _g4 in let tempMaybeArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
-      ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_23 = Obj.magic (Obj.magic (let __represented_array_24 = HxArray.create () in __represented_array_24)) in (
-        tempMaybeArray := __assign_23;
-        __assign_23
-      ) else let __assign_25 = Obj.magic (Obj.magic (let __array_receiver_26 = Obj.magic metadata in HxArray.copy __array_receiver_26)) in (
-        tempMaybeArray := __assign_25;
-        __assign_25
+      ignore (if metadata == Obj.magic (HxRuntime.hx_null) then let __assign_24 = Obj.magic (Obj.magic (let __represented_array_25 = HxArray.create () in __represented_array_25)) in (
+        tempMaybeArray := __assign_24;
+        __assign_24
+      ) else let __assign_26 = Obj.magic (Obj.magic (let __array_receiver_27 = Obj.magic metadata in HxArray.copy __array_receiver_27)) in (
+        tempMaybeArray := __assign_26;
+        __assign_26
       ));
-      let __assign_27 = Obj.magic (let __enum_arg_28 = (name : string) in let __enum_arg_29 = (typeHint : string) in let __enum_arg_30 = nullableExpression hx_initializer transform in let __enum_arg_31 = Obj.magic position in let __enum_arg_32 = Obj.magic (!tempMaybeArray) in HxStmt.SVar (Stdlib.Sys.opaque_identity __enum_arg_28, __enum_arg_29, __enum_arg_30, __enum_arg_31, __enum_arg_32)) in (
-        tempResult := __assign_27;
-        __assign_27
+      let __assign_28 = Obj.magic (let __enum_arg_29 = (name : string) in let __enum_arg_30 = (typeHint : string) in let __enum_arg_31 = nullableExpression hx_initializer transform in let __enum_arg_32 = Obj.magic position in let __enum_arg_33 = Obj.magic (!tempMaybeArray) in HxStmt.SVar (Stdlib.Sys.opaque_identity __enum_arg_29, __enum_arg_30, __enum_arg_31, __enum_arg_32, __enum_arg_33)) in (
+        tempResult := __assign_28;
+        __assign_28
       )
     )
     | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in (
       ignore _p4;
       let condition = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let position = Obj.magic _g3 in let tempMaybeHxStmt = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
-        ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_33 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
-          tempMaybeHxStmt := __assign_33;
-          __assign_33
-        ) else let __assign_34 = Obj.magic (Obj.repr (statementNode (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) transform)) in (
+        ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_34 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
           tempMaybeHxStmt := __assign_34;
           __assign_34
-        ));
-        let __assign_35 = Obj.magic (let __enum_arg_36 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_37 = Obj.magic (statementNode (Obj.magic thenBranch) transform) in let __enum_arg_38 = Obj.magic (!tempMaybeHxStmt) in let __enum_arg_39 = Obj.magic position in let __enum_arg_40 = HxRuntime.hx_null in HxStmt.SIf (Stdlib.Sys.opaque_identity __enum_arg_36, __enum_arg_37, __enum_arg_38, __enum_arg_39, __enum_arg_40)) in (
-          tempResult := __assign_35;
+        ) else let __assign_35 = Obj.magic (Obj.repr (statementNode (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) transform)) in (
+          tempMaybeHxStmt := __assign_35;
           __assign_35
+        ));
+        let __assign_36 = Obj.magic (let __enum_arg_37 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_38 = Obj.magic (statementNode (Obj.magic thenBranch) transform) in let __enum_arg_39 = Obj.magic (!tempMaybeHxStmt) in let __enum_arg_40 = Obj.magic position in let __enum_arg_41 = HxRuntime.hx_null in HxStmt.SIf (Stdlib.Sys.opaque_identity __enum_arg_37, __enum_arg_38, __enum_arg_39, __enum_arg_40, __enum_arg_41)) in (
+          tempResult := __assign_36;
+          __assign_36
         )
       )
     )
-    | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let loopBody = Obj.magic _g2 in let position = Obj.magic _g3 in let __assign_41 = Obj.magic (let __enum_arg_42 = (name : string) in let __enum_arg_43 = Obj.magic (expressionNode (Obj.magic iterable) transform) in let __enum_arg_44 = Obj.magic (statementNode (Obj.magic loopBody) transform) in let __enum_arg_45 = Obj.magic position in HxStmt.SForIn (Stdlib.Sys.opaque_identity __enum_arg_42, __enum_arg_43, __enum_arg_44, __enum_arg_45)) in (
-      tempResult := __assign_41;
-      __assign_41
+    | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> let _g = (_p0 : string) in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let name = (_g : string) in let iterable = Obj.magic _g1 in let loopBody = Obj.magic _g2 in let position = Obj.magic _g3 in let __assign_42 = Obj.magic (let __enum_arg_43 = (name : string) in let __enum_arg_44 = Obj.magic (expressionNode (Obj.magic iterable) transform) in let __enum_arg_45 = Obj.magic (statementNode (Obj.magic loopBody) transform) in let __enum_arg_46 = Obj.magic position in HxStmt.SForIn (Stdlib.Sys.opaque_identity __enum_arg_43, __enum_arg_44, __enum_arg_45, __enum_arg_46)) in (
+      tempResult := __assign_42;
+      __assign_42
     )
-    | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let loopBody = Obj.magic _g3 in let position = Obj.magic _g4 in let __assign_46 = Obj.magic (let __enum_arg_47 = (keyName : string) in let __enum_arg_48 = (valueName : string) in let __enum_arg_49 = Obj.magic (expressionNode (Obj.magic iterable) transform) in let __enum_arg_50 = Obj.magic (statementNode (Obj.magic loopBody) transform) in let __enum_arg_51 = Obj.magic position in HxStmt.SForKeyValue (Stdlib.Sys.opaque_identity __enum_arg_47, __enum_arg_48, __enum_arg_49, __enum_arg_50, __enum_arg_51)) in (
-      tempResult := __assign_46;
-      __assign_46
+    | HxStmt.SForKeyValue (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let keyName = (_g : string) in let valueName = (_g1 : string) in let iterable = Obj.magic _g2 in let loopBody = Obj.magic _g3 in let position = Obj.magic _g4 in let __assign_47 = Obj.magic (let __enum_arg_48 = (keyName : string) in let __enum_arg_49 = (valueName : string) in let __enum_arg_50 = Obj.magic (expressionNode (Obj.magic iterable) transform) in let __enum_arg_51 = Obj.magic (statementNode (Obj.magic loopBody) transform) in let __enum_arg_52 = Obj.magic position in HxStmt.SForKeyValue (Stdlib.Sys.opaque_identity __enum_arg_48, __enum_arg_49, __enum_arg_50, __enum_arg_51, __enum_arg_52)) in (
+      tempResult := __assign_47;
+      __assign_47
     )
-    | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let condition = Obj.magic _g in let loopBody = Obj.magic _g1 in let position = Obj.magic _g2 in let __assign_52 = Obj.magic (let __enum_arg_53 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_54 = Obj.magic (statementNode (Obj.magic loopBody) transform) in let __enum_arg_55 = Obj.magic position in HxStmt.SWhile (Stdlib.Sys.opaque_identity __enum_arg_53, __enum_arg_54, __enum_arg_55)) in (
-      tempResult := __assign_52;
-      __assign_52
+    | HxStmt.SWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let condition = Obj.magic _g in let loopBody = Obj.magic _g1 in let position = Obj.magic _g2 in let __assign_53 = Obj.magic (let __enum_arg_54 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_55 = Obj.magic (statementNode (Obj.magic loopBody) transform) in let __enum_arg_56 = Obj.magic position in HxStmt.SWhile (Stdlib.Sys.opaque_identity __enum_arg_54, __enum_arg_55, __enum_arg_56)) in (
+      tempResult := __assign_53;
+      __assign_53
     )
-    | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let loopBody = Obj.magic _g in let condition = Obj.magic _g1 in let position = Obj.magic _g2 in let __assign_56 = Obj.magic (let __enum_arg_57 = Obj.magic (statementNode (Obj.magic loopBody) transform) in let __enum_arg_58 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_59 = Obj.magic position in HxStmt.SDoWhile (Stdlib.Sys.opaque_identity __enum_arg_57, __enum_arg_58, __enum_arg_59)) in (
-      tempResult := __assign_56;
-      __assign_56
+    | HxStmt.SDoWhile (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let loopBody = Obj.magic _g in let condition = Obj.magic _g1 in let position = Obj.magic _g2 in let __assign_57 = Obj.magic (let __enum_arg_58 = Obj.magic (statementNode (Obj.magic loopBody) transform) in let __enum_arg_59 = Obj.magic (expressionNode (Obj.magic condition) transform) in let __enum_arg_60 = Obj.magic position in HxStmt.SDoWhile (Stdlib.Sys.opaque_identity __enum_arg_58, __enum_arg_59, __enum_arg_60)) in (
+      tempResult := __assign_57;
+      __assign_57
     )
     | HxStmt.SSwitch (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = _p4 in let scrutinee = Obj.magic _g in let patterns = Obj.magic _g1 in let bodies = Obj.magic _g2 in let position = Obj.magic _g3 in let exhaustive = _g4 in let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : HxSwitchPattern.hxswitchpattern HxArray.t) in (
-      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_60 = Obj.magic (let __arr_61 = HxArray.create () in __arr_61) in (
-        tempArray1 := __assign_60;
-        __assign_60
-      ) else let __assign_62 = Obj.magic (let __array_receiver_63 = Obj.magic patterns in HxArray.copy __array_receiver_63) in (
-        tempArray1 := __assign_62;
-        __assign_62
+      ignore (if patterns == Obj.magic (HxRuntime.hx_null) then let __assign_61 = Obj.magic (let __arr_62 = HxArray.create () in __arr_62) in (
+        tempArray1 := __assign_61;
+        __assign_61
+      ) else let __assign_63 = Obj.magic (let __array_receiver_64 = Obj.magic patterns in HxArray.copy __array_receiver_64) in (
+        tempArray1 := __assign_63;
+        __assign_63
       ));
       let tempArray2 = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in (
-        ignore (if bodies == Obj.magic (HxRuntime.hx_null) then let __assign_64 = Obj.magic (let __arr_65 = HxArray.create () in __arr_65) in (
-          tempArray2 := __assign_64;
-          __assign_64
-        ) else let _g5 = Obj.magic (let __arr_66 = HxArray.create () in __arr_66) in let _g6 = ref 0 in (
-          ignore (while !_g6 < HxArray.length bodies do ignore (let body__local = Obj.magic (let __array_read_receiver_67 = bodies in let __array_read_index_68 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_67) __array_read_index_68) in (
-            ignore (let __old_69 = !_g6 in let __new_70 = HxInt.add __old_69 1 in (
-              ignore (_g6 := __new_70);
-              __new_70
+        ignore (if bodies == Obj.magic (HxRuntime.hx_null) then let __assign_65 = Obj.magic (let __arr_66 = HxArray.create () in __arr_66) in (
+          tempArray2 := __assign_65;
+          __assign_65
+        ) else let _g5 = Obj.magic (let __arr_67 = HxArray.create () in __arr_67) in let _g6 = ref 0 in (
+          ignore (while !_g6 < HxArray.length bodies do ignore (let body__local = Obj.magic (let __array_read_receiver_68 = bodies in let __array_read_index_69 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_68) __array_read_index_69) in (
+            ignore (let __old_70 = !_g6 in let __new_71 = HxInt.add __old_70 1 in (
+              ignore (_g6 := __new_71);
+              __new_71
             ));
-            let __array_receiver_71 = Obj.magic _g5 in let __array_arg_0_72 = Obj.magic (statementNode (Obj.magic body__local) transform) in HxArray.push __array_receiver_71 __array_arg_0_72
+            let __array_receiver_72 = Obj.magic _g5 in let __array_arg_0_73 = Obj.magic (statementNode (Obj.magic body__local) transform) in HxArray.push __array_receiver_72 __array_arg_0_73
           )) done);
-          let __assign_73 = Obj.magic _g5 in (
-            tempArray2 := __assign_73;
-            __assign_73
+          let __assign_74 = Obj.magic _g5 in (
+            tempArray2 := __assign_74;
+            __assign_74
           )
         ));
-        let __assign_74 = Obj.magic (let __enum_arg_75 = Obj.magic (expressionNode (Obj.magic scrutinee) transform) in let __enum_arg_76 = Obj.magic (!tempArray1) in let __enum_arg_77 = Obj.magic (!tempArray2) in let __enum_arg_78 = Obj.magic position in let __enum_arg_79 = exhaustive in HxStmt.SSwitch (Stdlib.Sys.opaque_identity __enum_arg_75, __enum_arg_76, __enum_arg_77, __enum_arg_78, __enum_arg_79)) in (
-          tempResult := __assign_74;
-          __assign_74
+        let __assign_75 = Obj.magic (let __enum_arg_76 = Obj.magic (expressionNode (Obj.magic scrutinee) transform) in let __enum_arg_77 = Obj.magic (!tempArray1) in let __enum_arg_78 = Obj.magic (!tempArray2) in let __enum_arg_79 = Obj.magic position in let __enum_arg_80 = exhaustive in HxStmt.SSwitch (Stdlib.Sys.opaque_identity __enum_arg_76, __enum_arg_77, __enum_arg_78, __enum_arg_79, __enum_arg_80)) in (
+          tempResult := __assign_75;
+          __assign_75
         )
       )
     )
-    | HxStmt.SGuardedSwitch (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let value = Obj.magic _g in let enabled = Obj.magic _g1 in let plan = Obj.magic _g2 in let bodies = Obj.magic _g3 in let position = Obj.magic _g4 in let _g5 = Obj.magic (let __arr_80 = HxArray.create () in __arr_80) in let _g6 = ref 0 in (
-      ignore (while !_g6 < HxArray.length bodies do ignore (let body__local = Obj.magic (let __array_read_receiver_81 = bodies in let __array_read_index_82 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_81) __array_read_index_82) in (
-        ignore (let __old_83 = !_g6 in let __new_84 = HxInt.add __old_83 1 in (
-          ignore (_g6 := __new_84);
-          __new_84
+    | HxStmt.SGuardedSwitch (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let _g3 = Obj.magic _p3 in let _g4 = Obj.magic _p4 in let value = Obj.magic _g in let enabled = Obj.magic _g1 in let plan = Obj.magic _g2 in let bodies = Obj.magic _g3 in let position = Obj.magic _g4 in let _g5 = Obj.magic (let __arr_81 = HxArray.create () in __arr_81) in let _g6 = ref 0 in (
+      ignore (while !_g6 < HxArray.length bodies do ignore (let body__local = Obj.magic (let __array_read_receiver_82 = bodies in let __array_read_index_83 = !_g6 in HxArray.get (Obj.magic __array_read_receiver_82) __array_read_index_83) in (
+        ignore (let __old_84 = !_g6 in let __new_85 = HxInt.add __old_84 1 in (
+          ignore (_g6 := __new_85);
+          __new_85
         ));
-        let __array_receiver_85 = Obj.magic _g5 in let __array_arg_0_86 = Obj.magic (statementNode (Obj.magic body__local) transform) in HxArray.push __array_receiver_85 __array_arg_0_86
+        let __array_receiver_86 = Obj.magic _g5 in let __array_arg_0_87 = Obj.magic (statementNode (Obj.magic body__local) transform) in HxArray.push __array_receiver_86 __array_arg_0_87
       )) done);
-      let tempArray3 = Obj.magic _g5 in let __assign_87 = Obj.magic (let __enum_arg_88 = Obj.magic (expressionNode (Obj.magic value) transform) in let __enum_arg_89 = Obj.magic (expressionNode (Obj.magic enabled) transform) in let __enum_arg_90 = Obj.magic plan in let __enum_arg_91 = Obj.magic tempArray3 in let __enum_arg_92 = Obj.magic position in HxStmt.SGuardedSwitch (Stdlib.Sys.opaque_identity __enum_arg_88, __enum_arg_89, __enum_arg_90, __enum_arg_91, __enum_arg_92)) in (
-        tempResult := __assign_87;
-        __assign_87
+      let tempArray3 = Obj.magic _g5 in let __assign_88 = Obj.magic (let __enum_arg_89 = Obj.magic (expressionNode (Obj.magic value) transform) in let __enum_arg_90 = Obj.magic (expressionNode (Obj.magic enabled) transform) in let __enum_arg_91 = Obj.magic plan in let __enum_arg_92 = Obj.magic tempArray3 in let __enum_arg_93 = Obj.magic position in HxStmt.SGuardedSwitch (Stdlib.Sys.opaque_identity __enum_arg_89, __enum_arg_90, __enum_arg_91, __enum_arg_92, __enum_arg_93)) in (
+        tempResult := __assign_88;
+        __assign_88
       )
     )
-    | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in let position = Obj.magic _g2 in let _g3 = Obj.magic (let __arr_93 = HxArray.create () in __arr_93) in let _g4 = ref 0 in (
-      ignore (while !_g4 < HxArray.length catches do ignore (let item = let __array_read_receiver_94 = catches in let __array_read_index_95 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_94) __array_read_index_95 in (
-        ignore (let __old_96 = !_g4 in let __new_97 = HxInt.add __old_96 1 in (
-          ignore (_g4 := __new_97);
-          __new_97
+    | HxStmt.STry (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let tryBody = Obj.magic _g in let catches = Obj.magic _g1 in let position = Obj.magic _g2 in let _g3 = Obj.magic (let __arr_94 = HxArray.create () in __arr_94) in let _g4 = ref 0 in (
+      ignore (while !_g4 < HxArray.length catches do ignore (let item = let __array_read_receiver_95 = catches in let __array_read_index_96 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_95) __array_read_index_96 in (
+        ignore (let __old_97 = !_g4 in let __new_98 = HxInt.add __old_97 1 in (
+          ignore (_g4 := __new_98);
+          __new_98
         ));
-        let __array_receiver_98 = Obj.magic _g3 in let __array_arg_0_99 = let __anon_100 = HxAnon.create () in (
-          ignore (HxAnon.set __anon_100 "name" (Obj.repr (Obj.obj (HxAnon.get item "name"))));
-          ignore (HxAnon.set __anon_100 "typeHint" (Obj.repr (Obj.obj (HxAnon.get item "typeHint"))));
-          ignore (HxAnon.set __anon_100 "body" (HxEnum.box_if_needed "HxStmt" (Obj.repr (statementNode (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get item "body")))) transform))));
-          __anon_100
-        ) in HxArray.push __array_receiver_98 __array_arg_0_99
+        let __array_receiver_99 = Obj.magic _g3 in let __array_arg_0_100 = let __anon_101 = HxAnon.create () in (
+          ignore (HxAnon.set __anon_101 "name" (Obj.repr (Obj.obj (HxAnon.get item "name"))));
+          ignore (HxAnon.set __anon_101 "typeHint" (Obj.repr (Obj.obj (HxAnon.get item "typeHint"))));
+          ignore (HxAnon.set __anon_101 "body" (HxEnum.box_if_needed "HxStmt" (Obj.repr (statementNode (Obj.magic (Obj.obj (HxEnum.unbox_or_obj "HxStmt" (HxAnon.get item "body")))) transform))));
+          __anon_101
+        ) in HxArray.push __array_receiver_99 __array_arg_0_100
       )) done);
-      let tempArray4 = Obj.magic _g3 in let __assign_101 = Obj.magic (let __enum_arg_102 = Obj.magic (statementNode (Obj.magic tryBody) transform) in let __enum_arg_103 = Obj.magic tempArray4 in let __enum_arg_104 = Obj.magic position in HxStmt.STry (Stdlib.Sys.opaque_identity __enum_arg_102, __enum_arg_103, __enum_arg_104)) in (
-        tempResult := __assign_101;
-        __assign_101
+      let tempArray4 = Obj.magic _g3 in let __assign_102 = Obj.magic (let __enum_arg_103 = Obj.magic (statementNode (Obj.magic tryBody) transform) in let __enum_arg_104 = Obj.magic tempArray4 in let __enum_arg_105 = Obj.magic position in HxStmt.STry (Stdlib.Sys.opaque_identity __enum_arg_103, __enum_arg_104, __enum_arg_105)) in (
+        tempResult := __assign_102;
+        __assign_102
       )
     )
     | HxStmt.SBreak _p0 -> (
-      ignore _p0;
-      let __assign_105 = Obj.magic statement in (
-        tempResult := __assign_105;
-        __assign_105
-      )
-    )
-    | HxStmt.SContinue _p0 -> (
       ignore _p0;
       let __assign_106 = Obj.magic statement in (
         tempResult := __assign_106;
         __assign_106
       )
     )
-    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let value = Obj.magic _g in let position = Obj.magic _g1 in let __assign_107 = Obj.magic (let __enum_arg_108 = Obj.magic (expressionNode (Obj.magic value) transform) in let __enum_arg_109 = Obj.magic position in HxStmt.SThrow (Stdlib.Sys.opaque_identity __enum_arg_108, __enum_arg_109)) in (
-      tempResult := __assign_107;
-      __assign_107
+    | HxStmt.SContinue _p0 -> (
+      ignore _p0;
+      let __assign_107 = Obj.magic statement in (
+        tempResult := __assign_107;
+        __assign_107
+      )
+    )
+    | HxStmt.SThrow (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let value = Obj.magic _g in let position = Obj.magic _g1 in let __assign_108 = Obj.magic (let __enum_arg_109 = Obj.magic (expressionNode (Obj.magic value) transform) in let __enum_arg_110 = Obj.magic position in HxStmt.SThrow (Stdlib.Sys.opaque_identity __enum_arg_109, __enum_arg_110)) in (
+      tempResult := __assign_108;
+      __assign_108
     )
     | HxStmt.SReturnVoid _p0 -> (
       ignore _p0;
-      let __assign_110 = Obj.magic statement in (
-        tempResult := __assign_110;
-        __assign_110
+      let __assign_111 = Obj.magic statement in (
+        tempResult := __assign_111;
+        __assign_111
       )
     )
-    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let value = Obj.magic _g in let position = Obj.magic _g1 in let __assign_111 = Obj.magic (let __enum_arg_112 = Obj.magic (expressionNode (Obj.magic value) transform) in let __enum_arg_113 = Obj.magic position in HxStmt.SReturn (Stdlib.Sys.opaque_identity __enum_arg_112, __enum_arg_113)) in (
-      tempResult := __assign_111;
-      __assign_111
+    | HxStmt.SReturn (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let value = Obj.magic _g in let position = Obj.magic _g1 in let __assign_112 = Obj.magic (let __enum_arg_113 = Obj.magic (expressionNode (Obj.magic value) transform) in let __enum_arg_114 = Obj.magic position in HxStmt.SReturn (Stdlib.Sys.opaque_identity __enum_arg_113, __enum_arg_114)) in (
+      tempResult := __assign_112;
+      __assign_112
     )
-    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let value = Obj.magic _g in let position = Obj.magic _g1 in let __assign_114 = Obj.magic (let __enum_arg_115 = Obj.magic (expressionNode (Obj.magic value) transform) in let __enum_arg_116 = Obj.magic position in HxStmt.SExpr (Stdlib.Sys.opaque_identity __enum_arg_115, __enum_arg_116)) in (
-      tempResult := __assign_114;
-      __assign_114
+    | HxStmt.SExpr (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let value = Obj.magic _g in let position = Obj.magic _g1 in let __assign_115 = Obj.magic (let __enum_arg_116 = Obj.magic (expressionNode (Obj.magic value) transform) in let __enum_arg_117 = Obj.magic position in HxStmt.SExpr (Stdlib.Sys.opaque_identity __enum_arg_116, __enum_arg_117)) in (
+      tempResult := __assign_115;
+      __assign_115
     )
-    | HxStmt.STargetScope (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let kind = Obj.magic _g in let body__local = Obj.magic _g1 in let position = Obj.magic _g2 in let __assign_117 = Obj.magic (let __enum_arg_118 = Obj.magic kind in let __enum_arg_119 = Obj.magic (statementNode (Obj.magic body__local) transform) in let __enum_arg_120 = Obj.magic position in HxStmt.STargetScope (Stdlib.Sys.opaque_identity __enum_arg_118, __enum_arg_119, __enum_arg_120)) in (
-      tempResult := __assign_117;
-      __assign_117
+    | HxStmt.STargetScope (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = Obj.magic _p2 in let kind = Obj.magic _g in let body__local = Obj.magic _g1 in let position = Obj.magic _g2 in let __assign_118 = Obj.magic (let __enum_arg_119 = Obj.magic kind in let __enum_arg_120 = Obj.magic (statementNode (Obj.magic body__local) transform) in let __enum_arg_121 = Obj.magic position in HxStmt.STargetScope (Stdlib.Sys.opaque_identity __enum_arg_119, __enum_arg_120, __enum_arg_121)) in (
+      tempResult := __assign_118;
+      __assign_118
     ));
   !tempResult
 )

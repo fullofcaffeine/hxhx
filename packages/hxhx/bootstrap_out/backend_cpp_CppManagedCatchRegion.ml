@@ -174,7 +174,7 @@ let render = fun input -> (
   let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
     ignore (let _g = Obj.magic (Obj.obj (HxEnum.unbox_or_obj "backend.cpp.CppManagedTrySource" (HxAnon.get input "source"))) in match _g with
       | Statement _p0 -> let _g2 = Obj.magic _p0 in if (match _g2 with
-        | HxStmt.SBlock (_, _) -> 0
+        | HxStmt.SBlock (_, _, _) -> 0
         | HxStmt.SVar (_, _, _, _, _) -> 1
         | HxStmt.SIf (_, _, _, _, _) -> 2
         | HxStmt.SForIn (_, _, _, _) -> 3
@@ -4132,7 +4132,7 @@ let rec renderStatement = fun self (statement : HxStmt.hxstmt) (indent : string)
         __assign_166
       ))
     | _ -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_135 = "managed statement requires explicit lowering for " in let __string_part_136 = HxString.toStdString (let __enum_ctor_134 = Obj.repr statement in if __enum_ctor_134 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_134 with
-      | HxStmt.SBlock (_, _) -> "SBlock"
+      | HxStmt.SBlock (_, _, _) -> "SBlock"
       | HxStmt.SVar (_, _, _, _, _) -> "SVar"
       | HxStmt.SIf (_, _, _, _, _) -> "SIf"
       | HxStmt.SForIn (_, _, _, _) -> "SForIn"

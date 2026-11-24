@@ -6,12 +6,13 @@ let __reflaxe_ocaml__ = ()
 
 let rec validate = fun statement -> let tempResult = ref (0 : int) in (
   ignore (match statement with
-    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
+    | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
       ignore _p1;
-      let entries = Obj.magic _g in let count = ref 0 in let _g2 = ref 0 in (
-        ignore (while !_g2 < HxArray.length entries do ignore (let entry = Obj.magic (let __array_read_receiver_80 = entries in let __array_read_index_81 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_80) __array_read_index_81) in (
-          ignore (let __old_82 = !_g2 in let __new_83 = HxInt.add __old_82 1 in (
-            ignore (_g2 := __new_83);
+      ignore _p2;
+      let entries = Obj.magic _g in let count = ref 0 in let _g3 = ref 0 in (
+        ignore (while !_g3 < HxArray.length entries do ignore (let entry = Obj.magic (let __array_read_receiver_80 = entries in let __array_read_index_81 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_80) __array_read_index_81) in (
+          ignore (let __old_82 = !_g3 in let __new_83 = HxInt.add __old_82 1 in (
+            ignore (_g3 := __new_83);
             __new_83
           ));
           count := HxInt.add (!count) (validate (Obj.magic entry))

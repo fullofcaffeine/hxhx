@@ -1029,8 +1029,9 @@ let rec renderRootStatements = fun projection statements target result indent sc
     ));
     let tempArray = ref (Obj.magic (HxRuntime.hx_null) : string HxArray.t) in (
       ignore (match statement with
-        | HxStmt.SBlock (_p0, _p1) -> let _g2 = Obj.magic _p0 in (
+        | HxStmt.SBlock (_p0, _p1, _p2) -> let _g2 = Obj.magic _p0 in (
           ignore _p1;
+          ignore _p2;
           let children = Obj.magic _g2 in let __assign_47 = Obj.magic (let __array_receiver_48 = Obj.magic (let __array_receiver_49 = Obj.magic (let __represented_array_50 = HxArray.create () in let __represented_array_element_0_51 = HxString.toStdString indent ^ "{" in (
             ignore (HxArray.push __represented_array_50 __represented_array_element_0_51);
             __represented_array_50
@@ -1130,7 +1131,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
           ignore _p2;
           let condition = Obj.magic _g2 in let body = Obj.magic _g1 in let control = Obj.magic (TypedBackendFunctionProjection.requireStatementControl (Obj.magic projection) (Obj.magic statement)) in let tempBool = ref (false : bool) in (
             ignore (if (match statement with
-              | HxStmt.SBlock (_, _) -> 0
+              | HxStmt.SBlock (_, _, _) -> 0
               | HxStmt.SVar (_, _, _, _, _) -> 1
               | HxStmt.SIf (_, _, _, _, _) -> 2
               | HxStmt.SForIn (_, _, _, _) -> 3
@@ -1208,7 +1209,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
           ignore _p2;
           let body = Obj.magic _g2 in let condition = Obj.magic _g1 in let control = Obj.magic (TypedBackendFunctionProjection.requireStatementControl (Obj.magic projection) (Obj.magic statement)) in let tempBool1 = ref (false : bool) in (
             ignore (if (match statement with
-              | HxStmt.SBlock (_, _) -> 0
+              | HxStmt.SBlock (_, _, _) -> 0
               | HxStmt.SVar (_, _, _, _, _) -> 1
               | HxStmt.SIf (_, _, _, _, _) -> 2
               | HxStmt.SForIn (_, _, _, _) -> 3
@@ -1309,7 +1310,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
             ignore (if (let __string_receiver_157 = loop in HxString.length __string_receiver_157) = 0 || (let __string_eq_left_158 = (Obj.magic control : TypedBackendStatementControl.t).destination in let __string_eq_right_159 = loop in not (HxString.equals __string_eq_left_158 __string_eq_right_159)) then HxType.hx_throw_typed_rtti (Obj.repr "C++ root loop exit differs from its exact destination") ["Dynamic"] else ());
             let tempString4 = ref (HxString.hx_null_string : string) in (
               ignore (if (match statement with
-                | HxStmt.SBlock (_, _) -> 0
+                | HxStmt.SBlock (_, _, _) -> 0
                 | HxStmt.SVar (_, _, _, _, _) -> 1
                 | HxStmt.SIf (_, _, _, _, _) -> 2
                 | HxStmt.SForIn (_, _, _, _) -> 3
@@ -1351,7 +1352,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
             ignore (if (let __string_receiver_165 = loop in HxString.length __string_receiver_165) = 0 || (let __string_eq_left_166 = (Obj.magic control : TypedBackendStatementControl.t).destination in let __string_eq_right_167 = loop in not (HxString.equals __string_eq_left_166 __string_eq_right_167)) then HxType.hx_throw_typed_rtti (Obj.repr "C++ root loop exit differs from its exact destination") ["Dynamic"] else ());
             let tempString5 = ref (HxString.hx_null_string : string) in (
               ignore (if (match statement with
-                | HxStmt.SBlock (_, _) -> 0
+                | HxStmt.SBlock (_, _, _) -> 0
                 | HxStmt.SVar (_, _, _, _, _) -> 1
                 | HxStmt.SIf (_, _, _, _, _) -> 2
                 | HxStmt.SForIn (_, _, _, _) -> 3
@@ -1425,7 +1426,7 @@ let rec renderRootStatements = fun projection statements target result indent sc
           )
         )
         | _ -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_45 = "managed root statement requires exact control projection for " in let __string_part_46 = HxString.toStdString (let __enum_ctor_44 = Obj.repr statement in if __enum_ctor_44 == HxRuntime.hx_null then Obj.magic (HxRuntime.hx_null) else match Obj.obj __enum_ctor_44 with
-          | HxStmt.SBlock (_, _) -> "SBlock"
+          | HxStmt.SBlock (_, _, _) -> "SBlock"
           | HxStmt.SVar (_, _, _, _, _) -> "SVar"
           | HxStmt.SIf (_, _, _, _, _) -> "SIf"
           | HxStmt.SForIn (_, _, _, _) -> "SForIn"

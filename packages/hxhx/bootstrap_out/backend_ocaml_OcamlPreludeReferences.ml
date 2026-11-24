@@ -187,7 +187,7 @@ let rec statement = fun self (node : Obj.t) -> ignore (ignore (try ignore ((
       tempBool := __assign_7;
       __assign_7
     ) else if (let __enum_idx_8 = node in if __enum_idx_8 == HxRuntime.hx_null then -1 else match Obj.obj __enum_idx_8 with
-      | HxStmt.SBlock (_, _) -> 0
+      | HxStmt.SBlock (_, _, _) -> 0
       | HxStmt.SVar (_, _, _, _, _) -> 1
       | HxStmt.SIf (_, _, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3

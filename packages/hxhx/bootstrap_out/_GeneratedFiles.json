@@ -881,6 +881,7 @@
 		"hxhx_macro_MacroResolvedModuleScanner.ml",
 		"hxhx_macro_MacroRuntimeMode.ml",
 		"hxhx_macro_MacroState.ml",
+		"hxhx_macro_ProjectMacroArguments.ml",
 		"hxhx_macro_ProjectMacroPluginCache.ml",
 		"hxhx_macro_ProjectMacroPluginProcess.ml",
 		"hxhx_runtime_NullableRuntimeString.ml",

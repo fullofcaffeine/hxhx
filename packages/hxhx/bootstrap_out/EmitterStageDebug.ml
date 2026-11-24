@@ -161,15 +161,18 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
       ignore (if not (traceAll) && (let __string_eq_left_88 = fn in let __string_eq_right_89 = "emitToDir" in not (HxString.equals __string_eq_left_88 __string_eq_right_89)) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
       let tempStruct = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
         ignore (match stmt with
-          | HxStmt.SBlock (_p0, _p1) -> (
+          | HxStmt.SBlock (_p0, _p1, _p2) -> (
             ignore _p0;
-            let _g2 = Obj.magic _p1 in let pos = Obj.magic _g2 in let __assign_90 = Obj.magic (let __anon_91 = HxAnon.create () in (
-              ignore (HxAnon.set __anon_91 "kind" (Obj.repr "SBlock"));
-              ignore (HxAnon.set __anon_91 "pos" (Obj.repr pos));
-              __anon_91
-            )) in (
-              tempStruct := __assign_90;
-              __assign_90
+            let _g2 = Obj.magic _p1 in (
+              ignore _p2;
+              let pos = Obj.magic _g2 in let __assign_90 = Obj.magic (let __anon_91 = HxAnon.create () in (
+                ignore (HxAnon.set __anon_91 "kind" (Obj.repr "SBlock"));
+                ignore (HxAnon.set __anon_91 "pos" (Obj.repr pos));
+                __anon_91
+              )) in (
+                tempStruct := __assign_90;
+                __assign_90
+              )
             )
           )
           | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> (
@@ -378,8 +381,9 @@ let traceStage3StmtList = fun phase functionName idx total stmt -> ignore (try i
             ));
             let col = !tempNumber1 in let tempString = ref (HxString.hx_null_string : string) in (
               ignore (match stmt with
-                | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
+                | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
                   ignore _p1;
+                  ignore _p2;
                   let stmts = Obj.magic _g in let tempString1 = ref (HxString.hx_null_string : string) in (
                     ignore (if stmts == Obj.magic (HxRuntime.hx_null) then let __assign_127 = ("0" : string) in (
                       tempString1 := __assign_127;

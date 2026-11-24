@@ -6,7 +6,7 @@ let __reflaxe_ocaml__ = ()
 
 let render = fun arguments body expression -> let statements = Obj.magic (TypedControlStatements.functionBody (Obj.magic body) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null)) (Obj.magic (HxRuntime.hx_null))) in let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (if HxArray.length statements = 1 then let _g = Obj.magic (let __array_read_receiver_1 = statements in let __array_read_index_2 = 0 in HxArray.get (Obj.magic __array_read_receiver_1) __array_read_index_2) in if (match _g with
-    | HxStmt.SBlock (_, _) -> 0
+    | HxStmt.SBlock (_, _, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3

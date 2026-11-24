@@ -831,8 +831,9 @@ let rec hasUnsupportedStmtList = fun stmts -> (try let _g = ref 0 in (
   | HxRuntime.Hx_return __ret_1437 -> (Obj.obj __ret_1437 : bool) : bool)
 and hasUnsupportedStmt = fun stmt -> let tempResult = ref (false : bool) in (
   ignore (match stmt with
-    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
+    | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
       ignore _p1;
+      ignore _p2;
       let stmts = Obj.magic _g in let __assign_1438 = hasUnsupportedStmtList (Obj.magic stmts) in (
         tempResult := __assign_1438;
         __assign_1438
