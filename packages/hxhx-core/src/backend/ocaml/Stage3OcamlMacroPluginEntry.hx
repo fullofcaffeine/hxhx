@@ -20,13 +20,33 @@ package backend.ocaml;
 
 	`MacroDeclarationPlugin.invoke` (Haxe-authored) decodes the argument payload, checks the count,
 	calls the adapter, and encodes the result or the macro's failure. The declaration is checked
-	against the parsed program first: it must be a static `macro` method whose parameters are all
-	required `Expr` values and whose declared result is `Expr`. Anything else is rejected while the
-	plugin is generated, so a plugin never registers a callback with the wrong shape.
+	against the parsed program first (`unsupportedDeclarationShape`), so a plugin never registers a
+	callback with the wrong shape.
+
+	Every argument travels as an `Expr`. A parameter declared `String`, `Int`, `Float`, or `Bool`
+	receives the value of the constant the compiler checked at the call (`MacroPluginParameter`), so
+	its adapter argument is wrapped, for example
+	`(Hxhxmacrohost_MacroDeclarationPlugin.stringArgument (HxBootArray.get (Obj.magic args) 0))`.
 
 	The old `-D ocaml_plugin_macro_expr` / `-D ocaml_plugin_macro_handler` pair registered a
 	`unit -> string` source-text handler. It was removed with plugin ABI version 2 and is rejected.
 **/
+/**
+	How a project-macro plugin passes one macro parameter.
+
+	Upstream Haxe 4.3.7 (`src/typing/macroContext.ml`, `type_macro`, lines 723-797) passes a parameter
+	whose type unifies with `haxe.macro.Expr` as the argument's syntax, and evaluates the argument of
+	any other parameter as a constant value (`Texpr.is_constant_value`, `src/core/texpr.ml` lines
+	577-605). hxhx supports the second form for the four basic constant types.
+**/
+enum MacroPluginParameter {
+	/** A required `haxe.macro.Expr` parameter: the macro receives the argument's syntax. */
+	SyntaxParameter;
+
+	/** A required parameter of type `String`, `Int`, `Float`, or `Bool`: the macro receives the constant's value. */
+	ConstantParameter(type:String);
+}
+
 class Stage3OcamlMacroPluginEntry {
 	public static inline final DECLARATIONS_DEFINE:String = "ocaml_plugin_macro_declarations";
 	public static inline final PLUGIN_ENTRY_TYPE:String = "hxhxmacrohost.MacroDeclarationPlugin";
@@ -115,8 +135,19 @@ class Stage3OcamlMacroPluginEntry {
 			final separator = key.lastIndexOf(".");
 			final owner = key.substr(0, separator);
 			final method = key.substr(separator + 1);
-			final arity = checkedArity(key, owner, method, modules);
-			final arguments = [for (index in 0...arity) "(HxBootArray.get (Obj.magic args) " + index + ")"];
+			final parameters = checkedParameters(key, owner, method, modules);
+			final arity = parameters.length;
+			final arguments = [
+				for (index in 0...arity) {
+					final argument = "(HxBootArray.get (Obj.magic args) " + index + ")";
+					switch parameters[index] {
+						case SyntaxParameter:
+							argument;
+						case ConstantParameter(type):
+							"(" + entryModule + "." + valueIdent(constantDecoder(type)) + " " + argument + ")";
+					}
+				}
+			];
 			final call = moduleName(owner) + "." + valueIdent(method) + " " + (arity == 0 ? "()" : arguments.join(" "));
 			lines.push("  HxHxMacroModuleHost.register_macro_declaration \"" + quote(pluginId) + "\" \"" + quote(key) + "\"");
 			lines.push("    (fun payload -> "
@@ -133,7 +164,7 @@ class Stage3OcamlMacroPluginEntry {
 		return lines;
 	}
 
-	static function checkedArity(key:String, owner:String, method:String, modules:Array<TypedModule>):Int {
+	static function checkedParameters(key:String, owner:String, method:String, modules:Array<TypedModule>):Array<MacroPluginParameter> {
 		for (typed in modules) {
 			final declaration = typed.getBackendDeclaration();
 			final packagePath = HxModuleDecl.getPackagePath(declaration);
@@ -145,10 +176,7 @@ class Stage3OcamlMacroPluginEntry {
 				for (candidate in HxClassDecl.getFunctions(source)) {
 					if (HxFunctionDecl.getName(candidate) != method)
 						continue;
-					final unsupported = unsupportedDeclarationShape(key, candidate);
-					if (unsupported != null)
-						throw unsupported;
-					return HxFunctionDecl.getArgs(candidate).length;
+					return parameters(key, candidate);
 				}
 				throw "project macro declaration `" + key + "` names no method of " + owner;
 			}
@@ -160,26 +188,71 @@ class Stage3OcamlMacroPluginEntry {
 		Why the declaration `key` cannot be registered in a project-macro plugin, or `null` when it can.
 
 		A plugin adapter has the shape `Array<haxe.macro.Expr> -> haxe.macro.Expr`, so the declaration
-		must be a static `macro` method whose parameters are all required `Expr` values and whose
-		declared result is `Expr`. The compiler asks this before it builds a plugin, so an unsupported
-		declaration is reported at its call instead of failing a plugin build.
+		must be a static `macro` method whose result is `Expr`, declared or left to inference as
+		upstream allows (an inferred result that is not `Expr` fails the plugin build). Each parameter
+		must be required and declared `Expr`, `String`, `Int`, `Float`, or `Bool`. The compiler asks
+		this before it builds a plugin, so an unsupported declaration is reported at its call instead
+		of failing a plugin build.
 	**/
 	public static function unsupportedDeclarationShape(key:String, candidate:HxFunctionDecl):Null<String> {
-		if (!HxFunctionDecl.getIsStatic(candidate) || HxFunctionDecl.getMetadata(candidate).indexOf("macro") < 0)
-			return "project macro declaration `" + key + "` is not a static macro method";
-		for (argument in HxFunctionDecl.getArgs(candidate)) {
-			if (HxFunctionArg.getIsOptional(argument)
-				|| HxFunctionArg.getIsRest(argument)
-				|| !isExprType(HxFunctionArg.getTypeHint(argument)))
-				return "project macro declaration `"
-					+ key
-					+ "` parameter `"
-					+ HxFunctionArg.getName(argument)
-					+ "` must be a required haxe.macro.Expr; other parameter kinds are not supported yet";
+		try {
+			parameters(key, candidate);
+		} catch (reason:String) {
+			return reason;
 		}
-		if (!isExprType(HxFunctionDecl.getReturnTypeHint(candidate)))
-			return "project macro declaration `" + key + "` must declare an haxe.macro.Expr result";
 		return null;
+	}
+
+	/**
+		The parameters of declaration `key` in order, or throws why the plugin cannot register it.
+
+		Not yet supported, each with its own reason: optional and default-value parameters (upstream
+		passes `null` for an omitted argument), rest parameters, and every other parameter type
+		(upstream also evaluates arrays, objects, and functions).
+	**/
+	public static function parameters(key:String, candidate:HxFunctionDecl):Array<MacroPluginParameter> {
+		if (!HxFunctionDecl.getIsStatic(candidate) || HxFunctionDecl.getMetadata(candidate).indexOf("macro") < 0)
+			throw "project macro declaration `" + key + "` is not a static macro method";
+		final out = new Array<MacroPluginParameter>();
+		for (argument in HxFunctionDecl.getArgs(candidate)) {
+			final label = "project macro declaration `" + key + "` parameter `" + HxFunctionArg.getName(argument) + "`";
+			if (HxFunctionArg.getIsRest(argument))
+				throw label + " is a rest parameter; rest parameters are not supported yet";
+			if (HxFunctionArg.getIsOptional(argument) || !HxFunctionArg.getDefaultValue(argument).match(NoDefault))
+				throw label + " is optional; optional and default-value parameters are not supported yet";
+			final typeHint = HxFunctionArg.getTypeHint(argument);
+			final constant = constantType(typeHint);
+			if (isExprType(typeHint))
+				out.push(SyntaxParameter);
+			else if (constant != null)
+				out.push(ConstantParameter(constant));
+			else
+				throw label + " must be declared haxe.macro.Expr, String, Int, Float, or Bool; other parameter types are not supported yet";
+		}
+		final result = HxFunctionDecl.getReturnTypeHint(candidate);
+		if (result != null && StringTools.trim(result).length > 0 && !isExprType(result))
+			throw "project macro declaration `" + key + "` must declare an haxe.macro.Expr result";
+		return out;
+	}
+
+	/** The basic constant type a parameter declares (`String`, `Int`, `Float`, `Bool`), or `null`. */
+	public static function constantType(typeHint:Null<String>):Null<String> {
+		final text = typeHint == null ? "" : StringTools.trim(typeHint);
+		return switch text {
+			case "String" | "Int" | "Float" | "Bool": text;
+			case _: null;
+		};
+	}
+
+	/** The `MacroDeclarationPlugin` function that turns a checked constant `Expr` into a value of `type`. */
+	static function constantDecoder(type:String):String {
+		return switch type {
+			case "String": "stringArgument";
+			case "Int": "intArgument";
+			case "Float": "floatArgument";
+			case "Bool": "boolArgument";
+			case _: throw "no constant decoder for parameter type " + type;
+		};
 	}
 
 	static function isExprType(typeHint:Null<String>):Bool {

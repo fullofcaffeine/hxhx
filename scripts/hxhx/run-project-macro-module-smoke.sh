@@ -9,6 +9,11 @@ set -euo pipefail
 # writes a receipt into its plugin cache, loads the plugin in-process, and runs the macro. The
 # native program must print what upstream Haxe 4.3.7 prints.
 #
+# Later steps compile three more fixtures the same way and compare each program with upstream:
+# project-macro-reification (quoted syntax), project-macro-constant-args (String, Int, Float, and
+# Bool parameters, an inferred result), and expr_macro_pass_driver/suite (the upstream unit-suite
+# TestMain shape).
+#
 # The hxhx binary must contain the current compiler sources. Until the committed bootstrap
 # snapshot includes the plugin build driver, pass HXHX_BIN (and HXHX_MACRO_HOST_EXE) built from
 # source; see docs/01-getting-started/TESTING.md.
@@ -294,6 +299,34 @@ require_line reification '^expr_macros_expanded=1$'
 "$WORK_DIR/app-reification/out.exe" >"$ARTIFACT_DIR/reification.stdout" 2>"$ARTIFACT_DIR/reification.stderr"
 diff -u "$REIFICATION_DIR/expected.stdout" "$ARTIFACT_DIR/reification.stdout"
 echo "PROJECT_MACRO_MODULE_REIFICATION:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# Macros whose parameters are constants receive the values the call wrote, as in upstream Haxe 4.3.7:
+# `String`, `Int`, `Float`, and `Bool` parameters, and a result left to inference.
+CONSTANT_DIR="$ROOT/test/fixtures/project-macro-constant-args"
+(
+  cd "$CONSTANT_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/constant_args.oracle.stdout" 2>"$ARTIFACT_DIR/constant_args.oracle.stderr"
+diff -u "$CONSTANT_DIR/expected.stdout" "$ARTIFACT_DIR/constant_args.oracle.stdout"
+compile_app constant_args "$CONSTANT_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line constant_args '^project_macro_plugin=built$'
+require_line constant_args '^expr_macros_expanded=4$'
+"$WORK_DIR/app-constant_args/out.exe" >"$ARTIFACT_DIR/constant_args.stdout" 2>"$ARTIFACT_DIR/constant_args.stderr"
+diff -u "$CONSTANT_DIR/expected.stdout" "$ARTIFACT_DIR/constant_args.stdout"
+
+# The upstream unit-suite shape (`tests/unit` TestMain): a module-level main calls String-parameter
+# macros as a `for` iterable and as a statement; the program prints what upstream prints.
+SUITE_DIR="$ROOT/test/fixtures/expr_macro_pass_driver"
+(
+  cd "$SUITE_DIR"
+  haxe -cp . -main suite.SuiteMain --interp
+) >"$ARTIFACT_DIR/suite.oracle.stdout" 2>"$ARTIFACT_DIR/suite.oracle.stderr"
+printf 'specs\nissues:suite.issues\n' | diff -u - "$ARTIFACT_DIR/suite.oracle.stdout"
+compile_app suite "$SUITE_DIR" suite.SuiteMain --hxhx-macro-cache "$CACHE_DIR"
+require_line suite '^expr_macros_expanded=2$'
+"$WORK_DIR/app-suite/out.exe" >"$ARTIFACT_DIR/suite.stdout" 2>"$ARTIFACT_DIR/suite.stderr"
+diff -u "$ARTIFACT_DIR/suite.oracle.stdout" "$ARTIFACT_DIR/suite.stdout"
+echo "PROJECT_MACRO_MODULE_CONSTANT_ARGUMENTS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 {
   echo "candidate_commit=$CANDIDATE_COMMIT"

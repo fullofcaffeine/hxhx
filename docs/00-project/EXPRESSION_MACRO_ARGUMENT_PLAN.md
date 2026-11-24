@@ -59,8 +59,11 @@ Contract details and limits:
 - Export rejects pattern switches, comprehensions, raw text, lowered sequences without source
   groups, and `is`. Written types are read with the shared type grammar
   (`HxTypedefParser.parseTypeHint`) and printed back in the parser's compact text form.
-- Plugin declarations must be static `macro` methods whose parameters are all required `Expr`
-  values and whose result is `Expr`.
+- Plugin declarations must be static `macro` methods whose result is `Expr` (declared or
+  inferred). Each parameter is a required `Expr`, or a required `String`, `Int`, `Float`, or
+  `Bool` constant: the compiler checks the call argument with upstream's rule and messages and
+  sends it as `EConst`; the generated adapter passes its value (see "Constant arguments" in
+  `docs/02-user-guide/HXHX_EXPRESSION_MACROS.md`).
 - The external macro host has no structured dispatch method (`macro.runDeclaration`, above), so
   hxhx neither builds nor loads a plugin in that mode; a selected declaration fails the compile.
 - One in-process session loads at most one plugin; a second load is rejected. Registrations must

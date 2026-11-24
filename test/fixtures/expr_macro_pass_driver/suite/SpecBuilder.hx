@@ -17,7 +17,12 @@ class SpecBuilder {
 			found.push(spec.name);
 		}
 		add(basePath);
-		return macro $v{found};
+		// `$v{found}` (an Array) would need hxhx's plugin-only reification support module while the
+		// target compile still types macro bodies, which upstream does not do; build the array with `$a{}`.
+		final values = [];
+		for (name in found)
+			values.push(macro $v{name});
+		return macro $a{values};
 	}
 
 	macro static public function register(dir:String, pack:String):haxe.macro.Expr {
