@@ -9,10 +9,10 @@ set -euo pipefail
 # writes a receipt into its plugin cache, loads the plugin in-process, and runs the macro. The
 # native program must print what upstream Haxe 4.3.7 prints.
 #
-# Later steps compile three more fixtures the same way and compare each program with upstream:
+# Later steps compile four more fixtures the same way and compare each program with upstream:
 # project-macro-reification (quoted syntax), project-macro-constant-args (String, Int, Float, and
-# Bool parameters, an inferred result), and expr_macro_pass_driver/suite (the upstream unit-suite
-# TestMain shape).
+# Bool parameters, an inferred result), expr_macro_pass_driver/suite (the upstream unit-suite
+# TestMain shape), and project-macro-context (haxe.macro.Context services and Context.error).
 #
 # The hxhx binary must contain the current compiler sources. Until the committed bootstrap
 # snapshot includes the plugin build driver, pass HXHX_BIN (and HXHX_MACRO_HOST_EXE) built from
@@ -327,6 +327,31 @@ require_line suite '^expr_macros_expanded=2$'
 "$WORK_DIR/app-suite/out.exe" >"$ARTIFACT_DIR/suite.stdout" 2>"$ARTIFACT_DIR/suite.stderr"
 diff -u "$ARTIFACT_DIR/suite.oracle.stdout" "$ARTIFACT_DIR/suite.stdout"
 echo "PROJECT_MACRO_MODULE_CONSTANT_ARGUMENTS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# A macro that uses the first haxe.macro.Context services (positions, defines, parse, error) through
+# the compiler's host service prints what upstream prints, and Context.error reports its message
+# at its position exactly as upstream does.
+CONTEXT_DIR="$ROOT/test/fixtures/project-macro-context"
+(
+  cd "$CONTEXT_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/context.oracle.stdout" 2>"$ARTIFACT_DIR/context.oracle.stderr"
+diff -u "$CONTEXT_DIR/expected.stdout" "$ARTIFACT_DIR/context.oracle.stdout"
+set +e
+(
+  cd "$CONTEXT_DIR"
+  haxe oracle-error.hxml
+) >"$ARTIFACT_DIR/context_error.oracle.stdout" 2>"$ARTIFACT_DIR/context_error.oracle.stderr"
+set -e
+diff -u "$CONTEXT_DIR/expected-error.stderr" "$ARTIFACT_DIR/context_error.oracle.stderr"
+compile_app context "$CONTEXT_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR" -D probe_flag -D probe_dashed -D probe_value=forty-two
+require_line context '^expr_macros_expanded=3$'
+"$WORK_DIR/app-context/out.exe" >"$ARTIFACT_DIR/context.stdout" 2>"$ARTIFACT_DIR/context.stderr"
+diff -u "$CONTEXT_DIR/expected.stdout" "$ARTIFACT_DIR/context.stdout"
+expect_failure context_error "$CONTEXT_DIR/src" ErrorMain "src/ErrorMain.hx:4: characters 36-40 : context error here" \
+  --hxhx-macro-cache "$CACHE_DIR"
+diff -u "$CONTEXT_DIR/expected-error.stderr" "$ARTIFACT_DIR/context_error.compile.stderr"
+echo "PROJECT_MACRO_MODULE_CONTEXT:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 {
   echo "candidate_commit=$CANDIDATE_COMMIT"

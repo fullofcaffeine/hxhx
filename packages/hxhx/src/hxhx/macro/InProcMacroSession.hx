@@ -185,6 +185,8 @@ class InProcMacroSession {
 		When no loaded project-macro plugin registered that key, the call stays `Unavailable` and the
 		caller reports it as unexecuted. Otherwise:
 
+		0. install this call's macro Context services (`MacroContextHostServices`), which the
+		   plugin's `haxe.macro.Context` reaches through the native host while the macro runs,
 		1. export each authored argument of an `Expr` parameter to `haxe.macro.Expr` (`MacroSyntaxExport`);
 		   send the checked constant of a `String`, `Int`, `Float`, or `Bool` parameter as `EConst`
 		   (`ProjectMacroArguments`), which the plugin adapter turns into the value,
@@ -194,7 +196,8 @@ class InProcMacroSession {
 
 		Any failure in these steps (an argument without a source position, a macro exception, a
 		returned shape the importer rejects, a malformed payload) is thrown as a compile error that
-		names the call file and the declaration. It never falls back to ordinary typing.
+		names the call file and the declaration. A failure with a position (`Context.error`) is
+		reported at that position, as upstream does. It never falls back to ordinary typing.
 	**/
 	public function expandSelected(request:ExprMacroDispatchRequest):ExprMacroDispatchResult {
 		final declaration = request.getDeclaration();
@@ -220,15 +223,48 @@ class InProcMacroSession {
 							{expr: value, pos: constantPosition};
 					}
 			];
-			final response = NativeMacroModuleHost.runDeclaration(key, MacroSyntaxWire.encodeArguments(arguments));
-			if (MacroSyntaxWire.isFailure(response))
-				throw "the macro failed: " + MacroSyntaxWire.decodeFailure(response);
+			final payload = MacroSyntaxWire.encodeArguments(arguments);
+			// The plugin's `haxe.macro.Context` asks this call's services through the native host.
+			final services = MacroContextHostServices.forCall(request.getFilePath(), positions.getAnchor());
+			NativeMacroModuleHost.setHostService(contextRequest -> MacroContextHostServices.handle(services, contextRequest));
+			final response = try {
+				NativeMacroModuleHost.runDeclaration(key, payload);
+			} catch (error:String) {
+				NativeMacroModuleHost.setHostService(noContextService);
+				throw error;
+			}
+			NativeMacroModuleHost.setHostService(noContextService);
+			if (MacroSyntaxWire.isFailure(response)) {
+				final failure = MacroSyntaxWire.decodeFailureDetails(response);
+				if (failure.position != null)
+					throw reportedAt(failure.message, failure.position, request.getFilePath());
+				throw "the macro failed: " + failure.message;
+			}
 			return Expanded(new MacroSyntaxImport(positions).result(MacroSyntaxWire.decodeResult(response)));
+		} catch (error:TyperError) {
+			// A positioned macro error (`reportedAt`) is already the final diagnostic. Haxe wraps any
+			// thrown value for a `haxe.Exception` catch, so it must be rethrown before that catch.
+			throw error;
 		} catch (error:String) {
 			throw callSite + error;
 		} catch (error:haxe.Exception) {
 			throw callSite + error.message;
 		}
+	}
+
+	/** The answer outside a macro call: empty, which the plugin reports as a missing service. */
+	static function noContextService(_:String):String
+		return "";
+
+	/**
+		A macro error at a position (`Context.error`), printed as upstream Haxe 4.3.7 prints it:
+		`<file>:<line>: characters <a>-<b> : <message>` (`src/syntax/lexer.ml`, `get_error_pos`).
+		The file is the one the position names, read relative to the working directory.
+	**/
+	public static function reportedAt(message:String, position:haxe.macro.Expr.Position, callFile:String):TyperError {
+		final range = new HxSourceRange(position.file, position.min, position.max);
+		final text = HxLineTable.forFile(position.file).describe(range) + " : " + message;
+		return new TyperError(callFile, HxPos.unknown(), TyperStage.RAW_DIAGNOSTIC_PREFIX + text);
 	}
 
 	/**

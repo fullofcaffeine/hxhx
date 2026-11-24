@@ -244,6 +244,7 @@ class Stage3ProjectMacroPlugins {
 			defines: inputs.defines,
 			cwd: inputs.cwd,
 			supportClassPath: haxe.io.Path.join([repoRoot, "packages", "hxhx-core", "src"]),
+			contextClassPath: haxe.io.Path.join([repoRoot, "packages", "hxhx-core", "macro_plugin_std"]),
 			runtimeSourceDirectories: EmitterStage.stage3RuntimeSourceDirectories(),
 			cacheRoot: cacheRoot,
 			compilerIdentity: hxhxmacrohost.NativeMacroModuleHostIdentity.executableDigest(),

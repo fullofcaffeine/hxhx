@@ -91,6 +91,82 @@ Contract details and limits:
   lookup without editing any recorded file is not detected; macro calls inside macro classes are
   not run.
 
+## Macro Context services (decided 2026-11-24, `haxe_ocaml-expdc`)
+
+Fable decided this under the owner's delegation (option (a), recorded on `haxe_ocaml-expdc`,
+`haxe_ocaml-fmiag`, and `haxe_ocaml-9sj5p`).
+
+**Why.** Upstream's `haxe.macro.Context` sends every call to its macro interpreter (`load(...)`,
+Haxe 4.3.7 `std/haxe/macro/Context.hx` line 848), which a native plugin does not have. A plugin
+build that compiled upstream's `Context` also compiled `haxe.macro.Type`, whose `TLazy` payload
+the Stage3 emitter cannot represent, so no project macro that used `Context` could build
+(`haxe_ocaml-fmiag`).
+
+**The plugin's `Context`.** Plugins compile hxhx's own `haxe.macro.Context`
+(`packages/hxhx-core/macro_plugin_std/haxe/macro/Context.hx`). The plugin build lists that
+classpath before the standard library (`ProjectMacroPluginRequest.contextClassPath`, part of the
+cache key). It keeps upstream's signatures. It does not declare services that return
+`haxe.macro.Type` until type handles exist, so a plugin does not compile `haxe.macro.Type`.
+- Local services: `makePosition` and `getPosInfos` build and read the `{file, min, max}` record that
+  plugins use as a position. `error` stops the macro with `hxhxmacrohost.MacroContextAbort`.
+- Compiler services: everything that needs the compiler's state is one request to the host.
+
+**The callback ABI.** `HxHxMacroModuleHost` (handwritten OCaml) gains
+`set_host_service : (string -> string) -> unit` and `call_host : string -> string`. The compiler
+installs a service before it runs a declaration and replaces it afterwards. Native code passes
+both strings through unread, as it does for argument payloads. With no service installed, the
+answer is the empty string, which the plugin reports as a missing service.
+- `NativeMacroModuleAbi.ABI_VERSION` 2 -> 3 and `MACRO_API_VERSION` 1 -> 2 (and the same numbers in
+  `HxHxMacroModuleHost.ml`). Older plugins and receipts are rejected, and the cache key includes
+  both numbers.
+- The failure envelope (`MacroSyntaxWire.encodeFailure`) carries an optional position.
+  `MacroDeclarationPlugin.invoke` puts the position of a `MacroContextAbort` there. The compiler
+  prints the message there as upstream does: `<file>:<line>: characters <a>-<b> : <message>`,
+  through `HxLineTable` (`haxe_ocaml-9sj5p.2`).
+
+**The wire `hxhx-macro-context.v1`** (`hxhxmacrohost.MacroContextWire`; it uses the
+`MacroSyntaxWire` encoders for expressions and positions):
+- request: `C`, the message name, then its arguments. The names are `context.currentPos`,
+  `context.defined`, `context.definedValue`, `context.parse`, and `context.parseInlineString` now;
+  `context.defineModule`, `context.typeof`, `type.follow`, and `type.refGet` come later;
+- response: `R` and the value, or `E`, a kind, a message, and an optional position. The kinds:
+  - `error`: a compile error at that position; the plugin stops the macro with
+    `MacroContextAbort`;
+  - `unsupported`: hxhx does not provide that service yet;
+  - `invalid`: a malformed request or a stale handle.
+- The compiler side is a typed `MacroContextServices` record
+  (`hxhx.macro.MacroContextHostServices`). The external host will carry the same payload over
+  `HostToCompilerRpc` later.
+
+**Type handles (for the step that brings `haxe.macro.Type` into plugins).** They copy upstream's
+encoding (`src/macro/macroApi.ml`, lines 1181-1245):
+- **Shape.** A `Type` value travels by value as its shell: the constructor, its parameters, and
+  function arguments.
+- **References.** Every `Ref` is a host handle. The plugin builds its `{get, toString}` closures
+  so that they call the host.
+- **Laziness.** The host forces lazy types before it encodes them, as upstream's `encode_type`
+  does (line 1219), so a plugin never builds `TLazy`.
+- **Identity.** The host interns handles per compilation.
+- **Lifetime.** A handle is valid for one macro call; using a stale handle is an `invalid` error.
+- **Versioning.** Any change to the shapes changes the wire version and the macro API version.
+- **The codec** stays hand-written, like `MacroSyntaxWire`.
+
+**Order of work.**
+1. **PR 1, this section's first slice:** the callback, the wire, and the services above. Fixture
+   `test/fixtures/project-macro-context`, checked by `npm run test:macro-runtime:project-module`
+   against upstream's output, and `test/M14MacroContextWireTest.hx`.
+2. **PR 2:** `defineModule` and `defineType`.
+3. **PR 3:** `Type` reaches plugins; `typeof`, `follow`, and `Ref.get` over handles.
+4. **PR 4:** Gate 1 Lite runs the real `generateSpec`.
+
+**Known gaps in PR 1.**
+- `currentPos` is the call's file and the start of its first argument, not the call's range.
+- `parseInlineString` gives every node the given position, as `parse` does. Upstream places
+  nodes inside the string.
+- Both wait on per-node source ranges (`haxe_ocaml-9sj5p.2`).
+- The file is hxhx's absolute path, not upstream's spelling (decision D4 of
+  `MACRO_SOURCE_POSITIONS_PLAN.md`).
+
 ## Approved plan (2026-10-29)
 
 The owner approved this executor model after an independent design review (recorded on
