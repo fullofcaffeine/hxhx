@@ -230,7 +230,8 @@ host still keeps its own copy of the remaining cases.
 `RuntimeMacroExprs.convert` currently assigns the supplied position to each
 converted node. `HxPos` records a start index, line, and column; it has no end
 index or file identity. Several expression constructors have no position.
-These facts prevent a claim of complete source-span preservation.
+These facts prevent a claim of complete source-span preservation. The contracts that must hold
+before this changes are drafted in [MACRO_SOURCE_POSITIONS_PLAN.md](MACRO_SOURCE_POSITIONS_PLAN.md).
 
 ## Proposed ownership
 
