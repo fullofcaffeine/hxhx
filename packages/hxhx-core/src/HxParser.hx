@@ -100,25 +100,8 @@ class HxParser {
 	**/
 	final authoredSyntax:Bool;
 
-	/**
-		Authored parsing of a module also re-parses scanner bodies (abstract members) with
-		parsers it does not create directly. While `withAuthoredSyntax` runs, every new parser
-		is authored. Only `ParserStage.parseAuthored` opens it.
-	**/
-	static var authoredDepth = 0;
-
-	public static function withAuthoredSyntax<T>(run:() -> T):T {
-		authoredDepth++;
-		final result = try run() catch (error:Dynamic) {
-			authoredDepth--;
-			throw error;
-		}
-		authoredDepth--;
-		return result;
-	}
-
 	public function new(source:String, authoredSyntax:Bool = false) {
-		this.authoredSyntax = authoredSyntax || authoredDepth > 0;
+		this.authoredSyntax = authoredSyntax;
 		this.source = source == null ? "" : source;
 		lex = new HxLexer(source);
 		cur = lex.next();
@@ -338,9 +321,9 @@ class HxParser {
 		  module parsing.
 		- This is best-effort and only supports the current Stage 3 statement subset.
 	**/
-	public static function parseFunctionBodyText(bodySource:String):Array<HxStmt> {
+	public static function parseFunctionBodyText(bodySource:String, authoredSyntax:Bool = false):Array<HxStmt> {
 		final src = "{\n" + normalizeInlineJsConditionalMarkers(bodySource == null ? "" : bodySource) + "\n}";
-		final p = new HxParser(src);
+		final p = new HxParser(src, authoredSyntax);
 		if (!p.cur.kind.match(TLBrace))
 			return [];
 		p.bump(); // consume '{'
@@ -366,8 +349,8 @@ class HxParser {
 		- `parseFunctionBodyText` prepends `"{\n"` before parsing. Rebasing subtracts that
 		  synthetic line/index before adding the original slice start.
 	**/
-	public static function parseFunctionBodyTextAt(bodySource:String, originalSource:String, bodyStartIndex:Int):Array<HxStmt> {
-		final stmts = parseFunctionBodyText(bodySource);
+	public static function parseFunctionBodyTextAt(bodySource:String, originalSource:String, bodyStartIndex:Int, authoredSyntax:Bool = false):Array<HxStmt> {
+		final stmts = parseFunctionBodyText(bodySource, authoredSyntax);
 		if (originalSource == null || bodyStartIndex < 0 || bodyStartIndex > originalSource.length)
 			return stmts;
 		final base = sourcePosAt(originalSource, bodyStartIndex);
@@ -383,13 +366,13 @@ class HxParser {
 		braces inside a switch scrutinee. Keep the following declaration outside the
 		body and rebase source positions exactly as for a braced body slice.
 	 */
-	public static function parseUnbracedFunctionBodyAt(originalSource:String, start:Int):{
+	public static function parseUnbracedFunctionBodyAt(originalSource:String, start:Int, authoredSyntax:Bool = false):{
 		body:Array<HxStmt>,
 		bodyText:String,
 		nextPos:Int,
 		hasBody:Bool
 	} {
-		final parser = new HxParser("{\n" + originalSource.substr(start));
+		final parser = new HxParser("{\n" + originalSource.substr(start), authoredSyntax);
 		parser.bump();
 		final statement = parser.parseStmt(() -> parser.cur.kind.match(TEof));
 		if (parser.cur.kind.match(TSemicolon))

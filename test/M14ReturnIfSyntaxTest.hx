@@ -8,7 +8,7 @@ import sys.io.File;
 	Haxe 4.3.7 keeps one `EReturn(EIf)`. hxhx rewrote it while parsing into `if (c) return a else
 	return b`, so the parse oracle saw a different tree. Authored parsing
 	(`ParserStage.parseAuthored`) now parses the `if` as an expression, also in abstract bodies
-	that the scanner path re-parses (`HxParser.withAuthoredSyntax`). Ordinary parsing keeps the
+	that the scanner path re-parses (the flag is passed down as an argument). Ordinary parsing keeps the
 	rewrite and its `SIf.valueReturn` marker, which the typer reads.
 
 	`expected.bodies.json` holds the bodies upstream's parse recorder

@@ -22,8 +22,9 @@ class ParserStage {
 
 	/**
 		Parse with upstream syntax kept as written, for the parse oracle: syntax that ordinary
-		parsing lowers for the typer and backends stays in its authored form (`HxExpr.ERegexLiteral`),
-		including in the bodies the scanner path re-parses.
+		parsing lowers for the typer and backends stays in its authored form (`HxExpr.ERegexLiteral`).
+		Method bodies the scanner path re-parses (helper enums and abstracts) receive the same flag,
+		passed as an argument: a process-wide flag would be request state in HxParser.
 	**/
 	public static function parseAuthored(source:String, ?filePath:String):ParsedModule {
 		return parseFilteredSource({originalSource: source, filteredSource: source, filePath: filePath == null ? "<memory>" : filePath}, true);
@@ -35,17 +36,15 @@ class ParserStage {
 			throw "parser requires original and filtered source text";
 		final source = input.filteredSource;
 		final expectedMainClass = expectedMainClassFromFile(input.filePath);
-		function parseDecl():HxModuleDecl
-			return enrichPureParserDecl(source, expectedMainClass, new HxParser(source, authoredSyntax).parseModule(expectedMainClass, input.originalSource));
-		// Scanner bodies (abstract members) are re-parsed by parsers created inside; keep them authored too.
-		final decl = authoredSyntax ? HxParser.withAuthoredSyntax(parseDecl) : parseDecl();
+		final decl = enrichPureParserDecl(source, expectedMainClass,
+			new HxParser(source, authoredSyntax).parseModule(expectedMainClass, input.originalSource), authoredSyntax);
 		final path = input.filePath == null || input.filePath.length == 0 ? "<memory>" : input.filePath;
 		return new ParsedModule(source, decl, path);
 	}
 
-	static function enrichPureParserDecl(source:String, expectedMainClass:Null<String>, parsed:HxModuleDecl):HxModuleDecl {
-		final enumDecls = ParserStageScanHelpers.scanModuleLocalHelperEnums(source, null);
-		final abstractDecls = ParserStageScanHelpers.scanModuleLocalHelperAbstracts(source, null);
+	static function enrichPureParserDecl(source:String, expectedMainClass:Null<String>, parsed:HxModuleDecl, authoredSyntax:Bool = false):HxModuleDecl {
+		final enumDecls = ParserStageScanHelpers.scanModuleLocalHelperEnums(source, null, authoredSyntax);
+		final abstractDecls = ParserStageScanHelpers.scanModuleLocalHelperAbstracts(source, null, authoredSyntax);
 		if ((enumDecls == null || enumDecls.length == 0) && (abstractDecls == null || abstractDecls.length == 0))
 			return parsed;
 
