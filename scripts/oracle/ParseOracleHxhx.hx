@@ -14,6 +14,17 @@ typedef ParseOracleRecord = {key:String, ?body:String, ?error:String};
 	Usage: `ParseOracleHxhx <upstream.json> <out.json>`
 **/
 class ParseOracleHxhx {
+	/**
+		One function body as the oracle prints it. Upstream's recorder sees an abstract constructor
+		only through its generated wrapper block, which loses the authored bracing, so an abstract's
+		`new` is compared as a block (statement content is still compared).
+	**/
+	public static function functionBody(cls:HxClassDecl, fn:HxFunctionDecl, export:MacroBodyExport, position:Position):String {
+		final isAbstract = HxClassDecl.getMetadata(cls).indexOf("__hxhx_abstract") >= 0;
+		final braced = HxFunctionDecl.getBodyBraced(fn) || (isAbstract && HxFunctionDecl.getName(fn) == "new");
+		return new haxe.macro.Printer().printExpr(ParseOracleNormalize.expr(export.functionBody(HxFunctionDecl.getBody(fn), braced, position)));
+	}
+
 	static function main():Void {
 		final args = Sys.args();
 		if (args.length != 2)
@@ -54,8 +65,7 @@ class ParseOracleHxhx {
 					try {
 						records.push({
 							key: key,
-							body: printer.printExpr(ParseOracleNormalize.expr(export.functionBody(HxFunctionDecl.getBody(fn),
-								HxFunctionDecl.getBodyBraced(fn), unknown)))
+							body: functionBody(cls, fn, export, unknown)
 						});
 					} catch (e:haxe.Exception) {
 						records.push({key: key, error: e.message});
