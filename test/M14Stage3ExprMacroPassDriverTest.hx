@@ -17,6 +17,8 @@ import hxhx.Stage3Compiler;
 	  and compiles; a project macro with the same shape still fails.
 	- In a macro compilation, macro code calling another macro function is reported as
 	  "macro-in-macro", the error upstream Haxe 4.3.7 gives.
+	- A module-level `main` (fixture `suite/`) selects both a package-qualified macro used as a
+	  `for` iterable and a same-package macro statement, as upstream `tests/unit` `TestMain` does.
 **/
 class M14Stage3ExprMacroPassDriverTest {
 	static final root = "test/fixtures/expr_macro_pass_driver";
@@ -80,6 +82,24 @@ class M14Stage3ExprMacroPassDriverTest {
 		final projectRest = compile("ProjectRest");
 		require(projectRest.code != 0 && projectRest.stdout.indexOf("expression macro macros.Macros.access was not executed: ") >= 0,
 			"a project macro with rest arguments did not fail the compile:\n" + projectRest.stdout + projectRest.stderr);
+
+		// The upstream unit-suite shape: a module-level `main` calls a package-qualified macro as a `for`
+		// iterable and a same-package macro as a statement; their owner loads only when the pass selects
+		// them. Both calls must be selected, never typed as ordinary calls (which reports "value loop
+		// requires a resolved iterator protocol"). Upstream Haxe 4.3.7 runs both macros:
+		// `haxe -cp test/fixtures/expr_macro_pass_driver -main suite.SuiteMain --interp` prints `specs`
+		// and `issues:suite.issues`. hxhx cannot pass String parameters yet, so today each selected
+		// call is reported and the compile fails.
+		final suite = compile("suite.SuiteMain");
+		final suiteOutput = suite.stdout + suite.stderr;
+		require(suite.code != 0 && suiteOutput.indexOf("resolved iterator protocol") < 0,
+			"the upstream-shaped macro calls were typed as ordinary calls:\n" + suiteOutput);
+		for (declaration in ["suite.SpecBuilder.names", "suite.SpecBuilder.register"])
+			require(suite.stdout.indexOf("expression macro " + declaration + " was not executed: ") >= 0,
+				"the module-level main did not select "
+				+ declaration
+				+ ":\n"
+				+ suiteOutput);
 
 		// hxhx's own bundled-source macro (its file in this checkout) is the one scoped project-macro exception until it
 		// runs through the plugin path. A project class with the same name gets no exception.
