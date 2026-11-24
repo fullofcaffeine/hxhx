@@ -1,3 +1,14 @@
+## [0.46.3](https://github.com/fullofcaffeine/hxhx/compare/v0.46.2...v0.46.3) (2026-11-24)
+
+
+### Bug Fixes
+
+* **loader:** report the parse error of a module that typing loads ([#281](https://github.com/fullofcaffeine/hxhx/issues/281)) ([7b56817](https://github.com/fullofcaffeine/hxhx/commit/7b568174ed856f606b1f45f59ba801783b1b1246))
+* **oracle:** compare abstract constructors as authored in the parse oracle ([#278](https://github.com/fullofcaffeine/hxhx/issues/278)) ([697aac7](https://github.com/fullofcaffeine/hxhx/commit/697aac746fd95b7e20ab5331563cff679cf82707))
+* **parser:** a block ends its expression, as upstream does ([#279](https://github.com/fullofcaffeine/hxhx/issues/279)) ([f8694de](https://github.com/fullofcaffeine/hxhx/commit/f8694de83b64b24884f510e99aa7170994a02a25))
+* **parser:** keep regex literals as authored for the parse oracle ([#274](https://github.com/fullofcaffeine/hxhx/issues/274)) ([f06fcc8](https://github.com/fullofcaffeine/hxhx/commit/f06fcc893ae571e6b771f7e5e7bd5507404aaa50))
+* **parser:** keep var a, b declarations together for the parse oracle ([#275](https://github.com/fullofcaffeine/hxhx/issues/275)) ([35d68e4](https://github.com/fullofcaffeine/hxhx/commit/35d68e4f0489dd21990312c080925e6f8e70287c))
+
 ## [0.46.2](https://github.com/fullofcaffeine/hxhx/compare/v0.46.1...v0.46.2) (2026-11-23)
 
 
