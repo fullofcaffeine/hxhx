@@ -52,6 +52,7 @@ haxe test/m14_null_destination_input_test.hxml
 haxe test/m14_null_local_assignment_test.hxml
 haxe test/m14_open_value_test.hxml
 haxe test/m14_optional_field_type_equality_test.hxml
+haxe test/m14_parse_oracle_abstract_constructor_test.hxml
 haxe test/m14_primitive_constructor_effects_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_statement_control_projection_test.hxml

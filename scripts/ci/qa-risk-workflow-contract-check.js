@@ -100,7 +100,7 @@ function main() {
   }
   for (const snippet of [
     'core_run_id:',
-    "github.event.workflow_run.event == 'push'",
+    "github.event.workflow_run.event == 'schedule'",
     "github.event.workflow_run.head_branch == 'main'",
     'name: qa-risk-route-${{ steps.candidate.outputs.sha }}',
     'run-id: ${{ steps.core.outputs.run_id }}',

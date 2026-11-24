@@ -70,7 +70,7 @@ expectTier('hxhx-specific target example', {
 })
 
 expectTier('root hxhx application example', {
-  event: 'push',
+  event: 'pull_request',
   changedPaths: ['examples/hxhx-js-todoapp/src/Main.hx']
 }, 'Q2', {
   standalonePackage: true,
@@ -86,7 +86,7 @@ expectTier('standalone benchmark workload', {
 })
 
 expectTier('ordinary target module', {
-  event: 'push',
+  event: 'pull_request',
   changedPaths: ['packages/reflaxe.ocaml/src/reflaxe/ocaml/ast/OcamlExpr.hx']
 }, 'Q2', {
   hxhxCanary: true,
@@ -114,7 +114,7 @@ assert.deepStrictEqual(centralRepresentation.productSurfaces, [
 ])
 
 expectTier('plugin ABI', {
-  event: 'push',
+  event: 'pull_request',
   changedPaths: ['packages/hxhx/src/hxhx/NativeBackendPluginHostAbi.hx']
 }, 'Q3', {
   largeHxhxConsumer: true,
@@ -122,7 +122,7 @@ expectTier('plugin ABI', {
 })
 
 expectTier('CI evidence and shard enforcement', {
-  event: 'push',
+  event: 'pull_request',
   changedPaths: [
     'scripts/ci/ci-evidence-ownership.js',
     'scripts/ci/core-test-shards.json'
@@ -133,7 +133,7 @@ expectTier('CI evidence and shard enforcement', {
 })
 
 const unknown = expectTier('unknown code path', {
-  event: 'push',
+  event: 'pull_request',
   changedPaths: ['new-compiler-layer/Thing.hx']
 }, 'Q2', {
   hxhxCanary: true
@@ -180,11 +180,42 @@ expectTier('manual release proof', {
   hxhxReleaseEvidence: true
 })
 
-expectTier('missing push inventory', {
-  event: 'push',
+expectTier('missing pull request inventory', {
+  event: 'pull_request',
   changedPaths: []
 }, 'Q3', {
   largeHxhxConsumer: true
+})
+
+// A push to main runs at most Q1 (route, secret scan, guards). Pull requests prove each
+// change, and the 02:00 schedule runs the full cumulative route that gates releases.
+const cappedPush = expectTier('push capped at Q1', {
+  event: 'push',
+  changedPaths: ['packages/hxhx/src/hxhx/NativeBackendPluginHostAbi.hx']
+}, 'Q1', {
+  focusedTarget: true,
+  hxhxCanary: false,
+  largeHxhxConsumer: false,
+  authenticCompilerPromotion: false
+})
+assert.ok(
+  cappedPush.reasons.includes('push runs at most Q1; the routed Q3 runs on pull requests and the scheduled full run'),
+  'push capped at Q1: reason'
+)
+
+expectTier('missing push inventory capped at Q1', {
+  event: 'push',
+  changedPaths: []
+}, 'Q1', {
+  largeHxhxConsumer: false
+})
+
+expectTier('schedule keeps the full route', {
+  event: 'schedule',
+  changedPaths: ['packages/hxhx/src/hxhx/NativeBackendPluginHostAbi.hx']
+}, 'Q3', {
+  largeHxhxConsumer: true,
+  authenticCompilerPromotion: true
 })
 
 assert.throws(

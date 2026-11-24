@@ -16,6 +16,9 @@
     "schedule": "Q3",
     "workflow_dispatch": "Q3"
   },
+  "eventMaximums": {
+    "push": "Q1"
+  },
   "q0WorkflowIgnorePatterns": [
     ".beads/**",
     ".github/ISSUE_TEMPLATE/**",

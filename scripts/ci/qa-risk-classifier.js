@@ -26,6 +26,10 @@ function tierIndex(tier) {
   return index
 }
 
+function minTier(left, right) {
+  return tierIndex(left) <= tierIndex(right) ? left : right
+}
+
 function maxTier(...tiers) {
   return tiers.reduce((highest, tier) => (
     tierIndex(tier) > tierIndex(highest) ? tier : highest
@@ -52,6 +56,10 @@ function loadPolicy(policyPath = POLICY_PATH) {
     'defaultUnknownProductSurfaces must be a non-empty string array'
   )
   invariant(policy.eventMinimums && typeof policy.eventMinimums === 'object', 'eventMinimums must be an object')
+  invariant(
+    policy.eventMaximums === undefined || (policy.eventMaximums && typeof policy.eventMaximums === 'object'),
+    'eventMaximums must be an object when present'
+  )
   invariant(
     Array.isArray(policy.q0WorkflowIgnorePatterns) && policy.q0WorkflowIgnorePatterns.length > 0,
     'q0WorkflowIgnorePatterns must be a non-empty array'
@@ -88,6 +96,7 @@ function loadPolicy(policyPath = POLICY_PATH) {
     invariant(matchers.length > 0, `rule ${rule.id} needs at least one path matcher`)
   }
   for (const tier of Object.values(policy.eventMinimums)) tierIndex(tier)
+  for (const tier of Object.values(policy.eventMaximums || {})) tierIndex(tier)
 
   return {
     policy,
@@ -148,7 +157,11 @@ function classify(options, loaded = loadPolicy()) {
 
   const eventMinimum = loaded.policy.eventMinimums[event] || 'Q0'
   const emptyChangeMinimum = changedPaths.length === 0 && ['push', 'pull_request'].includes(event) ? 'Q3' : 'Q0'
-  const tier = maxTier(pathTier, eventMinimum, requestedTier, emptyChangeMinimum)
+  // A push to main runs at most its event maximum: pull requests already proved each change,
+  // and the 02:00 schedule runs the full cumulative route that gates releases.
+  const eventMaximum = (loaded.policy.eventMaximums || {})[event] || null
+  const routedTier = maxTier(pathTier, eventMinimum, requestedTier, emptyChangeMinimum)
+  const tier = eventMaximum === null ? routedTier : minTier(routedTier, eventMaximum)
   const index = tierIndex(tier)
   const reasons = []
   if (tierIndex(pathTier) > 0) reasons.push(`changed paths require ${pathTier}`)
@@ -156,6 +169,9 @@ function classify(options, loaded = loadPolicy()) {
   if (tierIndex(requestedTier) > 0) reasons.push(`manual request requires at least ${requestedTier}`)
   if (tierIndex(emptyChangeMinimum) > 0) reasons.push(`missing ${event} change inventory escalates to ${emptyChangeMinimum}`)
   if (unknownPaths.length > 0) reasons.push(`${unknownPaths.length} unknown path(s) fail safe to ${loaded.policy.defaultUnknownTier}`)
+  if (tier !== routedTier) {
+    reasons.push(`${event} runs at most ${eventMaximum}; the routed ${routedTier} runs on pull requests and the scheduled full run`)
+  }
   if (reasons.length === 0) reasons.push('all changed paths are Q0 documentation or tracking records')
 
   return {
