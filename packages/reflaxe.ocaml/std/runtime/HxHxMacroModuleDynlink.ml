@@ -9,6 +9,14 @@ let resolve_module_path (module_path : string) : string =
     Stdlib.Filename.concat (Stdlib.Sys.getcwd ()) module_path
   else module_path
 
+(* A project-macro plugin is built against the same runtime units as this host and takes them from
+   the host when it is loaded. OCaml links a library unit into the host only when linked host code
+   names it. Stage3-emitted code (every plugin) calls HxDynamicMethods, but the host's own code never
+   does, so without this reference Dynlink fails with "no implementation available for
+   HxDynamicMethods". Name here every runtime unit that only plugin code uses;
+   scripts/ci/macro-plugin-runtime-link-test.js checks that the host links every plugin runtime unit. *)
+let plugin_only_runtime_units : Obj.t list = [ Obj.repr HxDynamicMethods.register ]
+
 let load_and_capture (module_path : string) (plugin_id : string) : string =
   let module_path = normalize_token ~field:"module_path" module_path in
   let plugin_id = normalize_token ~field:"plugin_id" plugin_id in

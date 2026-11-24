@@ -231,6 +231,7 @@
     "test:m14:macro-syntax-wire-native": "compiler-focused-macro-plugins",
     "test:m14:macro-compilation-context": "compiler-focused-macro-plugins",
     "test:m14:project-macro-plugin-cache": "compiler-focused-macro-plugins",
+    "test:m14:macro-plugin-runtime-link": "compiler-focused-macro-plugins",
     "test:m14:project-macro-plugin-process": "compiler-focused-macro-plugins",
     "test:m14:macro-reification-lowering": "compiler-focused-2",
     "test:m14:project-macro-reification": "compiler-focused-macro-plugins",

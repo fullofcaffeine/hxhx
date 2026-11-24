@@ -150,8 +150,8 @@
     {
       "module": "HxHxMacroModuleDynlink",
       "scope": "tooling",
-      "files": [{ "path": "HxHxMacroModuleDynlink.ml", "sha256": "6c5961f8628e820c1a837c7369832e6b0cd9af2d209ec3529e3abf824a6fabb2" }],
-      "dependencies": ["HxHxMacroModuleHost"],
+      "files": [{ "path": "HxHxMacroModuleDynlink.ml", "sha256": "aa99d06100f63acde4d9c80e5f303832f7353dc2b74a655533c9e21a0463c654" }],
+      "dependencies": ["HxDynamicMethods", "HxHxMacroModuleHost"],
       "duneLibraries": ["dynlink", "unix"],
       "profiles": ["portable"],
       "license": "MIT"
