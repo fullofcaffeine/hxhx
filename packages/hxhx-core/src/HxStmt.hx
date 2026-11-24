@@ -30,8 +30,14 @@ enum HxStmt {
 
 		How
 		- This is a bootstrap representation; later rungs add positions and more statement forms.
+
+		`declarationGroup` marks a block that holds the declarators of one `var a = 1, b = 2;`
+		statement. Only authored parsing (`ParserStage.parseAuthored`, the parse oracle) sets it;
+		the export prints the group as one `EVars`, as upstream Haxe 4.3.7 keeps it. Ordinary
+		parsing still flattens the declarators into the enclosing block, or wraps them in an
+		unmarked block in single-statement position (haxe_ocaml-ac5i9.5).
 	**/
-	SBlock(stmts:Array<HxStmt>, pos:HxPos);
+	SBlock(stmts:Array<HxStmt>, pos:HxPos, ?declarationGroup:Bool);
 
 	/**
 		Variable declaration: `var name[:Type] [= expr];`
