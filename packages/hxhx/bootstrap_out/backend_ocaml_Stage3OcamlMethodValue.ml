@@ -61,7 +61,8 @@ let render = fun input -> let occurrence = Obj.magic (Obj.obj (HxAnon.get input 
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g1 = Obj.magic (match _g with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g1 = Obj.magic (match _g with
           | HxExpr.EField (__enum_param_5, _) -> __enum_param_5
           | _ -> failwith "Unexpected enum parameter") in (
           ignore (match _g with

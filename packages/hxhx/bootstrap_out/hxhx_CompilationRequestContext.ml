@@ -193,7 +193,7 @@ let recordActivePhase = fun self (now : float) -> ignore (ignore (let elapsed = 
       tempMaybeNumber1 := __assign_110;
       __assign_110
     ));
-    HxMap.set_string (Obj.magic _this) (key : string) ((let __nullable_float_111 = Obj.magic (!tempMaybeNumber1) in if __nullable_float_111 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_111) +. elapsed)
+    HxMap.set_string (Obj.magic _this) (key : string) ((let __nullable_float_111 = Obj.magic (!tempMaybeNumber1) in if __nullable_float_111 == HxRuntime.hx_null then 0. else if Obj.is_int __nullable_float_111 then float_of_int (Obj.obj __nullable_float_111) else Obj.obj __nullable_float_111) +. elapsed)
   )
 )))
 
@@ -411,7 +411,7 @@ let emitBaselineReport = fun self () -> ignore (ignore (let elapsedMs = Stdlib.I
                                                     tempMaybeNumber1 := __assign_242;
                                                     __assign_242
                                                   ));
-                                                  let phaseMs = Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float (Math.max (float_of_int 0) ((let __nullable_float_243 = Obj.magic (!tempMaybeNumber1) in if __nullable_float_243 == HxRuntime.hx_null then 0. else Obj.obj __nullable_float_243) *. float_of_int 1000)))) in (
+                                                  let phaseMs = Stdlib.Int32.to_int (Stdlib.Int32.of_int (int_of_float (Math.max (float_of_int 0) ((let __nullable_float_243 = Obj.magic (!tempMaybeNumber1) in if __nullable_float_243 == HxRuntime.hx_null then 0. else if Obj.is_int __nullable_float_243 then float_of_int (Obj.obj __nullable_float_243) else Obj.obj __nullable_float_243) *. float_of_int 1000)))) in (
                                                     ignore (Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.phase[" ^ string_of_int index) ^ "].name=") ^ HxString.toStdString phase : string));
                                                     Hxhx_CompilationRequestOutput.stdoutLine (Obj.magic ((Obj.magic self : t).output)) ((("hxhx_server_report.phase[" ^ string_of_int index) ^ "].elapsed_ms=") ^ string_of_int phaseMs : string)
                                                   )
@@ -553,7 +553,7 @@ let close = fun self (requestSucceeded : bool) -> let requestSucceeded = if Obj.
       | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_74, __exn_tags_75) -> if HxRuntime.tags_has __exn_tags_75 "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_74) : Haxe_io_Error.error) in (
         ignore error;
-        ignore (reportCleanupFailure (Obj.magic self) ("source-provider-validation" : string) (HxDynamic.toStdString (Obj.repr error) : string))
+        ignore (reportCleanupFailure (Obj.magic self) ("source-provider-validation" : string) (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string))
       ) else if true then let error = (if HxRuntime.tags_has __exn_tags_75 "haxe.Exception" then Obj.obj __exn_v_74 else Obj.magic (Haxe_ValueException.create __exn_v_74 (Obj.magic (HxRuntime.hx_null)) __exn_v_74) : Haxe_Exception.t) in (
         ignore error;
         ignore (reportCleanupFailure (Obj.magic self) ("source-provider-validation" : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string))
@@ -563,7 +563,7 @@ let close = fun self (requestSucceeded : bool) -> let requestSucceeded = if Obj.
       ) else HxRuntime.hx_throw_typed __exn_v_74 __exn_tags_75
       | __exn_76 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_76)) : Haxe_io_Error.error) in (
         ignore error;
-        ignore (reportCleanupFailure (Obj.magic self) ("source-provider-validation" : string) (HxDynamic.toStdString (Obj.repr error) : string))
+        ignore (reportCleanupFailure (Obj.magic self) ("source-provider-validation" : string) (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string))
       ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_76) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_76) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_76)) : Haxe_Exception.t) in (
         ignore error;
         ignore (reportCleanupFailure (Obj.magic self) ("source-provider-validation" : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string))
@@ -598,7 +598,7 @@ let close = fun self (requestSucceeded : bool) -> let requestSucceeded = if Obj.
         | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_82, __exn_tags_83) -> if HxRuntime.tags_has __exn_tags_83 "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_82) : Haxe_io_Error.error) in (
           ignore error;
-          ignore (reportCleanupFailure (Obj.magic self) ("output-publication" : string) (HxDynamic.toStdString (Obj.repr error) : string))
+          ignore (reportCleanupFailure (Obj.magic self) ("output-publication" : string) (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string))
         ) else if true then let error = (if HxRuntime.tags_has __exn_tags_83 "haxe.Exception" then Obj.obj __exn_v_82 else Obj.magic (Haxe_ValueException.create __exn_v_82 (Obj.magic (HxRuntime.hx_null)) __exn_v_82) : Haxe_Exception.t) in (
           ignore error;
           ignore (reportCleanupFailure (Obj.magic self) ("output-publication" : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string))
@@ -608,7 +608,7 @@ let close = fun self (requestSucceeded : bool) -> let requestSucceeded = if Obj.
         ) else HxRuntime.hx_throw_typed __exn_v_82 __exn_tags_83
         | __exn_84 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_84)) : Haxe_io_Error.error) in (
           ignore error;
-          ignore (reportCleanupFailure (Obj.magic self) ("output-publication" : string) (HxDynamic.toStdString (Obj.repr error) : string))
+          ignore (reportCleanupFailure (Obj.magic self) ("output-publication" : string) (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string))
         ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_84) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_84) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_84)) : Haxe_Exception.t) in (
           ignore error;
           ignore (reportCleanupFailure (Obj.magic self) ("output-publication" : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string))
@@ -623,7 +623,7 @@ let close = fun self (requestSucceeded : bool) -> let requestSucceeded = if Obj.
         | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_86, __exn_tags_87) -> if HxRuntime.tags_has __exn_tags_87 "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_86) : Haxe_io_Error.error) in (
           ignore error;
-          ignore (reportCleanupFailure (Obj.magic self) ("output-transaction" : string) (HxDynamic.toStdString (Obj.repr error) : string))
+          ignore (reportCleanupFailure (Obj.magic self) ("output-transaction" : string) (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string))
         ) else if true then let error = (if HxRuntime.tags_has __exn_tags_87 "haxe.Exception" then Obj.obj __exn_v_86 else Obj.magic (Haxe_ValueException.create __exn_v_86 (Obj.magic (HxRuntime.hx_null)) __exn_v_86) : Haxe_Exception.t) in (
           ignore error;
           ignore (reportCleanupFailure (Obj.magic self) ("output-transaction" : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string))
@@ -633,7 +633,7 @@ let close = fun self (requestSucceeded : bool) -> let requestSucceeded = if Obj.
         ) else HxRuntime.hx_throw_typed __exn_v_86 __exn_tags_87
         | __exn_88 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_88)) : Haxe_io_Error.error) in (
           ignore error;
-          ignore (reportCleanupFailure (Obj.magic self) ("output-transaction" : string) (HxDynamic.toStdString (Obj.repr error) : string))
+          ignore (reportCleanupFailure (Obj.magic self) ("output-transaction" : string) (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string))
         ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_88) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_88) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_88)) : Haxe_Exception.t) in (
           ignore error;
           ignore (reportCleanupFailure (Obj.magic self) ("output-transaction" : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string))
@@ -649,7 +649,7 @@ let close = fun self (requestSucceeded : bool) -> let requestSucceeded = if Obj.
       | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
       | HxRuntime.Hx_exception (__exn_v_90, __exn_tags_91) -> if HxRuntime.tags_has __exn_tags_91 "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_90) : Haxe_io_Error.error) in (
         ignore error;
-        ignore (reportCleanupFailure (Obj.magic self) ("source-provider-publication" : string) (HxDynamic.toStdString (Obj.repr error) : string))
+        ignore (reportCleanupFailure (Obj.magic self) ("source-provider-publication" : string) (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string))
       ) else if true then let error = (if HxRuntime.tags_has __exn_tags_91 "haxe.Exception" then Obj.obj __exn_v_90 else Obj.magic (Haxe_ValueException.create __exn_v_90 (Obj.magic (HxRuntime.hx_null)) __exn_v_90) : Haxe_Exception.t) in (
         ignore error;
         ignore (reportCleanupFailure (Obj.magic self) ("source-provider-publication" : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string))
@@ -659,7 +659,7 @@ let close = fun self (requestSucceeded : bool) -> let requestSucceeded = if Obj.
       ) else HxRuntime.hx_throw_typed __exn_v_90 __exn_tags_91
       | __exn_92 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let error = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_92)) : Haxe_io_Error.error) in (
         ignore error;
-        ignore (reportCleanupFailure (Obj.magic self) ("source-provider-publication" : string) (HxDynamic.toStdString (Obj.repr error) : string))
+        ignore (reportCleanupFailure (Obj.magic self) ("source-provider-publication" : string) (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr error)) : string))
       ) else if true then let error = (if HxRuntime.tags_has ["OcamlExn"] "haxe.Exception" then Obj.obj (Obj.repr __exn_92) else Obj.magic (Haxe_ValueException.create (Obj.repr __exn_92) (Obj.magic (HxRuntime.hx_null)) (Obj.repr __exn_92)) : Haxe_Exception.t) in (
         ignore error;
         ignore (reportCleanupFailure (Obj.magic self) ("source-provider-publication" : string) ((Obj.magic error : Haxe_Exception.t).get_message (Obj.magic error) () : string))

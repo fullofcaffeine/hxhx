@@ -51,7 +51,7 @@ let providerTypeNamesForManifest = fun manifest sourceLabel -> (try (
       __represented_array_19
     ))))
     | "ocaml-dynlink" -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Hxhx_NativeBackendPluginLoader.providerTypeNamesForNativeManifest manifest (sourceLabel : string))))
-    | _ -> let message = let __string_part_10 = "unsupported backend kind `" in let __string_part_11 = "<unsupported>" in let __string_part_12 = "`" in (__string_part_10 ^ __string_part_11) ^ __string_part_12 in let tempString = ref (HxString.hx_null_string : string) in (
+    | _ -> let message = let __string_part_10 = "unsupported backend kind `" in let __string_part_11 = HxString.toStdString (Obj.obj (HxAnon.get (Obj.obj (HxAnon.get manifest "backend")) "kind")) in let __string_part_12 = "`" in (__string_part_10 ^ __string_part_11) ^ __string_part_12 in let tempString = ref (HxString.hx_null_string : string) in (
       ignore (if sourceLabel == HxString.hx_null_string then let __assign_13 = "" in (
         tempString := __assign_13;
         __assign_13

@@ -164,7 +164,8 @@ let literal = fun occurrence emit names -> (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then ignore ((
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then ignore ((
     ignore (match _g with
       | HxExpr.EArrayDecl __enum_param_88 -> __enum_param_88
       | _ -> failwith "Unexpected enum parameter");

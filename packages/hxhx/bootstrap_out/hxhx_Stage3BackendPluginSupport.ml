@@ -317,7 +317,7 @@ let appendManifestRequests = fun out source manifestPaths trace output -> ignore
       ));
       appendPluginLoadRequest (Obj.magic out) (source : string) (providerType : string) ("manifest:" ^ HxString.toStdString manifestPath : string)
     )) done);
-    if trace then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_135 = "backend_plugin_manifest[" in let __string_part_136 = "<unsupported>" in let __string_part_137 = "][" in let __string_part_138 = HxString.toStdString manifestPath in let __string_part_139 = "]=" in let __string_part_140 = string_of_int (HxArray.length providers) in ((((__string_part_135 ^ __string_part_136) ^ __string_part_137) ^ __string_part_138) ^ __string_part_139) ^ __string_part_140 : string)) else ()
+    if trace then ignore (Hxhx_CompilationRequestOutput.writeStdoutLine (Obj.magic output) (let __string_part_135 = "backend_plugin_manifest[" in let __string_part_136 = HxString.toStdString source in let __string_part_137 = "][" in let __string_part_138 = HxString.toStdString manifestPath in let __string_part_139 = "]=" in let __string_part_140 = string_of_int (HxArray.length providers) in ((((__string_part_135 ^ __string_part_136) ^ __string_part_137) ^ __string_part_138) ^ __string_part_139) ^ __string_part_140 : string)) else ()
   )
 )) done)
 

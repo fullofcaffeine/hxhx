@@ -68,7 +68,7 @@ let sourceLabel = fun source -> let tempResult = ref (HxString.hx_null_string : 
       tempResult := __assign_12;
       __assign_12
     )
-    | _ -> let __assign_10 = ("<unsupported>" : string) in (
+    | _ -> let __assign_10 = (HxString.toStdString source : string) in (
       tempResult := __assign_10;
       __assign_10
     ));
@@ -126,7 +126,7 @@ let withSourcePriority = fun spec source -> (
         tempRight := __assign_26;
         __assign_26
       )
-      | _ -> let __assign_24 = ("<unsupported>" : string) in (
+      | _ -> let __assign_24 = (HxString.toStdString source : string) in (
         tempRight := __assign_24;
         __assign_24
       ));
@@ -204,7 +204,7 @@ let selectWinning = fun existing incoming -> (try let tempNumber = ref (0 : int)
             tempRight := __assign_40;
             __assign_40
           )
-          | _ -> let __assign_38 = ("<unsupported>" : string) in (
+          | _ -> let __assign_38 = (HxString.toStdString source : string) in (
             tempRight := __assign_38;
             __assign_38
           ));

@@ -61,7 +61,8 @@ let emit = fun call operand inlineCode -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g2 = (match _g with
         | HxExpr.EString __enum_param_22 -> __enum_param_22
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let __assign_23 = (name : string) in (
         tempString := __assign_23;

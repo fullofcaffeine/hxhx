@@ -126,7 +126,8 @@ let notUnrolled = fun self (e : HxExpr.hxexpr) -> let tempResult = ref (false : 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then (
         ignore (match _g2 with
           | HxExpr.EInt __enum_param_71 -> __enum_param_71
           | _ -> failwith "Unexpected enum parameter");
@@ -227,7 +228,8 @@ let literalBound = fun e -> let tempResult = ref (HxRuntime.hx_null : Obj.t) in 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then Obj.repr (let _g3 = match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then Obj.repr (let _g3 = match _g2 with
         | HxExpr.EInt __enum_param_221 -> __enum_param_221
         | _ -> failwith "Unexpected enum parameter" in let value = _g3 in let __assign_222 = Obj.magic (Obj.repr (HxInt.neg value)) in (
         tempResult := __assign_222;
@@ -621,7 +623,8 @@ let rec expression = fun self (e : HxExpr.hxexpr) (assigned : bool) (pos : HxPos
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let value = Obj.magic _g2 in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let value = Obj.magic _g2 in (
           ignore (expression (Obj.magic self) (Obj.magic value) assigned (Obj.magic pos));
           let __assign_128 = true in (
             tempResult := __assign_128;
@@ -686,7 +689,8 @@ let rec expression = fun self (e : HxExpr.hxexpr) (assigned : bool) (pos : HxPos
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let value = Obj.magic _g2 in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let value = Obj.magic _g2 in (
         ignore (expression (Obj.magic self) (Obj.magic value) assigned (Obj.magic pos));
         let __assign_131 = true in (
           tempResult := __assign_131;
@@ -746,7 +750,8 @@ let rec expression = fun self (e : HxExpr.hxexpr) (assigned : bool) (pos : HxPos
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let op = (_g : string) in let value = Obj.magic _g2 in if (let __call_arg_0_133 = op in let __call_arg_1_134 = "=" in StringTools.endsWith __call_arg_0_133 __call_arg_1_134) && (let __string_eq_left_135 = op in let __string_eq_right_136 = "==" in not (HxString.equals __string_eq_left_135 __string_eq_right_136)) && (let __string_eq_left_137 = op in let __string_eq_right_138 = "!=" in not (HxString.equals __string_eq_left_137 __string_eq_right_138)) && (let __string_eq_left_139 = op in let __string_eq_right_140 = "<=" in not (HxString.equals __string_eq_left_139 __string_eq_right_140)) && (let __string_eq_left_141 = op in let __string_eq_right_142 = ">=" in not (HxString.equals __string_eq_left_141 __string_eq_right_142)) then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let op = (_g : string) in let value = Obj.magic _g2 in if (let __call_arg_0_133 = op in let __call_arg_1_134 = "=" in StringTools.endsWith __call_arg_0_133 __call_arg_1_134) && (let __string_eq_left_135 = op in let __string_eq_right_136 = "==" in not (HxString.equals __string_eq_left_135 __string_eq_right_136)) && (let __string_eq_left_137 = op in let __string_eq_right_138 = "!=" in not (HxString.equals __string_eq_left_137 __string_eq_right_138)) && (let __string_eq_left_139 = op in let __string_eq_right_140 = "<=" in not (HxString.equals __string_eq_left_139 __string_eq_right_140)) && (let __string_eq_left_141 = op in let __string_eq_right_142 = ">=" in not (HxString.equals __string_eq_left_141 __string_eq_right_142)) then (
       ignore (if not (assigned) then ignore (fail (Obj.magic self) (Obj.magic pos)) else ());
       ignore (expression (Obj.magic self) (Obj.magic value) assigned (Obj.magic pos));
       let __assign_143 = true in (
@@ -1039,12 +1044,15 @@ and statement = fun self (s : HxStmt.hxstmt) (assigned : bool) -> let _gthis = O
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in let condition = Obj.magic _g in let whenTrue = Obj.magic _g1 in let whenFalse = _g2 in let pos = Obj.magic _g3 in let afterCondition = expression (Obj.magic self) (Obj.magic condition) assigned (Obj.magic pos) in let trueState = statement (Obj.magic self) (Obj.magic whenTrue) afterCondition in if whenFalse == Obj.magic (HxRuntime.hx_null) then let __assign_24 = afterCondition in (
-      tempResult := __assign_24;
-      __assign_24
-    ) else let __assign_25 = trueState && statement (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" whenFalse)) afterCondition in (
-      tempResult := __assign_25;
-      __assign_25
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in let _g3 = Obj.magic _p3 in (
+      ignore _p4;
+      let condition = Obj.magic _g in let whenTrue = Obj.magic _g1 in let whenFalse = _g2 in let pos = Obj.magic _g3 in let afterCondition = expression (Obj.magic self) (Obj.magic condition) assigned (Obj.magic pos) in let trueState = statement (Obj.magic self) (Obj.magic whenTrue) afterCondition in if whenFalse == Obj.magic (HxRuntime.hx_null) then let __assign_24 = afterCondition in (
+        tempResult := __assign_24;
+        __assign_24
+      ) else let __assign_25 = trueState && statement (Obj.magic self) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" whenFalse)) afterCondition in (
+        tempResult := __assign_25;
+        __assign_25
+      )
     )
     | HxStmt.SForIn (_p0, _p1, _p2, _p3) -> (
       ignore _p0;

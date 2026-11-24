@@ -52,7 +52,8 @@ let renderCall = fun callee arguments -> let tempResult = ref (Obj.magic (HxRunt
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match callee with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match callee with
     | HxExpr.EIdent __enum_param_1 -> __enum_param_1
     | _ -> failwith "Unexpected enum parameter" : string) in match _g with
     | "$print" | "__dollar__print" -> let __assign_3 = Obj.magic (let __string_part_4 = "$print(" in let __string_part_5 = HxString.toStdString (HxArray.join arguments ", " (fun x -> x)) in let __string_part_6 = ")" in (__string_part_4 ^ __string_part_5) ^ __string_part_6 : string) in (

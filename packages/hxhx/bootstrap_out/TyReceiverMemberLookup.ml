@@ -4,54 +4,84 @@
 
 let __reflaxe_ocaml__ = ()
 
-let owner = fun receiver context -> (try (
+let rec owner = fun receiver context depth -> let depth = if Obj.repr depth == HxRuntime.hx_null then 0 else depth in (try (
   ignore (if TyperContext.getIndex (Obj.magic context) () == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
-  let value = Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic receiver)) in let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic value) ()) in (
-    ignore (if identity != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TyperIndex.getByFullName (Obj.magic (TyperContext.getIndex (Obj.magic context) ())) (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string)))) else ());
-    let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
-      ignore (if TyType.isPrimitive (Obj.magic value) () then let __assign_1 = Obj.magic (Obj.magic (TyperContext.resolvePrimitiveProvider (Obj.magic context) (Obj.magic value))) in (
-        tempResult := __assign_1;
-        __assign_1
-      ) else let __assign_2 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
-        tempResult := __assign_2;
-        __assign_2
-      ));
-      !tempResult
+  let value = Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic receiver)) in (
+    ignore (if TyType.isTypeParameter (Obj.magic value) () then (
+      ignore (if depth > 8 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());
+      let _g = ref 0 in let _g1 = Obj.magic (TyperIndex.getParameterBounds (Obj.magic (TyperContext.getIndex (Obj.magic context) ())) (Obj.magic (TyType.getTypeParameterIdentity (Obj.magic value) ()))) in (
+        ignore (while !_g < HxArray.length _g1 do ignore (let bound = Obj.magic (let __array_read_receiver_1 = _g1 in let __array_read_index_2 = !_g in HxArray.get (Obj.magic __array_read_receiver_1) __array_read_index_2) in (
+          ignore (let __old_3 = !_g in let __new_4 = HxInt.add __old_3 1 in (
+            ignore (_g := __new_4);
+            __new_4
+          ));
+          let found = Obj.magic (owner (Obj.magic bound) (Obj.magic context) (HxInt.add depth 1)) in if found != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr found)) else ()
+        )) done);
+        Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
+      )
+    ) else ());
+    let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic value) ()) in (
+      ignore (if identity != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (TyperIndex.getByFullName (Obj.magic (TyperContext.getIndex (Obj.magic context) ())) (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string)))) else ());
+      let tempResult = ref (Obj.magic (HxRuntime.hx_null) : TyNominalInfo.t) in (
+        ignore (if TyType.isPrimitive (Obj.magic value) () then let __assign_5 = Obj.magic (Obj.magic (TyperContext.resolvePrimitiveProvider (Obj.magic context) (Obj.magic value))) in (
+          tempResult := __assign_5;
+          __assign_5
+        ) else let __assign_6 = Obj.magic (Obj.magic (Obj.magic (HxRuntime.hx_null))) in (
+          tempResult := __assign_6;
+          __assign_6
+        ));
+        !tempResult
+      )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_3 -> (Obj.obj __ret_3 : TyNominalInfo.t) : TyNominalInfo.t)
+  | HxRuntime.Hx_return __ret_7 -> (Obj.obj __ret_7 : TyNominalInfo.t) : TyNominalInfo.t)
+
+let rec structuralView = fun receiver name context depth -> let depth = if Obj.repr depth == HxRuntime.hx_null then 0 else depth in (try let value = Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic receiver)) in (
+  ignore (if not (TyType.isTypeParameter (Obj.magic value) ()) || TyperContext.getIndex (Obj.magic context) () == Obj.magic (HxRuntime.hx_null) || depth > 8 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr receiver)) else ());
+  let _g = ref 0 in let _g1 = Obj.magic (TyperIndex.getParameterBounds (Obj.magic (TyperContext.getIndex (Obj.magic context) ())) (Obj.magic (TyType.getTypeParameterIdentity (Obj.magic value) ()))) in (
+    ignore (while !_g < HxArray.length _g1 do ignore (let bound = Obj.magic (let __array_read_receiver_8 = _g1 in let __array_read_index_9 = !_g in HxArray.get (Obj.magic __array_read_receiver_8) __array_read_index_9) in (
+      ignore (let __old_10 = !_g in let __new_11 = HxInt.add __old_10 1 in (
+        ignore (_g := __new_11);
+        __new_11
+      ));
+      let view = Obj.magic (structuralView (Obj.magic bound) (name : string) (Obj.magic context) (HxInt.add depth 1)) in if not (TyType.isDynamic (Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic view))) ()) && TyStructuralFieldRead.resolve (Obj.magic view) (name : string) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr view)) else ()
+    )) done);
+    receiver
+  )
+) with
+  | HxRuntime.Hx_return __ret_12 -> (Obj.obj __ret_12 : TyType.t) : TyType.t)
 
 let rec classProvesAbsence = fun provider member index path -> (try (
-  ignore (if index == Obj.magic (HxRuntime.hx_null) || not (let __isOfTypeValue_9 = Obj.repr provider in HxType.isOfType __isOfTypeValue_9 (HxType.class_ "TyClassInfo")) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+  ignore (if index == Obj.magic (HxRuntime.hx_null) || not (let __isOfTypeValue_18 = Obj.repr provider in HxType.isOfType __isOfTypeValue_18 (HxType.class_ "TyClassInfo")) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let declaration = Obj.magic provider in (
     ignore (if (Obj.magic declaration : TyNominalInfo.t).getIsEnum (Obj.magic declaration) () then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
     let name = ((Obj.magic declaration : TyNominalInfo.t).getFullName (Obj.magic declaration) () : string) in (
-      ignore (if (let __array_receiver_10 = Obj.magic path in let __array_arg_0_11 = (name : string) in HxArray.indexOf_default __array_receiver_10 __array_arg_0_11) >= 0 || (Obj.magic declaration : TyNominalInfo.t).hasField (Obj.magic declaration) (member : string) || (Obj.magic declaration : TyNominalInfo.t).propertyInfo (Obj.magic declaration) (member : string) != Obj.magic (HxRuntime.hx_null) || HxArray.length ((Obj.magic declaration : TyNominalInfo.t).instanceMethodCandidates (Obj.magic declaration) (member : string)) > 0 || (Obj.magic declaration : TyClassInfo.t).getDynamicMemberType (Obj.magic declaration) () != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
-      ignore (let __array_receiver_12 = Obj.magic path in let __array_arg_0_13 = (name : string) in HxArray.push __array_receiver_12 __array_arg_0_13);
+      ignore (if (let __array_receiver_19 = Obj.magic path in let __array_arg_0_20 = (name : string) in HxArray.indexOf_default __array_receiver_19 __array_arg_0_20) >= 0 || (Obj.magic declaration : TyNominalInfo.t).hasField (Obj.magic declaration) (member : string) || (Obj.magic declaration : TyNominalInfo.t).propertyInfo (Obj.magic declaration) (member : string) != Obj.magic (HxRuntime.hx_null) || HxArray.length ((Obj.magic declaration : TyNominalInfo.t).instanceMethodCandidates (Obj.magic declaration) (member : string)) > 0 || (Obj.magic declaration : TyClassInfo.t).getDynamicMemberType (Obj.magic declaration) () != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
+      ignore (let __array_receiver_21 = Obj.magic path in let __array_arg_0_22 = (name : string) in HxArray.push __array_receiver_21 __array_arg_0_22);
       let parents = Obj.magic ((Obj.magic declaration : TyClassInfo.t).getDeclaredInterfaceTypes (Obj.magic declaration) ()) in let superclass = Obj.magic ((Obj.magic declaration : TyClassInfo.t).getSuperType (Obj.magic declaration) ()) in (
-        ignore (if superclass != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_14 = Obj.magic parents in let __array_arg_0_15 = Obj.magic superclass in HxArray.push __array_receiver_14 __array_arg_0_15) else ());
+        ignore (if superclass != Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_23 = Obj.magic parents in let __array_arg_0_24 = Obj.magic superclass in HxArray.push __array_receiver_23 __array_arg_0_24) else ());
         let _g = ref 0 in (
-          ignore (while !_g < HxArray.length parents do ignore (let parent = Obj.magic (let __array_read_receiver_16 = parents in let __array_read_index_17 = !_g in HxArray.get (Obj.magic __array_read_receiver_16) __array_read_index_17) in (
-            ignore (let __old_18 = !_g in let __new_19 = HxInt.add __old_18 1 in (
-              ignore (_g := __new_19);
-              __new_19
+          ignore (while !_g < HxArray.length parents do ignore (let parent = Obj.magic (let __array_read_receiver_25 = parents in let __array_read_index_26 = !_g in HxArray.get (Obj.magic __array_read_receiver_25) __array_read_index_26) in (
+            ignore (let __old_27 = !_g in let __new_28 = HxInt.add __old_27 1 in (
+              ignore (_g := __new_28);
+              __new_28
             ));
             let identity = Obj.magic (TyType.getNominalIdentity (Obj.magic parent) ()) in if identity == Obj.magic (HxRuntime.hx_null) || not (classProvesAbsence (Obj.magic (TyperIndex.getByFullName (Obj.magic index) (TyNominalTypeId.getCanonicalName (Obj.magic identity) () : string))) (member : string) (Obj.magic index) (Obj.magic path)) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()
           )) done);
-          ignore (let __array_receiver_20 = Obj.magic path in HxArray.pop __array_receiver_20 ());
+          ignore (let __array_receiver_29 = Obj.magic path in HxArray.pop __array_receiver_29 ());
           true
         )
       )
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_21 -> (Obj.obj __ret_21 : bool) : bool)
+  | HxRuntime.Hx_return __ret_30 -> (Obj.obj __ret_30 : bool) : bool)
 
 let rejectAbsent = fun input -> ignore (try ignore (let value = Obj.magic (TyAliasExpansion.revealNonNullable (Obj.magic (Obj.obj (HxAnon.get input "receiver")))) in (
   ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get input "unchecked") || HxRuntime.unbox_bool_or_obj (HxAnon.get input "hasValueField") || TyType.isDynamic (Obj.magic value) () || TyType.hasUnknownComponent (Obj.magic value) () then Stdlib.raise (HxRuntime.Hx_return_void) else ());
-  ignore (if not (TyType.isAnonymous (Obj.magic value) ()) && not (classProvesAbsence (Obj.magic (Obj.obj (HxAnon.get input "provider"))) (Obj.obj (HxAnon.get input "member") : string) (Obj.magic (TyperContext.getIndex (Obj.magic (Obj.obj (HxAnon.get input "context"))) ())) (Obj.magic (let __represented_array_4 = HxArray.create () in __represented_array_4))) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
+  ignore (if not (TyType.isAnonymous (Obj.magic value) ()) && not (classProvesAbsence (Obj.magic (Obj.obj (HxAnon.get input "provider"))) (Obj.obj (HxAnon.get input "member") : string) (Obj.magic (TyperContext.getIndex (Obj.magic (Obj.obj (HxAnon.get input "context"))) ())) (Obj.magic (let __represented_array_13 = HxArray.create () in __represented_array_13))) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   ignore (if TyNominalApplication.dynamicMemberType (Obj.magic (TyperContext.getIndex (Obj.magic (Obj.obj (HxAnon.get input "context"))) ())) (Obj.magic value) != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return_void) else ());
-  HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath (Obj.magic (Obj.obj (HxAnon.get input "context"))) () : string) (Obj.magic (Obj.obj (HxAnon.get input "position"))) (let __string_part_5 = HxString.toStdString (TyType.getDisplay (Obj.magic value) ()) in let __string_part_6 = " has no field " in let __string_part_7 = HxString.toStdString (Obj.obj (HxAnon.get input "member")) in (__string_part_5 ^ __string_part_6) ^ __string_part_7 : string))) ["Dynamic"]
+  HxType.hx_throw_typed_rtti (Obj.repr (TyperError.create (TyperContext.getFilePath (Obj.magic (Obj.obj (HxAnon.get input "context"))) () : string) (Obj.magic (Obj.obj (HxAnon.get input "position"))) (let __string_part_14 = HxString.toStdString (TyType.getDisplay (Obj.magic value) ()) in let __string_part_15 = " has no field " in let __string_part_16 = HxString.toStdString (Obj.obj (HxAnon.get input "member")) in (__string_part_14 ^ __string_part_15) ^ __string_part_16 : string))) ["Dynamic"]
 )) with
   | HxRuntime.Hx_return_void -> ())

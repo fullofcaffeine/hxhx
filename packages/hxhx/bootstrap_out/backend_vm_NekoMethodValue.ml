@@ -74,7 +74,8 @@ let render = fun context expression emit -> (try let tempMaybeTypedBackendMethod
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match expression with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match expression with
         | HxExpr.EField (__enum_param_11, _) -> __enum_param_11
         | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expression with
         | HxExpr.EField (_, __enum_param_12) -> __enum_param_12

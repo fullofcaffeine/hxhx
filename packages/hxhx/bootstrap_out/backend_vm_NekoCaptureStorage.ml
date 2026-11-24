@@ -139,7 +139,8 @@ let forFunction = fun projection -> let hasClosures = ref false in let _g = ref 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then (
         ignore (match expression with
           | HxExpr.ELambda (__enum_param_33, _, _) -> __enum_param_33
           | _ -> failwith "Unexpected enum parameter");
@@ -227,7 +228,8 @@ let forInitializer = fun projection -> let hasClosures = ref false in (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then (
       ignore (match expression with
         | HxExpr.ELambda (__enum_param_41, _, _) -> __enum_param_41
         | _ -> failwith "Unexpected enum parameter");

@@ -79,7 +79,8 @@ let expression = fun self (original : HxExpr.hxexpr) (rebuilt : HxExpr.hxexpr) -
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 31 then let _g = Obj.magic (match original with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 31 then let _g = Obj.magic (match original with
     | HxExpr.EArrayAccess (__enum_param_12, _) -> __enum_param_12
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match original with
     | HxExpr.EArrayAccess (_, __enum_param_13) -> __enum_param_13
@@ -130,7 +131,8 @@ let expression = fun self (original : HxExpr.hxexpr) (rebuilt : HxExpr.hxexpr) -
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 31 then let _g2 = Obj.magic (match rebuilt with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 31 then let _g2 = Obj.magic (match rebuilt with
     | HxExpr.EArrayAccess (__enum_param_14, _) -> __enum_param_14
     | _ -> failwith "Unexpected enum parameter") in let _g3 = Obj.magic (match rebuilt with
     | HxExpr.EArrayAccess (_, __enum_param_15) -> __enum_param_15

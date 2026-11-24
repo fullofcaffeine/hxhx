@@ -52,7 +52,8 @@ let validateInputs = fun input -> ignore (let tempHxExpr = ref (Obj.magic (HxRun
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then (
     ignore (match _g with
       | HxExpr.EBinop (__enum_param_1, _, _) -> __enum_param_1
       | _ -> failwith "Unexpected enum parameter");
@@ -116,7 +117,8 @@ let validateInputs = fun input -> ignore (let tempHxExpr = ref (Obj.magic (HxRun
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 31 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 31 then (
         ignore (match _g4 with
           | HxExpr.EArrayAccess (__enum_param_5, _) -> __enum_param_5
           | _ -> failwith "Unexpected enum parameter");

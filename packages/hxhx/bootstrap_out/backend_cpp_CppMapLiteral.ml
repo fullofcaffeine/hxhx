@@ -68,7 +68,8 @@ let entriesFromElements = fun elements -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then ignore (let _g2 = (match element with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then ignore (let _g2 = (match element with
         | HxExpr.EBinop (__enum_param_62, _, _) -> __enum_param_62
         | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match element with
         | HxExpr.EBinop (_, __enum_param_63, _) -> __enum_param_63

@@ -121,7 +121,8 @@ let classBackedCastForExpectedType = fun expr expectedType scope services -> (tr
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 33 then let _g = Obj.magic (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 33 then let _g = Obj.magic (match expr with
       | HxExpr.ECast (__enum_param_25, _) -> __enum_param_25
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
       | HxExpr.ECast (_, __enum_param_26) -> __enum_param_26

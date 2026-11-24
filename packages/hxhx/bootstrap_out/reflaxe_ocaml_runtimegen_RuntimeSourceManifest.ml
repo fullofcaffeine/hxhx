@@ -173,19 +173,19 @@ let requiredToken = fun (value : Obj.t) (field : string) -> (let token = let __c
 
 let requiredInt = fun (value : Obj.t) (field : string) -> (let raw = let __reflect_arg_0_281 = value in let __reflect_arg_1_282 = HxString.toStdString field in Obj.obj (HxAnon.get __reflect_arg_0_281 __reflect_arg_1_282) in (
   ignore (if not (let __isOfTypeValue_283 = raw in if __isOfTypeValue_283 == HxRuntime.hx_null then false else Obj.is_int __isOfTypeValue_283 && not (HxRuntime.is_boxed_bool __isOfTypeValue_283)) then HxType.hx_throw_typed_rtti (Obj.repr (("OCaml runtime source manifest field \"" ^ HxString.toStdString field) ^ "\" must be an integer.")) ["Dynamic"] else ());
-  raw
+  let __nullable_int_284 = raw in if __nullable_int_284 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_284
 ) : int)
 
 let compareStrings = fun (left : string) (right : string) -> (let tempResult = ref (0 : int) in (
-  ignore (if left < right then let __assign_284 = -1 in (
-    tempResult := __assign_284;
-    __assign_284
-  ) else if left > right then let __assign_285 = 1 in (
+  ignore (if left < right then let __assign_285 = -1 in (
     tempResult := __assign_285;
     __assign_285
-  ) else let __assign_286 = 0 in (
+  ) else if left > right then let __assign_286 = 1 in (
     tempResult := __assign_286;
     __assign_286
+  ) else let __assign_287 = 0 in (
+    tempResult := __assign_287;
+    __assign_287
   ));
   !tempResult
 ) : int)

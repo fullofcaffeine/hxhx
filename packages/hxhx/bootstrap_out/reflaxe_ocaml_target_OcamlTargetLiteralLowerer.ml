@@ -26,7 +26,7 @@ let represent = fun value -> let __enum_arg_54 = Obj.magic (let __enum_arg_51 = 
   __arr_53
 )) in Reflaxe_ocaml_ast_OcamlExpr.EApp (Stdlib.Sys.opaque_identity __enum_arg_54, __enum_arg_55)
 
-let incompatible = fun fact carrier -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_56 = "OCaml target literal " in let __string_part_57 = HxString.toStdString (Reflaxe_ocaml_target_OcamlTargetLiteralFact.getCanonicalIdentity (Obj.magic fact) ()) in let __string_part_58 = " is incompatible with carrier " in let __string_part_59 = HxString.toStdString (HxDynamic.toStdString (Obj.repr carrier)) in ((__string_part_56 ^ __string_part_57) ^ __string_part_58) ^ __string_part_59)) ["Dynamic"]
+let incompatible = fun fact carrier -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_56 = "OCaml target literal " in let __string_part_57 = HxString.toStdString (Reflaxe_ocaml_target_OcamlTargetLiteralFact.getCanonicalIdentity (Obj.magic fact) ()) in let __string_part_58 = " is incompatible with carrier " in let __string_part_59 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "reflaxe.ocaml.target.OcamlTargetLiteralCarrier" (Obj.repr carrier))) in ((__string_part_56 ^ __string_part_57) ^ __string_part_58) ^ __string_part_59)) ["Dynamic"]
 
 let buildNonNull = fun fact carrier authorization -> (
   ignore (if fact == Obj.magic (HxRuntime.hx_null) || carrier == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml target literal lowering requires a fact and carrier") ["Dynamic"] else ());

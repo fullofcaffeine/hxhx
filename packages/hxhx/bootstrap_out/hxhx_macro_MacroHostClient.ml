@@ -113,7 +113,7 @@ let macroclient_readLineWithTimeout = fun self (hx_method : string) (phase : str
         ))
       ) else if HxRuntime.tags_has __exn_tags_76 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_75) : Haxe_io_Error.error) in (
         ignore e;
-        ignore (let __assign_70 = Obj.magic (let __enum_arg_71 = (HxDynamic.toStdString (Obj.repr e) : string) in ReadError (Stdlib.Sys.opaque_identity __enum_arg_71)) in (
+        ignore (let __assign_70 = Obj.magic (let __enum_arg_71 = (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e)) : string) in ReadError (Stdlib.Sys.opaque_identity __enum_arg_71)) in (
           result := __assign_70;
           __assign_70
         ))
@@ -132,7 +132,7 @@ let macroclient_readLineWithTimeout = fun self (hx_method : string) (phase : str
         ))
       ) else if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_77)) : Haxe_io_Error.error) in (
         ignore e;
-        ignore (let __assign_70 = Obj.magic (let __enum_arg_71 = (HxDynamic.toStdString (Obj.repr e) : string) in ReadError (Stdlib.Sys.opaque_identity __enum_arg_71)) in (
+        ignore (let __assign_70 = Obj.magic (let __enum_arg_71 = (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e)) : string) in ReadError (Stdlib.Sys.opaque_identity __enum_arg_71)) in (
           result := __assign_70;
           __assign_70
         ))
@@ -1286,7 +1286,7 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (ignore (t
     | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
     | HxRuntime.Hx_exception (__exn_v_173, __exn_tags_174) -> if HxRuntime.tags_has __exn_tags_174 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_173) : Haxe_io_Error.error) in (
       ignore e;
-      ignore (let id2 = let __nullable_int_141 = id in if __nullable_int_141 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_141 in let msg = let __string_part_142 = HxString.toStdString hx_method in let __string_part_143 = ": exception: " in let __string_part_144 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in (__string_part_142 ^ __string_part_143) ^ __string_part_144 in (
+      ignore (let id2 = let __nullable_int_141 = id in if __nullable_int_141 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_141 in let msg = let __string_part_142 = HxString.toStdString hx_method in let __string_part_143 = ": exception: " in let __string_part_144 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in (__string_part_142 ^ __string_part_143) ^ __string_part_144 in (
         ignore (let __obj_156 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_156 : Haxe_io_Output.t).writeString (Obj.magic __obj_156) (let __string_part_149 = "res " in let __string_part_150 = string_of_int id2 in let __string_part_151 = " err " in let __string_part_152 = HxString.toStdString (let __call_arg_0_145 = "m" in let __call_arg_1_146 = msg in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_145 __call_arg_1_146) in let __string_part_153 = " " in let __string_part_154 = HxString.toStdString (let __call_arg_0_147 = "p" in let __call_arg_1_148 = "" in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_147 __call_arg_1_148) in let __string_part_155 = "\n" in (((((__string_part_149 ^ __string_part_150) ^ __string_part_151) ^ __string_part_152) ^ __string_part_153) ^ __string_part_154) ^ __string_part_155 : string) (Obj.magic (HxRuntime.hx_null)));
         let __obj_157 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_157 : Haxe_io_Output.t).flush (Obj.magic __obj_157) ()
       ))
@@ -1299,7 +1299,7 @@ let macroclient_handleInboundReq = fun self (line : string) -> ignore (ignore (t
     ) else HxRuntime.hx_throw_typed __exn_v_173 __exn_tags_174
     | __exn_175 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_175)) : Haxe_io_Error.error) in (
       ignore e;
-      ignore (let id2 = let __nullable_int_141 = id in if __nullable_int_141 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_141 in let msg = let __string_part_142 = HxString.toStdString hx_method in let __string_part_143 = ": exception: " in let __string_part_144 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in (__string_part_142 ^ __string_part_143) ^ __string_part_144 in (
+      ignore (let id2 = let __nullable_int_141 = id in if __nullable_int_141 == HxRuntime.hx_null then 0 else Obj.obj __nullable_int_141 in let msg = let __string_part_142 = HxString.toStdString hx_method in let __string_part_143 = ": exception: " in let __string_part_144 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in (__string_part_142 ^ __string_part_143) ^ __string_part_144 in (
         ignore (let __obj_156 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_156 : Haxe_io_Output.t).writeString (Obj.magic __obj_156) (let __string_part_149 = "res " in let __string_part_150 = string_of_int id2 in let __string_part_151 = " err " in let __string_part_152 = HxString.toStdString (let __call_arg_0_145 = "m" in let __call_arg_1_146 = msg in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_145 __call_arg_1_146) in let __string_part_153 = " " in let __string_part_154 = HxString.toStdString (let __call_arg_0_147 = "p" in let __call_arg_1_148 = "" in Hxhx_macro_MacroProtocol.encodeLen __call_arg_0_147 __call_arg_1_148) in let __string_part_155 = "\n" in (((((__string_part_149 ^ __string_part_150) ^ __string_part_151) ^ __string_part_152) ^ __string_part_153) ^ __string_part_154) ^ __string_part_155 : string) (Obj.magic (HxRuntime.hx_null)));
         let __obj_157 = (Obj.magic ((Obj.magic self : macroclient_t).proc) : Sys_io_Process.t).stdin in (Obj.magic __obj_157 : Haxe_io_Output.t).flush (Obj.magic __obj_157) ()
       ))
@@ -1355,14 +1355,14 @@ let macroclient_call = fun self (hx_method : string) (tail : string) -> (try let
         | HxRuntime.Hx_return_void -> Stdlib.raise (HxRuntime.Hx_return_void)
         | HxRuntime.Hx_exception (__exn_v_28, __exn_tags_29) -> if HxRuntime.tags_has __exn_tags_29 "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" __exn_v_28) : Haxe_io_Error.error) in (
           ignore e;
-          HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_25 = "macro host: failed to write request: " in let __string_part_26 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_25 ^ __string_part_26)) ["Dynamic"]
+          HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_25 = "macro host: failed to write request: " in let __string_part_26 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_25 ^ __string_part_26)) ["Dynamic"]
         ) else if HxRuntime.tags_has __exn_tags_29 "String" then let e = (Obj.obj __exn_v_28 : string) in (
           ignore e;
           HxType.hx_throw_typed_rtti (Obj.repr ("macro host: failed to write request: " ^ HxString.toStdString e)) ["Dynamic"]
         ) else HxRuntime.hx_throw_typed __exn_v_28 __exn_tags_29
         | __exn_30 -> if HxRuntime.tags_has ["OcamlExn"] "haxe.io.Error" then let e = (Obj.obj (HxEnum.unbox_or_obj "haxe.io.Error" (Obj.repr __exn_30)) : Haxe_io_Error.error) in (
           ignore e;
-          HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_25 = "macro host: failed to write request: " in let __string_part_26 = HxString.toStdString (HxDynamic.toStdString (Obj.repr e)) in __string_part_25 ^ __string_part_26)) ["Dynamic"]
+          HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_25 = "macro host: failed to write request: " in let __string_part_26 = HxString.toStdString (HxDynamic.toStdString (HxEnum.box_if_needed "haxe.io.Error" (Obj.repr e))) in __string_part_25 ^ __string_part_26)) ["Dynamic"]
         ) else if HxRuntime.tags_has ["OcamlExn"] "String" then let e = (Obj.obj (Obj.repr __exn_30) : string) in (
           ignore e;
           HxType.hx_throw_typed_rtti (Obj.repr ("macro host: failed to write request: " ^ HxString.toStdString e)) ["Dynamic"]

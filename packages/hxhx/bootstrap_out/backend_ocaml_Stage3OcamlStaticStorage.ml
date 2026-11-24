@@ -97,7 +97,8 @@ let storedRead = fun self (e : HxExpr.hxexpr) (field : HxExpr.hxexpr -> TypedBac
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then (
     ignore (match e with
       | HxExpr.EIdent __enum_param_73 -> __enum_param_73
       | _ -> failwith "Unexpected enum parameter");
@@ -159,7 +160,8 @@ let storedRead = fun self (e : HxExpr.hxexpr) (field : HxExpr.hxexpr -> TypedBac
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
     ignore (match e with
       | HxExpr.EField (__enum_param_77, _) -> __enum_param_77
       | _ -> failwith "Unexpected enum parameter");
@@ -282,7 +284,8 @@ let operandFor = fun hx_type op value -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_195 = true in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_195 = true in (
         tempBool := __assign_195;
         __assign_195
       ) else let __assign_196 = false in (
@@ -413,7 +416,8 @@ let split = fun self (e : HxExpr.hxexpr) (field : HxExpr.hxexpr -> TypedBackendF
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then (
         ignore (match _g with
           | HxExpr.EIdent __enum_param_57 -> __enum_param_57
           | _ -> failwith "Unexpected enum parameter");
@@ -475,7 +479,8 @@ let split = fun self (e : HxExpr.hxexpr) (field : HxExpr.hxexpr -> TypedBackendF
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
         ignore (match _g with
           | HxExpr.EField (__enum_param_61, _) -> __enum_param_61
           | _ -> failwith "Unexpected enum parameter");

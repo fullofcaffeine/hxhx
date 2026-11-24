@@ -92,7 +92,8 @@ let fromExpression = fun program expression -> (try let call = TypedExactCallSou
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expression with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expression with
     | HxExpr.ECall (__enum_param_8, _) -> __enum_param_8
     | _ -> failwith "Unexpected enum parameter") in (
     ignore (match expression with
@@ -145,7 +146,8 @@ let fromExpression = fun program expression -> (try let call = TypedExactCallSou
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_10 -> __enum_param_10
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_11 = _g2 in let __string_eq_right_12 = "__hxhx_exact_instance_call" in HxString.equals __string_eq_left_11 __string_eq_right_12 then HxType.hx_throw_typed_rtti (Obj.repr "Neko exact instance call contains a malformed typed payload") ["Dynamic"] else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
   ) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null)))) else ());

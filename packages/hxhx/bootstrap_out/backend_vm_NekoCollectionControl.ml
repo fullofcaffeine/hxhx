@@ -80,7 +80,8 @@ let renderAppend = fun context expression emit -> (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g = Obj.magic (match expression with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g = Obj.magic (match expression with
       | HxExpr.ELoweredControl (__enum_param_16, _, _, _) -> __enum_param_16
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expression with
       | HxExpr.ELoweredControl (_, __enum_param_17, _, _) -> __enum_param_17

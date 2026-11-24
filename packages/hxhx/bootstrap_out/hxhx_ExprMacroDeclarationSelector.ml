@@ -194,7 +194,8 @@ let capture = fun call context scope -> let tempResult = ref (Obj.magic (HxRunti
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match call with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match call with
     | HxExpr.ECall (__enum_param_35, _) -> __enum_param_35
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match call with
     | HxExpr.ECall (_, __enum_param_36) -> __enum_param_36

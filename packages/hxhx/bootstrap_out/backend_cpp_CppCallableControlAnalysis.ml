@@ -171,7 +171,8 @@ let entries = fun values scope candidates resultType finalValue -> let finalValu
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 38 then ignore (let _g2 = Obj.magic (match value with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 38 then ignore (let _g2 = Obj.magic (match value with
       | HxExpr.EVars __enum_param_114 -> __enum_param_114
       | _ -> failwith "Unexpected enum parameter") in let declarations = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length declarations do ignore (let declaration = Obj.magic (let __array_read_receiver_115 = declarations in let __array_read_index_116 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_115) __array_read_index_116) in (
       ignore (let __old_117 = !_g3 in let __new_118 = HxInt.add __old_117 1 in (
@@ -3460,7 +3461,8 @@ let isEnumMetadataAnonInit = fun init -> let tempResult = ref (false : bool) in 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (let __enum_param_3987 = init in if __enum_param_3987 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_3987 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (let __enum_param_3987 = init in if __enum_param_3987 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_3987 with
     | HxExpr.EAnon (__enum_param_3986, _) -> __enum_param_3986
     | _ -> failwith "Unexpected enum parameter") in (
     ignore (let __enum_param_3989 = init in if __enum_param_3989 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_3989 with
@@ -3525,7 +3527,8 @@ let enumMetadataCtorName = fun init -> let tempResult = ref (HxString.hx_null_st
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match init with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match init with
     | HxExpr.EAnon (__enum_param_4008, _) -> __enum_param_4008
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match init with
     | HxExpr.EAnon (_, __enum_param_4009) -> __enum_param_4009
@@ -3579,7 +3582,8 @@ let enumMetadataCtorName = fun init -> let tempResult = ref (HxString.hx_null_st
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g3 = (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g3 = (match _g2 with
     | HxExpr.EString __enum_param_4015 -> __enum_param_4015
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in let __assign_4016 = (name : string) in (
     tempResult := __assign_4016;
@@ -3645,7 +3649,8 @@ let enumMetadataCtorIndex = fun init -> let tempResult = ref (HxRuntime.hx_null 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match init with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match init with
     | HxExpr.EAnon (__enum_param_4020, _) -> __enum_param_4020
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match init with
     | HxExpr.EAnon (_, __enum_param_4021) -> __enum_param_4021
@@ -3699,7 +3704,8 @@ let enumMetadataCtorIndex = fun init -> let tempResult = ref (HxRuntime.hx_null 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then Obj.repr (let _g3 = match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then Obj.repr (let _g3 = match _g2 with
     | HxExpr.EInt __enum_param_4027 -> __enum_param_4027
     | _ -> failwith "Unexpected enum parameter" in let value = _g3 in let __assign_4028 = Obj.magic (Obj.repr value) in (
     tempResult := __assign_4028;
@@ -3765,7 +3771,8 @@ let enumMetadataCtorParams = fun init -> let tempResult = ref (Obj.magic (HxRunt
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match init with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match init with
     | HxExpr.EAnon (__enum_param_4032, _) -> __enum_param_4032
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match init with
     | HxExpr.EAnon (_, __enum_param_4033) -> __enum_param_4033
@@ -3819,7 +3826,8 @@ let enumMetadataCtorParams = fun init -> let tempResult = ref (Obj.magic (HxRunt
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g3 = Obj.magic (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g3 = Obj.magic (match _g2 with
     | HxExpr.EArrayDecl __enum_param_4040 -> __enum_param_4040
     | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g3 in if values == Obj.magic (HxRuntime.hx_null) then let __assign_4041 = Obj.magic (let __arr_4042 = HxArray.create () in __arr_4042) in (
     tempResult := __assign_4041;
@@ -4058,7 +4066,7 @@ let constructorBodyWithoutSuperCall = fun ctor -> let body = Obj.magic (HxFuncti
     if (match stmt with
       | HxStmt.SBlock (_, _) -> 0
       | HxStmt.SVar (_, _, _, _, _) -> 1
-      | HxStmt.SIf (_, _, _, _) -> 2
+      | HxStmt.SIf (_, _, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
       | HxStmt.SWhile (_, _, _) -> 5
@@ -4125,7 +4133,8 @@ let constructorBodyWithoutSuperCall = fun ctor -> let body = Obj.magic (HxFuncti
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then ignore (let _g3 = Obj.magic (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then ignore (let _g3 = Obj.magic (match _g2 with
         | HxExpr.ECall (__enum_param_6561, _) -> __enum_param_6561
         | _ -> failwith "Unexpected enum parameter") in (
         ignore (match _g2 with
@@ -4178,7 +4187,8 @@ let constructorBodyWithoutSuperCall = fun ctor -> let body = Obj.magic (HxFuncti
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then ignore (if not (!skipped) then ignore (let __assign_6563 = true in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 11 then ignore (if not (!skipped) then ignore (let __assign_6563 = true in (
           skipped := __assign_6563;
           __assign_6563
         )) else ignore (let __array_receiver_6564 = Obj.magic out in let __array_arg_0_6565 = Obj.magic stmt in HxArray.push __array_receiver_6564 __array_arg_0_6565)) else ignore (let __array_receiver_6566 = Obj.magic out in let __array_arg_0_6567 = Obj.magic stmt in HxArray.push __array_receiver_6566 __array_arg_0_6567)
@@ -4199,7 +4209,7 @@ let constructorSuperCallArgs = fun stmts -> (try (
       if (match stmt with
         | HxStmt.SBlock (_, _) -> 0
         | HxStmt.SVar (_, _, _, _, _) -> 1
-        | HxStmt.SIf (_, _, _, _) -> 2
+        | HxStmt.SIf (_, _, _, _, _) -> 2
         | HxStmt.SForIn (_, _, _, _) -> 3
         | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
         | HxStmt.SWhile (_, _, _) -> 5
@@ -4266,7 +4276,8 @@ let constructorSuperCallArgs = fun stmts -> (try (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then ignore (let _g3 = Obj.magic (match _g2 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then ignore (let _g3 = Obj.magic (match _g2 with
           | HxExpr.ECall (__enum_param_6659, _) -> __enum_param_6659
           | _ -> failwith "Unexpected enum parameter") in let _g4 = Obj.magic (match _g2 with
           | HxExpr.ECall (_, __enum_param_6660) -> __enum_param_6660
@@ -4317,7 +4328,8 @@ let constructorSuperCallArgs = fun stmts -> (try (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then let args = Obj.magic _g4 in Stdlib.raise (HxRuntime.Hx_return (Obj.repr args)) else ignore ()) else ignore ()
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 11 then let args = Obj.magic _g4 in Stdlib.raise (HxRuntime.Hx_return (Obj.repr args)) else ignore ()) else ignore ()
       )) else ignore ()
     )) done);
     Obj.magic (HxRuntime.hx_null)
@@ -4390,7 +4402,8 @@ let optionalLambdaNameSet = fun exprs -> let names = Obj.magic (HxMap.create_str
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then ignore (let _g2 = (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then ignore (let _g2 = (match expr with
       | HxExpr.EString __enum_param_7262 -> __enum_param_7262
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in HxMap.set_string (Obj.magic names) (name : string) true) else ignore ()
   )) done);
@@ -4448,7 +4461,8 @@ let optionalLambdaLocalInfo = fun init -> let tempResult = ref (Obj.magic (HxRun
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (let __enum_param_7236 = init in if __enum_param_7236 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7236 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (let __enum_param_7236 = init in if __enum_param_7236 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7236 with
     | HxExpr.ECall (__enum_param_7235, _) -> __enum_param_7235
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_7238 = init in if __enum_param_7238 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7238 with
     | HxExpr.ECall (_, __enum_param_7237) -> __enum_param_7237
@@ -4499,7 +4513,8 @@ let optionalLambdaLocalInfo = fun init -> let tempResult = ref (Obj.magic (HxRun
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_7239 -> __enum_param_7239
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_7240 = _g2 in let __string_eq_right_7241 = "__hxhx_optional_lambda" in HxString.equals __string_eq_left_7240 __string_eq_right_7241 then if HxArray.length _g1 = 2 then let _g3 = Obj.magic (let __array_read_receiver_7242 = _g1 in let __array_read_index_7243 = 0 in HxArray.get (Obj.magic __array_read_receiver_7242) __array_read_index_7243) in let _g4 = Obj.magic (let __array_read_receiver_7244 = _g1 in let __array_read_index_7245 = 1 in HxArray.get (Obj.magic __array_read_receiver_7244) __array_read_index_7245) in if (match _g3 with
     | HxExpr.EParenthesized (_, _) -> 0
@@ -4548,7 +4563,8 @@ let optionalLambdaLocalInfo = fun init -> let tempResult = ref (Obj.magic (HxRun
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g5 = Obj.magic (match _g3 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g5 = Obj.magic (match _g3 with
     | HxExpr.ELambda (__enum_param_7246, _, _) -> __enum_param_7246
     | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
     | HxExpr.ELambda (_, __enum_param_7247, _) -> __enum_param_7247
@@ -4603,7 +4619,8 @@ let optionalLambdaLocalInfo = fun init -> let tempResult = ref (Obj.magic (HxRun
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g8 = Obj.magic (match _g4 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g8 = Obj.magic (match _g4 with
       | HxExpr.EArrayDecl __enum_param_7249 -> __enum_param_7249
       | _ -> failwith "Unexpected enum parameter") in let optionalExprs = Obj.magic _g8 in let body = Obj.magic _g6 in let args = Obj.magic _g5 in let __assign_7250 = Obj.magic (let __anon_7251 = HxAnon.create () in (
       ignore (HxAnon.set __anon_7251 "args" (Obj.repr args));
@@ -4705,7 +4722,8 @@ let callArgsHaveDirectDynamicLocalCandidate = fun args candidates -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g2 = (match arg with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g2 = (match arg with
         | HxExpr.EIdent __enum_param_7753 -> __enum_param_7753
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else ignore ()) else ignore ()
     )) done);
@@ -4765,10 +4783,11 @@ let rec collectReturnLocalTypeOverridesFromStmt = fun stmt scope returnType -> i
       collectReturnLocalTypeOverridesFromStmt (Obj.magic s) scope (returnType : string)
     )) done
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore ((
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
     let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
       ignore _p3;
+      ignore _p4;
       let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in (
         ignore (collectReturnLocalTypeOverridesFromStmt (Obj.magic thenBranch) scope (returnType : string));
         if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (collectReturnLocalTypeOverridesFromStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) scope (returnType : string)) else ()
@@ -4864,7 +4883,8 @@ let rec collectReturnLocalTypeOverridesFromStmt = fun stmt scope returnType -> i
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_8155 -> __enum_param_8155
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in setReturnLocalTypeOverride scope (name : string) (returnType : string)) else ignore ()
   ))
@@ -4941,7 +4961,8 @@ let isHelperMacrosTypedAsCallee = fun callee -> let tempResult = ref (false : bo
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_8560 -> __enum_param_8560
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_8561 = _g4 in let __string_eq_right_8562 = "unit" in HxString.equals __string_eq_left_8561 __string_eq_right_8562 then if let __string_eq_left_8563 = _g3 in let __string_eq_right_8564 = "HelperMacros" in HxString.equals __string_eq_left_8563 __string_eq_right_8564 then if let __string_eq_left_8565 = _g1 in let __string_eq_right_8566 = "typedAs" in HxString.equals __string_eq_left_8565 __string_eq_right_8566 then let __assign_8567 = true in (
         tempResult := __assign_8567;
@@ -5185,7 +5206,8 @@ let helperMacrosTypeErrorProbeExpr = fun callee args -> (try (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g2 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g2 with
           | HxExpr.EIdent __enum_param_8599 -> __enum_param_8599
           | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_8600 = _g4 in let __string_eq_right_8601 = "unit" in HxString.equals __string_eq_left_8600 __string_eq_right_8601 then if let __string_eq_left_8602 = _g3 in let __string_eq_right_8603 = "HelperMacros" in HxString.equals __string_eq_left_8602 __string_eq_right_8603 then let name = (_g1 : string) in let __assign_8604 = (name : string) in (
           tempString := __assign_8604;
@@ -5280,7 +5302,8 @@ let isHelperMacrosGetMetaCallee = fun callee -> let tempResult = ref (false : bo
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_8675 -> __enum_param_8675
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_8676 = _g4 in let __string_eq_right_8677 = "unit" in HxString.equals __string_eq_left_8676 __string_eq_right_8677 then if let __string_eq_left_8678 = _g3 in let __string_eq_right_8679 = "HelperMacros" in HxString.equals __string_eq_left_8678 __string_eq_right_8679 then if let __string_eq_left_8680 = _g1 in let __string_eq_right_8681 = "getMeta" in HxString.equals __string_eq_left_8680 __string_eq_right_8681 then let __assign_8682 = true in (
         tempResult := __assign_8682;
@@ -5359,7 +5382,8 @@ let helperMacrosGetMetaPayload = fun callee args -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g1 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g1 = Obj.magic (match _g with
       | HxExpr.ECall (__enum_param_8638, _) -> __enum_param_8638
       | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (match _g with
       | HxExpr.ECall (_, __enum_param_8639) -> __enum_param_8639
@@ -5410,7 +5434,8 @@ let helperMacrosGetMetaPayload = fun callee args -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g3 = (match _g1 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g3 = (match _g1 with
       | HxExpr.EIdent __enum_param_8640 -> __enum_param_8640
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_8641 = _g3 in let __string_eq_right_8642 = "__hxhx_expr_meta" in HxString.equals __string_eq_left_8641 __string_eq_right_8642 then if HxArray.length _g2 = 3 then let _g4 = Obj.magic (let __array_read_receiver_8643 = _g2 in let __array_read_index_8644 = 0 in HxArray.get (Obj.magic __array_read_receiver_8643) __array_read_index_8644) in let _g5 = Obj.magic (let __array_read_receiver_8645 = _g2 in let __array_read_index_8646 = 1 in HxArray.get (Obj.magic __array_read_receiver_8645) __array_read_index_8646) in (
       ignore (let __array_read_receiver_8647 = _g2 in let __array_read_index_8648 = 2 in HxArray.get (Obj.magic __array_read_receiver_8647) __array_read_index_8648);
@@ -5461,7 +5486,8 @@ let helperMacrosGetMetaPayload = fun callee args -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g7 = (match _g4 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g7 = (match _g4 with
         | HxExpr.EString __enum_param_8649 -> __enum_param_8649
         | _ -> failwith "Unexpected enum parameter" : string) in if (match _g5 with
         | HxExpr.EParenthesized (_, _) -> 0
@@ -5510,7 +5536,8 @@ let helperMacrosGetMetaPayload = fun callee args -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g8 = (match _g5 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g8 = (match _g5 with
         | HxExpr.EString __enum_param_8650 -> __enum_param_8650
         | _ -> failwith "Unexpected enum parameter" : string) in let rawArgs = (_g8 : string) in let name = (_g7 : string) in let __assign_8651 = Obj.magic (Obj.magic (let __represented_array_8652 = HxArray.create () in let __represented_array_element_0_8653 = name in (
         ignore (HxArray.push __represented_array_8652 __represented_array_element_0_8653);
@@ -5594,7 +5621,8 @@ let testGadtMacroProbeName = fun callee -> let tempResult = ref (Obj.magic (HxRu
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match callee with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match callee with
     | HxExpr.EField (__enum_param_8731, _) -> __enum_param_8731
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
     | HxExpr.EField (_, __enum_param_8732) -> __enum_param_8732
@@ -5688,7 +5716,8 @@ let testGadtMacroProbeName = fun callee -> let tempResult = ref (Obj.magic (HxRu
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
         | HxExpr.EIdent __enum_param_8764 -> __enum_param_8764
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_8765 = _g6 in let __string_eq_right_8766 = "unit" in HxString.equals __string_eq_left_8765 __string_eq_right_8766 then if let __string_eq_left_8767 = _g5 in let __string_eq_right_8768 = "MyMacro" in HxString.equals __string_eq_left_8767 __string_eq_right_8768 then match _g3 with
         | "MyMacroHelper" -> let field = (_g1 : string) in if (let __string_eq_left_8770 = field in let __string_eq_right_8771 = "followWithAbstracts" in HxString.equals __string_eq_left_8770 __string_eq_right_8771) || (let __string_eq_left_8772 = field in let __string_eq_right_8773 = "followWithAbstractsOnce" in HxString.equals __string_eq_left_8772 __string_eq_right_8773) then let __assign_8774 = Obj.magic (field : string) in (
@@ -6023,7 +6052,8 @@ let rec optionalValueCallReceiver = fun expr scope -> let tempResult = ref (Obj.
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_25507, _) -> __enum_param_25507
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_25508) -> __enum_param_25508
@@ -6176,7 +6206,8 @@ let eqForwardingBodyArgs = fun fn -> (try let body = Obj.magic (HxFunctionDecl.g
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g3 = Obj.magic (match _g1 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g3 = Obj.magic (match _g1 with
           | HxExpr.ECall (__enum_param_25923, _) -> __enum_param_25923
           | _ -> failwith "Unexpected enum parameter") in let _g4 = Obj.magic (match _g1 with
           | HxExpr.ECall (_, __enum_param_25924) -> __enum_param_25924
@@ -6227,7 +6258,8 @@ let eqForwardingBodyArgs = fun fn -> (try let body = Obj.magic (HxFunctionDecl.g
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g5 = (match _g3 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g5 = (match _g3 with
           | HxExpr.EIdent __enum_param_25925 -> __enum_param_25925
           | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_25926 = _g5 in let __string_eq_right_25927 = "eq" in HxString.equals __string_eq_left_25926 __string_eq_right_25927 then let args = Obj.magic _g4 in let __assign_25928 = Obj.magic (Obj.magic args) in (
           tempResult := __assign_25928;
@@ -6292,7 +6324,8 @@ let eqForwardingBodyArgs = fun fn -> (try let body = Obj.magic (HxFunctionDecl.g
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g3 = Obj.magic (match _g1 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g3 = Obj.magic (match _g1 with
           | HxExpr.ECall (__enum_param_25932, _) -> __enum_param_25932
           | _ -> failwith "Unexpected enum parameter") in let _g4 = Obj.magic (match _g1 with
           | HxExpr.ECall (_, __enum_param_25933) -> __enum_param_25933
@@ -6343,7 +6376,8 @@ let eqForwardingBodyArgs = fun fn -> (try let body = Obj.magic (HxFunctionDecl.g
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g5 = (match _g3 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g5 = (match _g3 with
           | HxExpr.EIdent __enum_param_25934 -> __enum_param_25934
           | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_25935 = _g5 in let __string_eq_right_25936 = "eq" in HxString.equals __string_eq_left_25935 __string_eq_right_25936 then let args = Obj.magic _g4 in let __assign_25937 = Obj.magic (Obj.magic args) in (
           tempResult := __assign_25937;
@@ -6493,7 +6527,8 @@ let isNullExpr = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_26622 = true in (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_26622 = true in (
     tempResult := __assign_26622;
     __assign_26622
   ) else let __assign_26623 = false in (
@@ -6551,7 +6586,8 @@ let isIntLiteralExpr = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then (
     ignore (match expr with
       | HxExpr.EInt __enum_param_26626 -> __enum_param_26626
       | _ -> failwith "Unexpected enum parameter");
@@ -6646,7 +6682,8 @@ let targetOwnedForwardedERegMapCallbackAlreadyResolved = fun callee args scope c
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match callee with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match callee with
       | HxExpr.EField (__enum_param_8512, _) -> __enum_param_8512
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
       | HxExpr.EField (_, __enum_param_8513) -> __enum_param_8513
@@ -6697,7 +6734,8 @@ let targetOwnedForwardedERegMapCallbackAlreadyResolved = fun callee args scope c
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_8514 -> __enum_param_8514
       | _ -> failwith "Unexpected enum parameter" : string) in let receiverName = (_g2 : string) in let hx_method = (_g1 : string) in let tempShortCircuit = ref (false : bool) in (
       ignore (if let __string_eq_left_8515 = hx_method in let __string_eq_right_8516 = "map" in HxString.equals __string_eq_left_8515 __string_eq_right_8516 then let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in let tempLeft = (HxMap.get_string (Obj.magic _this) (receiverName : string) : string) in let __assign_8517 = let __string_eq_left_8518 = tempLeft in let __string_eq_right_8519 = "std::shared_ptr<EReg>" in HxString.equals __string_eq_left_8518 __string_eq_right_8519 in (
@@ -6754,7 +6792,8 @@ let targetOwnedForwardedERegMapCallbackAlreadyResolved = fun callee args scope c
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g3 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g3 with
         | HxExpr.EIdent __enum_param_8523 -> __enum_param_8523
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let local = (name : string) in if not (HxMap.exists_string (Obj.magic candidates) (local : string)) then let __assign_8524 = false in (
         tempResult := __assign_8524;
@@ -6840,7 +6879,8 @@ let targetOwnedResolvedERegMapInferenceLeavesAreInert = fun callee args scope ca
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then (
       ignore (match _g with
         | HxExpr.EString __enum_param_7743 -> __enum_param_7743
         | _ -> failwith "Unexpected enum parameter");
@@ -7010,7 +7050,8 @@ let rec argHasErasedArgTypeOverride = fun arg scope -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
         | HxExpr.EIdent __enum_param_27955 -> __enum_param_27955
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_27956 = _g2 in let __string_eq_right_27957 = "__hxhx_expr_meta" in HxString.equals __string_eq_left_27956 __string_eq_right_27957 then let args = Obj.magic _g1 in if HxArray.length args >= 3 then let __assign_27958 = argHasErasedArgTypeOverride (Obj.magic (let __array_read_receiver_27959 = args in let __array_read_index_27960 = 2 in HxArray.get (Obj.magic __array_read_receiver_27959) __array_read_index_27960)) scope in (
         tempResult := __assign_27958;
@@ -7385,7 +7426,8 @@ let isCppNativeArrayReceiver = fun expr -> let tempResult = ref (false : bool) i
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_35798 -> __enum_param_35798
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_35799 = _g2 in let __string_eq_right_35800 = "cpp" in HxString.equals __string_eq_left_35799 __string_eq_right_35800 then if let __string_eq_left_35801 = _g1 in let __string_eq_right_35802 = "NativeArray" in HxString.equals __string_eq_left_35801 __string_eq_right_35802 then let __assign_35803 = true in (
       tempResult := __assign_35803;
@@ -7463,7 +7505,8 @@ let isInt64StaticReceiver = fun expr -> let tempResult = ref (false : bool) in (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_35812 -> __enum_param_35812
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_35813 = _g2 in let __string_eq_right_35814 = "haxe" in HxString.equals __string_eq_left_35813 __string_eq_right_35814 then if let __string_eq_left_35815 = _g1 in let __string_eq_right_35816 = "Int64" in HxString.equals __string_eq_left_35815 __string_eq_right_35816 then let __assign_35817 = true in (
       tempResult := __assign_35817;
@@ -7541,7 +7584,8 @@ let isInt64HelperReceiver = fun expr -> let tempResult = ref (false : bool) in (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_35826 -> __enum_param_35826
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_35827 = _g2 in let __string_eq_right_35828 = "haxe" in HxString.equals __string_eq_left_35827 __string_eq_right_35828 then if let __string_eq_left_35829 = _g1 in let __string_eq_right_35830 = "Int64Helper" in HxString.equals __string_eq_left_35829 __string_eq_right_35830 then let __assign_35831 = true in (
       tempResult := __assign_35831;
@@ -7625,7 +7669,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47 with
     | 15 -> let _g = Obj.magic (let __enum_param_35922 = init in if __enum_param_35922 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_35922 with
       | HxExpr.ECall (__enum_param_35921, _) -> __enum_param_35921
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_35924 = init in if __enum_param_35924 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_35924 with
@@ -7677,7 +7722,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_35925 -> __enum_param_35925
       | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
       | "__hxhx_optional_lambda" -> if HxArray.length _g1 = 2 then let _g3 = Obj.magic (let __array_read_receiver_35927 = _g1 in let __array_read_index_35928 = 0 in HxArray.get (Obj.magic __array_read_receiver_35927) __array_read_index_35928) in let _g4 = Obj.magic (let __array_read_receiver_35929 = _g1 in let __array_read_index_35930 = 1 in HxArray.get (Obj.magic __array_read_receiver_35929) __array_read_index_35930) in match _g3 with
@@ -7728,7 +7774,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g7 = (match _g5 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g7 = (match _g5 with
           | HxExpr.EIdent __enum_param_35932 -> __enum_param_35932
           | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_35933 = _g7 in let __string_eq_right_35934 = "__hxhx_rest_lambda" in HxString.equals __string_eq_left_35933 __string_eq_right_35934 then if HxArray.length _g6 = 2 then let _g8 = Obj.magic (let __array_read_receiver_35935 = _g6 in let __array_read_index_35936 = 0 in HxArray.get (Obj.magic __array_read_receiver_35935) __array_read_index_35936) in let _g9 = Obj.magic (let __array_read_receiver_35937 = _g6 in let __array_read_index_35938 = 1 in HxArray.get (Obj.magic __array_read_receiver_35937) __array_read_index_35938) in if (match _g8 with
           | HxExpr.EParenthesized (_, _) -> 0
@@ -7777,7 +7824,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g10 = Obj.magic (match _g8 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g10 = Obj.magic (match _g8 with
           | HxExpr.ELambda (__enum_param_35939, _, _) -> __enum_param_35939
           | _ -> failwith "Unexpected enum parameter") in let _g11 = Obj.magic (match _g8 with
           | HxExpr.ELambda (_, __enum_param_35940, _) -> __enum_param_35940
@@ -7832,7 +7880,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then (
             ignore (match _g9 with
               | HxExpr.EInt __enum_param_35942 -> __enum_param_35942
               | _ -> failwith "Unexpected enum parameter");
@@ -7883,7 +7932,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
               ignore (match _g4 with
                 | HxExpr.EArrayDecl __enum_param_35943 -> __enum_param_35943
                 | _ -> failwith "Unexpected enum parameter");
@@ -7965,7 +8015,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
             ignore (match _g4 with
               | HxExpr.EArrayDecl __enum_param_35952 -> __enum_param_35952
               | _ -> failwith "Unexpected enum parameter");
@@ -8036,7 +8087,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g5 = Obj.magic (match _g3 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g5 = Obj.magic (match _g3 with
         | HxExpr.ELambda (__enum_param_35961, _, _) -> __enum_param_35961
         | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
         | HxExpr.ELambda (_, __enum_param_35962, _) -> __enum_param_35962
@@ -8091,7 +8143,8 @@ let rec localCallableLambdaShape = fun init -> let tempResult = ref (Obj.magic (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then (
           ignore (match _g4 with
             | HxExpr.EInt __enum_param_35964 -> __enum_param_35964
             | _ -> failwith "Unexpected enum parameter");
@@ -8247,7 +8300,8 @@ let isUnhintedEmptyArray = fun typeHint init -> (try let tempString = ref (HxStr
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g = Obj.magic (let __enum_param_36088 = init in if __enum_param_36088 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_36088 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g = Obj.magic (let __enum_param_36088 = init in if __enum_param_36088 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_36088 with
       | HxExpr.EArrayDecl __enum_param_36087 -> __enum_param_36087
       | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g in let __assign_36089 = HxArray.length values = 0 in (
       tempResult := __assign_36089;
@@ -8321,7 +8375,8 @@ let isUnhintedNullLocal = fun typeHint init -> (try let tempString = ref (HxStri
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_36098 = true in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_36098 = true in (
       tempResult := __assign_36098;
       __assign_36098
     ) else let __assign_36099 = false in (
@@ -8523,7 +8578,8 @@ let rec stringLiteralValue = fun expr -> let tempResult = ref (Obj.magic (HxRunt
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_42497 -> __enum_param_42497
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_42498 = _g2 in let __string_eq_right_42499 = "__unprotect__" in HxString.equals __string_eq_left_42498 __string_eq_right_42499 then if HxArray.length _g1 = 1 then let _g3 = Obj.magic (let __array_read_receiver_42500 = _g1 in let __array_read_index_42501 = 0 in HxArray.get (Obj.magic __array_read_receiver_42500) __array_read_index_42501) in let inner = Obj.magic _g3 in let __assign_42502 = Obj.magic (stringLiteralValue (Obj.magic inner) : string) in (
       tempResult := __assign_42502;
@@ -8661,7 +8717,8 @@ let classReferencePathCandidateText = fun expr -> let tempResult = ref (Obj.magi
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 9 then let _g = (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 9 then let _g = (match expr with
     | HxExpr.EEnumValue __enum_param_42510 -> __enum_param_42510
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let __assign_42511 = Obj.magic (name : string) in (
     tempResult := __assign_42511;
@@ -8881,7 +8938,8 @@ let directXmlFactoryToStringReceiver = fun expr scope -> let tempResult = ref (O
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
     | HxExpr.ECall (__enum_param_25639, _) -> __enum_param_25639
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ECall (_, __enum_param_25640) -> __enum_param_25640
@@ -8932,7 +8990,8 @@ let directXmlFactoryToStringReceiver = fun expr scope -> let tempResult = ref (O
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_25641, _) -> __enum_param_25641
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_25642) -> __enum_param_25642
@@ -8983,7 +9042,8 @@ let directXmlFactoryToStringReceiver = fun expr scope -> let tempResult = ref (O
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g4 = Obj.magic (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g4 = Obj.magic (match _g2 with
     | HxExpr.ECall (__enum_param_25643, _) -> __enum_param_25643
     | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
     | HxExpr.ECall (_, __enum_param_25644) -> __enum_param_25644
@@ -9034,7 +9094,8 @@ let directXmlFactoryToStringReceiver = fun expr scope -> let tempResult = ref (O
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
     | HxExpr.EField (__enum_param_25645, _) -> __enum_param_25645
     | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
     | HxExpr.EField (_, __enum_param_25646) -> __enum_param_25646
@@ -9085,7 +9146,8 @@ let directXmlFactoryToStringReceiver = fun expr scope -> let tempResult = ref (O
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g8 = (match _g6 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g8 = (match _g6 with
     | HxExpr.EIdent __enum_param_25647 -> __enum_param_25647
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_25648 = _g8 in let __string_eq_right_25649 = "Xml" in HxString.equals __string_eq_left_25648 __string_eq_right_25649 then if let __string_eq_left_25650 = _g3 in let __string_eq_right_25651 = "toString" in HxString.equals __string_eq_left_25650 __string_eq_right_25651 then let factoryCall = Obj.magic _g2 in let factoryArgs = Obj.magic _g5 in let factoryMethod = (_g7 : string) in let outerArgs = Obj.magic _g1 in let tempBool = ref (false : bool) in (
     ignore (match factoryMethod with
@@ -9205,7 +9267,8 @@ let switchExprBranches = fun expr -> let tempResult = ref (Obj.magic (HxRuntime.
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 21 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 21 then (
     ignore (match expr with
       | HxExpr.ESwitch (__enum_param_44365, _, _) -> __enum_param_44365
       | _ -> failwith "Unexpected enum parameter");
@@ -9449,7 +9512,8 @@ let zeroArgLambdaBodyExpr = fun expr -> let tempResult = ref (Obj.magic (HxRunti
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g = Obj.magic (match expr with
     | HxExpr.ELambda (__enum_param_45523, _, _) -> __enum_param_45523
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ELambda (_, __enum_param_45524, _) -> __enum_param_45524
@@ -9519,7 +9583,8 @@ let tryExprBody = fun expr -> let tempResult = ref (Obj.magic (HxRuntime.hx_null
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g = Obj.magic (match expr with
     | HxExpr.ELambda (__enum_param_45678, _, _) -> __enum_param_45678
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ELambda (_, __enum_param_45679, _) -> __enum_param_45679
@@ -9589,7 +9654,8 @@ let tryCatchEntry = fun expr -> let tempResult = ref (Obj.magic (HxRuntime.hx_nu
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g = Obj.magic (match expr with
     | HxExpr.EArrayDecl __enum_param_45694 -> __enum_param_45694
     | _ -> failwith "Unexpected enum parameter") in if HxArray.length _g = 3 then let _g1 = Obj.magic (let __array_read_receiver_45695 = _g in let __array_read_index_45696 = 0 in HxArray.get (Obj.magic __array_read_receiver_45695) __array_read_index_45696) in let _g2 = Obj.magic (let __array_read_receiver_45697 = _g in let __array_read_index_45698 = 1 in HxArray.get (Obj.magic __array_read_receiver_45697) __array_read_index_45698) in let _g3 = Obj.magic (let __array_read_receiver_45699 = _g in let __array_read_index_45700 = 2 in HxArray.get (Obj.magic __array_read_receiver_45699) __array_read_index_45700) in if (match _g1 with
     | HxExpr.EParenthesized (_, _) -> 0
@@ -9638,7 +9704,8 @@ let tryCatchEntry = fun expr -> let tempResult = ref (Obj.magic (HxRuntime.hx_nu
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g4 = (match _g1 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g4 = (match _g1 with
     | HxExpr.EString __enum_param_45701 -> __enum_param_45701
     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g2 with
     | HxExpr.EParenthesized (_, _) -> 0
@@ -9687,7 +9754,8 @@ let tryCatchEntry = fun expr -> let tempResult = ref (Obj.magic (HxRuntime.hx_nu
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g5 = (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g5 = (match _g2 with
     | HxExpr.EString __enum_param_45702 -> __enum_param_45702
     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g3 with
     | HxExpr.EParenthesized (_, _) -> 0
@@ -9736,7 +9804,8 @@ let tryCatchEntry = fun expr -> let tempResult = ref (Obj.magic (HxRuntime.hx_nu
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g6 = Obj.magic (match _g3 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g6 = Obj.magic (match _g3 with
     | HxExpr.ELambda (__enum_param_45703, _, _) -> __enum_param_45703
     | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g3 with
     | HxExpr.ELambda (_, __enum_param_45704, _) -> __enum_param_45704
@@ -9832,7 +9901,8 @@ let tryCatchEntries = fun expr -> let tempResult = ref (Obj.magic (HxRuntime.hx_
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g = Obj.magic (match expr with
     | HxExpr.EArrayDecl __enum_param_45684 -> __enum_param_45684
     | _ -> failwith "Unexpected enum parameter") in let entries = Obj.magic _g in let out = Obj.magic (HxArray.create ()) in let _g2 = ref 0 in (
     ignore (while !_g2 < HxArray.length entries do ignore (let entry = Obj.magic (let __array_read_receiver_45685 = entries in let __array_read_index_45686 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_45685) __array_read_index_45686) in (
@@ -9922,7 +9992,8 @@ let rec boundFunctionBindChain = fun expr -> let tempResult = ref (Obj.magic (Hx
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
     | HxExpr.ECall (__enum_param_46521, _) -> __enum_param_46521
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ECall (_, __enum_param_46522) -> __enum_param_46522
@@ -9973,7 +10044,8 @@ let rec boundFunctionBindChain = fun expr -> let tempResult = ref (Obj.magic (Hx
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_46523, _) -> __enum_param_46523
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_46524) -> __enum_param_46524
@@ -10068,7 +10140,8 @@ let isBindPlaceholderExpr = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match expr with
     | HxExpr.EIdent __enum_param_46673 -> __enum_param_46673
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_46674 = _g in let __string_eq_right_46675 = "_" in HxString.equals __string_eq_left_46674 __string_eq_right_46675 then let __assign_46676 = true in (
     tempResult := __assign_46676;
@@ -10304,7 +10377,8 @@ let recordOptionalLambdaBindCallShape = fun expr callArgs scope callShapes -> (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
         | HxExpr.EIdent __enum_param_7225 -> __enum_param_7225
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let __assign_7226 = (name : string) in (
         tempString := __assign_7226;
@@ -10383,7 +10457,8 @@ let rec collectOptionalLambdaLocalCallsFromExpr = fun expr scope callShapes -> i
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g2 = (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_7193 -> __enum_param_7193
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in let local = (name : string) in (
     ignore (if not (HxMap.exists_string (Obj.magic callShapes) (local : string)) then ignore (HxMap.set_string (Obj.magic callShapes) (local : string) (let __arr_7194 = HxArray.create () in __arr_7194)) else ());
@@ -10631,7 +10706,8 @@ let rec isStringLike = fun expr -> let tempResult = ref (false : bool) in (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g2 with
         | HxExpr.EIdent __enum_param_47272 -> __enum_param_47272
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_47273 = _g4 in let __string_eq_right_47274 = "Std" in HxString.equals __string_eq_left_47273 __string_eq_right_47274 then if let __string_eq_left_47275 = _g3 in let __string_eq_right_47276 = "string" in HxString.equals __string_eq_left_47275 __string_eq_right_47276 then let args = Obj.magic _g1 in if HxArray.length args = 1 then let __assign_47277 = true in (
         tempResult := __assign_47277;
@@ -11060,6 +11136,11 @@ let rec exprKind = fun expr -> let tempResult = ref (HxString.hx_null_string : s
         tempResult := __assign_47459;
         __assign_47459
       )
+    )
+    | HxExpr.ERegexLiteral (_p0, _p1) -> (
+      ignore _p0;
+      ignore _p1;
+      HxType.hx_throw_typed_rtti (Obj.repr "regex literal syntax must be lowered before this stage") ["Dynamic"]
     ));
   !tempResult
 )
@@ -11227,11 +11308,12 @@ let stmtKind = fun stmt -> let tempResult = ref (HxString.hx_null_string : strin
         __assign_47374
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       ignore _p1;
       ignore _p2;
       ignore _p3;
+      ignore _p4;
       let __assign_47375 = "SIf" in (
         tempResult := __assign_47375;
         __assign_47375
@@ -11904,7 +11986,8 @@ let isHelperMacrosStringShimReceiver = fun receiver hx_method -> (try let tempBo
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_8578 -> __enum_param_8578
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_8579 = _g2 in let __string_eq_right_8580 = "unit" in HxString.equals __string_eq_left_8579 __string_eq_right_8580 then if let __string_eq_left_8581 = _g1 in let __string_eq_right_8582 = "HelperMacros" in HxString.equals __string_eq_left_8581 __string_eq_right_8582 then let __assign_8583 = true in (
       tempBool := __assign_8583;
@@ -12194,7 +12277,8 @@ let lambdaArrayStructuralIteratorProvider = fun iterable -> (try let tempResult 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match iterable with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match iterable with
     | HxExpr.EAnon (__enum_param_27141, _) -> __enum_param_27141
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match iterable with
     | HxExpr.EAnon (_, __enum_param_27142) -> __enum_param_27142
@@ -12559,7 +12643,8 @@ let isOpaqueStringMapExpr = fun expr -> let tempResult = ref (false : bool) in (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47 with
     | 19 -> let _g = (let __enum_param_42403 = expr in if __enum_param_42403 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42403 with
       | HxExpr.ETryCatchRaw __enum_param_42402 -> __enum_param_42402
       | _ -> failwith "Unexpected enum parameter" : string) in let raw = (_g : string) in let __assign_42404 = (let __call_arg_0_42405 = raw in renderOpaqueStringMapRaw __call_arg_0_42405) != Obj.magic (HxRuntime.hx_null) in (
@@ -12686,7 +12771,8 @@ let rec exprForwardsArgToUtestPosition = fun expr argName -> let tempResult = re
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_4254 -> __enum_param_4254
       | _ -> failwith "Unexpected enum parameter" : string) in let hx_method = (_g2 : string) in let args = Obj.magic _g1 in if ((let __string_eq_left_4255 = hx_method in let __string_eq_right_4256 = "exc" in HxString.equals __string_eq_left_4255 __string_eq_right_4256) || (let __string_eq_left_4257 = hx_method in let __string_eq_right_4258 = "unspec" in HxString.equals __string_eq_left_4257 __string_eq_right_4258)) && HxArray.length args >= 2 then let __assign_4259 = exprIsIdentifier (Obj.magic (let __array_read_receiver_4260 = args in let __array_read_index_4261 = 1 in HxArray.get (Obj.magic __array_read_receiver_4260) __array_read_index_4261)) (argName : string) in (
       tempResult := __assign_4259;
@@ -12867,8 +12953,9 @@ and stmtForwardsArgToUtestPosition = fun stmt argName -> let tempResult = ref (f
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
       ignore _p3;
+      ignore _p4;
       let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let __assign_4206 = exprForwardsArgToUtestPosition (Obj.magic cond) (argName : string) || stmtForwardsArgToUtestPosition (Obj.magic thenBranch) (argName : string) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtForwardsArgToUtestPosition (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (argName : string) in (
         tempResult := __assign_4206;
         __assign_4206
@@ -13649,7 +13736,8 @@ let shadowedCurrentOwnerFieldInitExpr = fun local init declaredType localType ha
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (let __enum_param_9563 = init in if __enum_param_9563 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_9563 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (let __enum_param_9563 = init in if __enum_param_9563 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_9563 with
       | HxExpr.EIdent __enum_param_9562 -> __enum_param_9562
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in if let __string_eq_left_9564 = let __call_arg_0_9566 = name in sanitizeIdentifier __call_arg_0_9566 in let __string_eq_right_9565 = let __call_arg_0_9567 = local in sanitizeIdentifier __call_arg_0_9567 in HxString.equals __string_eq_left_9564 __string_eq_right_9565 then let field = (currentOwnerFieldReferenceExpr (local : string) scope : string) in if field == Obj.magic (HxRuntime.hx_null) then let __assign_9568 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_9568;
@@ -13797,7 +13885,8 @@ let sameOwnerMethodValueExpr = fun expr scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match expr with
       | HxExpr.EIdent __enum_param_26947 -> __enum_param_26947
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let fn = Obj.magic (currentOwnerMethod (name : string) scope) in if fn == Obj.magic (HxRuntime.hx_null) then let __assign_26948 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
       tempResult := __assign_26948;
@@ -14268,7 +14357,8 @@ let rec typeEnumConstructorNameLiteral = fun expr -> let tempResult = ref (Obj.m
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_48134 -> __enum_param_48134
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_48135 = _g2 in let __string_eq_right_48136 = "__unprotect__" in HxString.equals __string_eq_left_48135 __string_eq_right_48136 then let args = Obj.magic _g1 in if HxArray.length args = 1 then let __assign_48137 = Obj.magic (typeEnumConstructorNameLiteral (Obj.magic (let __array_read_receiver_48138 = args in let __array_read_index_48139 = 0 in HxArray.get (Obj.magic __array_read_receiver_48138) __array_read_index_48139)) : string) in (
       tempResult := __assign_48137;
@@ -14390,7 +14480,8 @@ let rec typeEnumFactoryPayloadArgs = fun expr -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47 with
       | 0 -> let _g = Obj.magic (let __enum_param_48152 = expr in if __enum_param_48152 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_48152 with
         | HxExpr.EParenthesized (__enum_param_48151, _) -> __enum_param_48151
         | _ -> failwith "Unexpected enum parameter") in (
@@ -15017,10 +15108,11 @@ let rec stmtReturnsLambda = fun stmt -> let tempResult = ref (false : bool) in (
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
         ignore _p3;
+        ignore _p4;
         let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in let __assign_49441 = stmtReturnsLambda (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtReturnsLambda (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
           tempResult := __assign_49441;
           __assign_49441
@@ -15076,7 +15168,8 @@ let rec stmtReturnsLambda = fun stmt -> let tempResult = ref (false : bool) in (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then (
         ignore (match _g with
           | HxExpr.ELambda (__enum_param_49442, _, _) -> __enum_param_49442
           | _ -> failwith "Unexpected enum parameter");
@@ -15236,10 +15329,11 @@ and stmtCanFallThrough = fun stmt -> let tempResult = ref (false : bool) in (
         __assign_49782
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
         ignore _p3;
+        ignore _p4;
         let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in let __assign_49783 = elseBranch == Obj.magic (HxRuntime.hx_null) || stmtCanFallThrough (Obj.magic thenBranch) || stmtCanFallThrough (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
           tempResult := __assign_49783;
           __assign_49783
@@ -15317,10 +15411,11 @@ let rec stmtReturnsOnlyNull = fun stmt -> (try match stmt with
     ignore _p1;
     let stmts = Obj.magic _g in Stdlib.raise (HxRuntime.Hx_return (Obj.repr (stmtsReturnOnlyNull (Obj.magic stmts))))
   )
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
     ignore _p0;
     let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
       ignore _p3;
+      ignore _p4;
       let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in let thenNull = stmtReturnsOnlyNull (Obj.magic thenBranch) in let tempMaybeBool = ref (HxRuntime.hx_null : Obj.t) in (
         ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_49808 = Obj.magic (Obj.repr false) in (
           tempMaybeBool := __assign_49808;
@@ -15420,7 +15515,8 @@ let rec stmtReturnsOnlyNull = fun stmt -> (try match stmt with
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr false))
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr true)) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr false))
   )
   | _ -> Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) with
   | HxRuntime.Hx_return __ret_49823 -> (Obj.obj __ret_49823 : Obj.t) : Obj.t)
@@ -15469,10 +15565,11 @@ let rec stmtHasValueReturn = fun stmt -> let tempResult = ref (false : bool) in 
         __assign_49832
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
         ignore _p3;
+        ignore _p4;
         let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in let __assign_49833 = stmtHasValueReturn (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtHasValueReturn (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
           tempResult := __assign_49833;
           __assign_49833
@@ -16301,7 +16398,7 @@ let isDynamicIdentityFunction = fun fn -> (try (
           ignore (let _g = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in if HxArray.length _g = 1 then let _g2 = Obj.magic (let __array_read_receiver_10449 = _g in let __array_read_index_10450 = 0 in HxArray.get (Obj.magic __array_read_receiver_10449) __array_read_index_10450) in if (match _g2 with
             | HxStmt.SBlock (_, _) -> 0
             | HxStmt.SVar (_, _, _, _, _) -> 1
-            | HxStmt.SIf (_, _, _, _) -> 2
+            | HxStmt.SIf (_, _, _, _, _) -> 2
             | HxStmt.SForIn (_, _, _, _) -> 3
             | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
             | HxStmt.SWhile (_, _, _) -> 5
@@ -16368,7 +16465,8 @@ let isDynamicIdentityFunction = fun fn -> (try (
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g1 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g1 with
               | HxExpr.EIdent __enum_param_10453 -> __enum_param_10453
               | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let __assign_10454 = let __string_eq_left_10455 = name in let __string_eq_right_10456 = argName in HxString.equals __string_eq_left_10455 __string_eq_right_10456 in (
               tempResult := __assign_10454;
@@ -17800,7 +17898,8 @@ let isFreshERegLocalInitializer = fun init -> let tempResult = ref (false : bool
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then let _g = (let __enum_param_7673 = init in if __enum_param_7673 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7673 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then let _g = (let __enum_param_7673 = init in if __enum_param_7673 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7673 with
     | HxExpr.ENew (__enum_param_7672, _) -> __enum_param_7672
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (let __enum_param_7675 = init in if __enum_param_7675 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7675 with
@@ -18120,7 +18219,7 @@ let primitiveBackedAbstractCtorSideEffects = fun typePath args scope -> (
               if (match stmt with
                 | HxStmt.SBlock (_, _) -> 0
                 | HxStmt.SVar (_, _, _, _, _) -> 1
-                | HxStmt.SIf (_, _, _, _) -> 2
+                | HxStmt.SIf (_, _, _, _, _) -> 2
                 | HxStmt.SForIn (_, _, _, _) -> 3
                 | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
                 | HxStmt.SWhile (_, _, _) -> 5
@@ -18188,7 +18287,8 @@ let primitiveBackedAbstractCtorSideEffects = fun typePath args scope -> (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g7 = (match _g6 with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g7 = (match _g6 with
                     | HxExpr.EIdent __enum_param_24327 -> __enum_param_24327
                     | _ -> failwith "Unexpected enum parameter" : string) in let field = (_g7 : string) in let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if ((let __enum_eq_left_24328 = op in let __enum_eq_right_24329 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_24328) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_24329)) || (let __enum_eq_left_24330 = op in let __enum_eq_right_24331 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_24330) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_24331))) && isStaticFieldName (Obj.magic cls) (field : string) then ignore (let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in let renderedField = let __string_part_24333 = HxString.toStdString className in let __string_part_24334 = "::" in let __string_part_24335 = HxString.toStdString (let __call_arg_0_24332 = field in sanitizeIdentifier __call_arg_0_24332) in (__string_part_24333 ^ __string_part_24334) ^ __string_part_24335 in let tempString2 = ref (HxString.hx_null_string : string) in (
                     ignore (if let __enum_eq_left_24336 = fixity in let __enum_eq_right_24337 = HxUnaryFixity.Postfix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_24336) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_24337) then let __assign_24338 = HxString.toStdString renderedField ^ HxString.toStdString token in (
@@ -18249,7 +18349,8 @@ let primitiveBackedAbstractCtorSideEffects = fun typePath args scope -> (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then ignore () else ignore ()) else ignore ()
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then ignore () else ignore ()) else ignore ()
                   ))
                   | _ -> ignore ()
               )) else ignore ()
@@ -18384,7 +18485,8 @@ let isEqForwardingHelper = fun fn -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g3 = (match _g2 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g3 = (match _g2 with
             | HxExpr.EIdent __enum_param_25912 -> __enum_param_25912
             | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in if let __string_eq_left_25913 = let __call_arg_0_25915 = name in sanitizeIdentifier __call_arg_0_25915 in let __string_eq_right_25914 = let __call_arg_0_25916 = HxFunctionArg.getName (Obj.magic (let __array_read_receiver_25917 = params in let __array_read_index_25918 = i in HxArray.get (Obj.magic __array_read_receiver_25917) __array_read_index_25918)) in sanitizeIdentifier __call_arg_0_25916 in not (HxString.equals __string_eq_left_25913 __string_eq_right_25914) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ()) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr false))) done);
           true
@@ -18785,7 +18887,8 @@ let rec isLocalCallableInit = fun init -> let tempResult = ref (false : bool) in
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47 with
     | 15 -> (let _g = Obj.magic (let __enum_param_7771 = init in if __enum_param_7771 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7771 with
       | HxExpr.ECall (__enum_param_7770, _) -> __enum_param_7770
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_7773 = init in if __enum_param_7773 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7773 with
@@ -19420,7 +19523,8 @@ let isFreshERegStringCall = fun receiver hx_method arity -> let tempResult = ref
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then let _g = (match receiver with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then let _g = (match receiver with
     | HxExpr.ENew (__enum_param_41710, _) -> __enum_param_41710
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (match receiver with
@@ -19490,7 +19594,8 @@ let isFreshERegFieldCall = fun receiver hx_method arity -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then let _g = (match receiver with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then let _g = (match receiver with
       | HxExpr.ENew (__enum_param_41726, _) -> __enum_param_41726
       | _ -> failwith "Unexpected enum parameter" : string) in (
       ignore (match receiver with
@@ -19562,7 +19667,8 @@ let isFreshERegMatchCall = fun receiver hx_method arity -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then let _g = (match receiver with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then let _g = (match receiver with
       | HxExpr.ENew (__enum_param_41735, _) -> __enum_param_41735
       | _ -> failwith "Unexpected enum parameter" : string) in (
       ignore (match receiver with
@@ -19658,7 +19764,8 @@ let parseStructuredStringMapInit = fun expr -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47 with
         | 0 -> let _g = Obj.magic (let __enum_param_42287 = value in if __enum_param_42287 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42287 with
           | HxExpr.EParenthesized (__enum_param_42286, _) -> __enum_param_42286
           | _ -> failwith "Unexpected enum parameter") in (
@@ -19723,7 +19830,8 @@ let parseStructuredStringMapInit = fun expr -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
             | HxExpr.EIdent __enum_param_42295 -> __enum_param_42295
             | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in if let __string_eq_left_42296 = let __call_arg_0_42298 = name in sanitizeIdentifier __call_arg_0_42298 in let __string_eq_right_42297 = "__hxhx_make_shared_StringMap" in HxString.equals __string_eq_left_42296 __string_eq_right_42297 then let __assign_42299 = true in (
             tempResult := __assign_42299;
@@ -19868,7 +19976,8 @@ let parseStructuredStringMapInit = fun expr -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
             | HxExpr.EField (__enum_param_42343, _) -> __enum_param_42343
             | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
             | HxExpr.EField (_, __enum_param_42344) -> __enum_param_42344
@@ -19919,7 +20028,8 @@ let parseStructuredStringMapInit = fun expr -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g2 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g2 with
             | HxExpr.EIdent __enum_param_42345 -> __enum_param_42345
             | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_42346 = _g3 in let __string_eq_right_42347 = "set" in HxString.equals __string_eq_left_42346 __string_eq_right_42347 then let name = (_g4 : string) in let args = Obj.magic _g1 in if HxArray.length args = 2 && isStringLike (Obj.magic (let __array_read_receiver_42348 = args in let __array_read_index_42349 = 0 in HxArray.get (Obj.magic __array_read_receiver_42348) __array_read_index_42349)) && isStringLike (Obj.magic (let __array_read_receiver_42350 = args in let __array_read_index_42351 = 1 in HxArray.get (Obj.magic __array_read_receiver_42350) __array_read_index_42351)) then if not (let __call_callee_42352 = setLocal in let __call_arg_0_42353 = name in __call_callee_42352 __call_arg_0_42353) then let __assign_42354 = false in (
             tempResult1 := __assign_42354;
@@ -20039,7 +20149,8 @@ let parseStructuredStringMapInit = fun expr -> (try (
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g2 = Obj.magic (match _g with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g2 = Obj.magic (match _g with
               | HxExpr.ELambda (__enum_param_42378, _, _) -> __enum_param_42378
               | _ -> failwith "Unexpected enum parameter") in let _g3 = Obj.magic (match _g with
               | HxExpr.ELambda (_, __enum_param_42379, _) -> __enum_param_42379
@@ -20249,7 +20360,8 @@ let enumConstructorIndex = fun carrierType ctorName scope -> (try let cls = Obj.
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then ignore (let _g3 = Obj.magic (let __enum_param_42734 = _g2 in if __enum_param_42734 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42734 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then ignore (let _g3 = Obj.magic (let __enum_param_42734 = _g2 in if __enum_param_42734 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42734 with
         | HxExpr.EArrayDecl __enum_param_42733 -> __enum_param_42733
         | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g3 in let _g4 = ref 0 in let _g5 = HxArray.length values in while !_g4 < _g5 do ignore (let i = let __old_42735 = !_g4 in let __new_42736 = HxInt.add __old_42735 1 in (
         ignore (_g4 := __new_42736);
@@ -20301,7 +20413,8 @@ let enumConstructorIndex = fun carrierType ctorName scope -> (try let cls = Obj.
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then ignore (let _g7 = (match _g6 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then ignore (let _g7 = (match _g6 with
         | HxExpr.EString __enum_param_42739 -> __enum_param_42739
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g7 : string) in if let __string_eq_left_42740 = let __call_arg_0_42742 = name in sanitizeIdentifier __call_arg_0_42742 in let __string_eq_right_42741 = wanted in HxString.equals __string_eq_left_42740 __string_eq_right_42741 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr i)) else ignore ()) else ignore ()) done) else ignore ())
     )) with
@@ -20417,7 +20530,8 @@ let enumConstructorNameByIndex = fun carrierType ctorIndex scope -> (try let cls
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then ignore (let _g3 = Obj.magic (let __enum_param_42783 = _g2 in if __enum_param_42783 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42783 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then ignore (let _g3 = Obj.magic (let __enum_param_42783 = _g2 in if __enum_param_42783 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_42783 with
         | HxExpr.EArrayDecl __enum_param_42782 -> __enum_param_42782
         | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g3 in if ctorIndex < HxArray.length values then let tempResult = ref (Obj.magic (HxRuntime.hx_null) : string) in (
         ignore (let _g4 = Obj.magic (let __array_read_receiver_42784 = values in let __array_read_index_42785 = ctorIndex in HxArray.get (Obj.magic __array_read_receiver_42784) __array_read_index_42785) in if (match _g4 with
@@ -20467,7 +20581,8 @@ let enumConstructorNameByIndex = fun carrierType ctorIndex scope -> (try let cls
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g5 = (match _g4 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g5 = (match _g4 with
           | HxExpr.EString __enum_param_42786 -> __enum_param_42786
           | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g5 : string) in let __assign_42787 = Obj.magic (name : string) in (
           tempResult := __assign_42787;
@@ -21561,7 +21676,8 @@ let emptyMapNewToStringExpr = fun receiver args -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then let _g = (match receiver with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then let _g = (match receiver with
       | HxExpr.ENew (__enum_param_41783, _) -> __enum_param_41783
       | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match receiver with
       | HxExpr.ENew (_, __enum_param_41784) -> __enum_param_41784
@@ -22281,7 +22397,8 @@ let genericFactoryClassNameFromNewExpr = fun typeHint init scope -> (try let tem
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then let _g = (let __enum_param_7534 = init in if __enum_param_7534 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7534 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then let _g = (let __enum_param_7534 = init in if __enum_param_7534 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7534 with
       | HxExpr.ENew (__enum_param_7533, _) -> __enum_param_7533
       | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (let __enum_param_7536 = init in if __enum_param_7536 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7536 with
       | HxExpr.ENew (_, __enum_param_7535) -> __enum_param_7535
@@ -22415,7 +22532,8 @@ let unhintedThisLocalReferenceCppType = fun typeHint init scope -> (try let temp
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (currentOwnerReferenceCppType scope))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr ""))
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (currentOwnerReferenceCppType scope))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr ""))
 ) with
   | HxRuntime.Hx_return __ret_36067 -> (Obj.obj __ret_36067 : string) : string)
 
@@ -22613,7 +22731,8 @@ let enumRuntimeConstructorEntries = fun cls classLookup -> let names = Obj.magic
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then ignore (let _g2 = Obj.magic (let __enum_param_49374 = init in if __enum_param_49374 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_49374 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then ignore (let _g2 = Obj.magic (let __enum_param_49374 = init in if __enum_param_49374 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_49374 with
       | HxExpr.EArrayDecl __enum_param_49373 -> __enum_param_49373
       | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length values do ignore (let value = Obj.magic (let __array_read_receiver_49375 = values in let __array_read_index_49376 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_49375) __array_read_index_49376) in (
       ignore (let __old_49377 = !_g3 in let __new_49378 = HxInt.add __old_49377 1 in (
@@ -22667,7 +22786,8 @@ let enumRuntimeConstructorEntries = fun cls classLookup -> let names = Obj.magic
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then ignore (let _g4 = (match value with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then ignore (let _g4 = (match value with
         | HxExpr.EString __enum_param_49379 -> __enum_param_49379
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let __call_callee_49380 = addName in let __call_arg_0_49381 = name in Stdlib.fst __call_callee_49380 __call_arg_0_49381) else ignore ()
     )) done) else ignore ())) else ignore (if isEnumMetadataAnonInit init then ignore (let __call_callee_49382 = addName in let __call_arg_0_49383 = enumMetadataCtorName (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) in Stdlib.fst __call_callee_49382 __call_arg_0_49383) else ())
@@ -23644,7 +23764,8 @@ let applyGenericFactoryDirectCallExpectedTypes = fun callee args scope candidate
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match callee with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match callee with
       | HxExpr.EIdent __enum_param_7544 -> __enum_param_7544
       | _ -> failwith "Unexpected enum parameter" : string) in let value = (_g : string) in let __assign_7545 = (value : string) in (
       tempString := __assign_7545;
@@ -23713,7 +23834,8 @@ let applyGenericFactoryDirectCallExpectedTypes = fun callee args scope candidate
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g3 = (match _g2 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g3 = (match _g2 with
               | HxExpr.EIdent __enum_param_7552 -> __enum_param_7552
               | _ -> failwith "Unexpected enum parameter" : string) in let localName = (_g3 : string) in let __assign_7553 = (localName : string) in (
               tempString1 := __assign_7553;
@@ -23991,7 +24113,8 @@ let assignmentExpectedAbstractUnderlyingCppType = fun left scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let underlying = (abstractUnderlyingTypeHint (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) : string) in if underlying == Obj.magic (HxRuntime.hx_null) then let __assign_43404 = ("" : string) in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let underlying = (abstractUnderlyingTypeHint (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) : string) in if underlying == Obj.magic (HxRuntime.hx_null) then let __assign_43404 = ("" : string) in (
       tempResult := __assign_43404;
       __assign_43404
     ) else let __assign_43405 = (cppTypeHint (underlying : string) scope (lookupForScope scope (Obj.magic (HxRuntime.hx_null))) : string) in (
@@ -24067,7 +24190,8 @@ let switchExprResultType = fun exprs scope -> (try let _g = ref 0 in (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 8 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 8 then (
         ignore (match expr with
           | HxExpr.EFloat __enum_param_44396 -> __enum_param_44396
           | _ -> failwith "Unexpected enum parameter");
@@ -24127,7 +24251,8 @@ let switchExprResultType = fun exprs scope -> (try let _g = ref 0 in (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 5 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 5 then (
           ignore (match expr with
             | HxExpr.EBool __enum_param_44401 -> __enum_param_44401
             | _ -> failwith "Unexpected enum parameter");
@@ -24187,7 +24312,8 @@ let switchExprResultType = fun exprs scope -> (try let _g = ref 0 in (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then ignore (let _g2 = (match expr with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then ignore (let _g2 = (match expr with
             | HxExpr.ENew (__enum_param_44406, _) -> __enum_param_44406
             | _ -> failwith "Unexpected enum parameter" : string) in (
             ignore (match expr with
@@ -25482,7 +25608,8 @@ let typePathPlaceholderExprForExpectedType = fun expr expectedType scope -> (try
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then (
           ignore (match _g with
             | HxExpr.ELambda (__enum_param_43214, _, _) -> __enum_param_43214
             | _ -> failwith "Unexpected enum parameter");
@@ -25961,7 +26088,8 @@ and cppAnonFieldType = fun fieldName expr assertStatusShape scope -> (try let te
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
                     | HxExpr.EField (__enum_param_967, _) -> __enum_param_967
                     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
                     | HxExpr.EField (_, __enum_param_968) -> __enum_param_968
@@ -26094,7 +26222,8 @@ and methodValueCppFunctionType = fun expr scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match expr with
       | HxExpr.EField (__enum_param_992, _) -> __enum_param_992
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
       | HxExpr.EField (_, __enum_param_993) -> __enum_param_993
@@ -26145,7 +26274,8 @@ and methodValueCppFunctionType = fun expr scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_994 -> __enum_param_994
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_995 = _g2 in let __string_eq_right_996 = "Math" in HxString.equals __string_eq_left_995 __string_eq_right_996 then let hx_method = (_g1 : string) in let __assign_997 = (let __call_arg_0_998 = hx_method in mathFunctionValueCppType __call_arg_0_998 : string) in (
       tempResult := __assign_997;
@@ -26446,7 +26576,8 @@ and isPrimitiveBackedAbstractStaticFieldInit = fun init scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47 with
       | 0 -> let _g = Obj.magic (let __enum_param_3906 = init in if __enum_param_3906 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_3906 with
         | HxExpr.EParenthesized (__enum_param_3905, _) -> __enum_param_3905
         | _ -> failwith "Unexpected enum parameter") in (
@@ -26927,7 +27058,7 @@ and inferCallableArgTypeOverrides = fun scope fn -> ignore (try ignore ((
               ignore (if (match stmt with
                 | HxStmt.SBlock (_, _) -> 0
                 | HxStmt.SVar (_, _, _, _, _) -> 1
-                | HxStmt.SIf (_, _, _, _) -> 2
+                | HxStmt.SIf (_, _, _, _, _) -> 2
                 | HxStmt.SForIn (_, _, _, _) -> 3
                 | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
                 | HxStmt.SWhile (_, _, _) -> 5
@@ -27132,7 +27263,8 @@ and inferredCallableValueType = fun expr scope -> let tempResult = ref (HxString
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g5 = Obj.magic (match _g3 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g5 = Obj.magic (match _g3 with
         | HxExpr.ELambda (__enum_param_6938, _, _) -> __enum_param_6938
         | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
         | HxExpr.ELambda (_, __enum_param_6939, _) -> __enum_param_6939
@@ -27187,7 +27319,8 @@ and inferredCallableValueType = fun expr scope -> let tempResult = ref (HxString
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
           ignore (match _g4 with
             | HxExpr.EArrayDecl __enum_param_6941 -> __enum_param_6941
             | _ -> failwith "Unexpected enum parameter");
@@ -27330,7 +27463,8 @@ and inferredStaticFieldCallableType = fun owner field explicit init scope -> (tr
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47 with
           | 15 -> let _g = Obj.magic (let __enum_param_6984 = init in if __enum_param_6984 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_6984 with
             | HxExpr.ECall (__enum_param_6983, _) -> __enum_param_6983
             | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_6986 = init in if __enum_param_6986 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_6986 with
@@ -27382,7 +27516,8 @@ and inferredStaticFieldCallableType = fun owner field explicit init scope -> (tr
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
             | HxExpr.EIdent __enum_param_6987 -> __enum_param_6987
             | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_6988 = _g2 in let __string_eq_right_6989 = "__hxhx_optional_lambda" in HxString.equals __string_eq_left_6988 __string_eq_right_6989 then if HxArray.length _g1 = 2 then let _g3 = Obj.magic (let __array_read_receiver_6990 = _g1 in let __array_read_index_6991 = 0 in HxArray.get (Obj.magic __array_read_receiver_6990) __array_read_index_6991) in let _g4 = Obj.magic (let __array_read_receiver_6992 = _g1 in let __array_read_index_6993 = 1 in HxArray.get (Obj.magic __array_read_receiver_6992) __array_read_index_6993) in if (match _g3 with
             | HxExpr.EParenthesized (_, _) -> 0
@@ -27431,7 +27566,8 @@ and inferredStaticFieldCallableType = fun owner field explicit init scope -> (tr
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g5 = Obj.magic (match _g3 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g5 = Obj.magic (match _g3 with
             | HxExpr.ELambda (__enum_param_6994, _, _) -> __enum_param_6994
             | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
             | HxExpr.ELambda (_, __enum_param_6995, _) -> __enum_param_6995
@@ -27486,7 +27622,8 @@ and inferredStaticFieldCallableType = fun owner field explicit init scope -> (tr
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
               ignore (match _g4 with
                 | HxExpr.EArrayDecl __enum_param_6997 -> __enum_param_6997
                 | _ -> failwith "Unexpected enum parameter");
@@ -27604,8 +27741,9 @@ and collectStaticFieldCallableArgTypesFromStmt = fun owner field arity stmt scop
       let init = _g3 in if init != Obj.magic (HxRuntime.hx_null) then ignore (collectStaticFieldCallableArgTypesFromExpr (owner : string) (field : string) arity (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope (Obj.magic matches)) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectStaticFieldCallableArgTypesFromExpr (owner : string) (field : string) arity (Obj.magic cond) scope (Obj.magic matches));
       ignore (collectStaticFieldCallableArgTypesFromStmt (owner : string) (field : string) arity (Obj.magic thenBranch) scope (Obj.magic matches));
@@ -27784,7 +27922,8 @@ and collectStaticFieldCallableArgTypesFromExpr = fun owner field arity expr scop
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_7065 -> __enum_param_7065
       | _ -> failwith "Unexpected enum parameter" : string) in let receiver = (_g4 : string) in let name = (_g3 : string) in let args = Obj.magic _g1 in if (let __string_eq_left_7066 = let __call_arg_0_7068 = name in sanitizeIdentifier __call_arg_0_7068 in let __string_eq_right_7067 = field in HxString.equals __string_eq_left_7066 __string_eq_right_7067) && (let __string_eq_left_7069 = let __call_arg_0_7071 = let __call_arg_0_7072 = receiver in typeBaseName __call_arg_0_7072 in sanitizeTypePath __call_arg_0_7071 in let __string_eq_right_7070 = owner in HxString.equals __string_eq_left_7069 __string_eq_right_7070) then ignore ((
       ignore (addStaticFieldCallableArgTypes (Obj.magic args) arity scope (Obj.magic matches));
@@ -28007,8 +28146,9 @@ and collectOptionalLambdaLocalCandidatesFromStmt = fun stmt scope candidates -> 
       )
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectOptionalLambdaLocalCandidatesFromExpr (Obj.magic cond) scope (Obj.magic candidates));
       ignore (collectOptionalLambdaLocalCandidatesFromStmt (Obj.magic thenBranch) scope (Obj.magic candidates));
@@ -28243,8 +28383,9 @@ and collectOptionalLambdaLocalCallsFromStmt = fun stmt scope callShapes -> ignor
       let local = (name : string) in let typeName = (cppLocalTypeHint (typeHint : string) init scope : string) in if (let __string_receiver_7183 = typeName in HxString.length __string_receiver_7183) > 0 then ignore (let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (local : string) typeName) else ()
     )) else ignore (let name2 = (_g : string) in let typeHint2 = (_g1 : string) in let local = (name2 : string) in let typeName = (cppLocalTypeHint (typeHint2 : string) (Obj.magic (HxRuntime.hx_null)) scope : string) in if (let __string_receiver_7184 = typeName in HxString.length __string_receiver_7184) > 0 then ignore (let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (local : string) typeName) else ())
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectOptionalLambdaLocalCallsFromExpr (Obj.magic cond) scope (Obj.magic callShapes));
       ignore (collectOptionalLambdaLocalCallsFromStmt (Obj.magic thenBranch) scope (Obj.magic callShapes));
@@ -28575,7 +28716,8 @@ and optionalLambdaDefaultValueType = fun name body scope -> let tempResult = ref
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g3 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g3 = (match _g with
       | HxExpr.EBinop (__enum_param_7373, _, _) -> __enum_param_7373
       | _ -> failwith "Unexpected enum parameter" : string) in let _g4 = Obj.magic (match _g with
       | HxExpr.EBinop (_, __enum_param_7374, _) -> __enum_param_7374
@@ -28629,7 +28771,8 @@ and optionalLambdaDefaultValueType = fun name body scope -> let tempResult = ref
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g5 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g5 with
         | HxExpr.EIdent __enum_param_7383 -> __enum_param_7383
         | _ -> failwith "Unexpected enum parameter" : string) in if (match _g2 with
         | HxExpr.EParenthesized (_, _) -> 0
@@ -28678,7 +28821,8 @@ and optionalLambdaDefaultValueType = fun name body scope -> let tempResult = ref
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g7 = (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g7 = (match _g2 with
         | HxExpr.EIdent __enum_param_7384 -> __enum_param_7384
         | _ -> failwith "Unexpected enum parameter" : string) in let elseArg = (_g7 : string) in let thenExpr = Obj.magic _g1 in let arg = (_g6 : string) in if (let __string_eq_left_7385 = arg in let __string_eq_right_7386 = name in HxString.equals __string_eq_left_7385 __string_eq_right_7386) && (let __string_eq_left_7387 = elseArg in let __string_eq_right_7388 = name in HxString.equals __string_eq_left_7387 __string_eq_right_7388) then let __assign_7389 = (inferExprCppType (Obj.magic thenExpr) scope : string) in (
         tempResult := __assign_7389;
@@ -28758,7 +28902,8 @@ and optionalLambdaDefaultValueType = fun name body scope -> let tempResult = ref
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then if (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then if (match _g2 with
         | HxExpr.EParenthesized (_, _) -> 0
         | HxExpr.ESourceTry (_, _, _) -> 1
         | HxExpr.ESourceFor (_, _, _, _) -> 2
@@ -28805,7 +28950,8 @@ and optionalLambdaDefaultValueType = fun name body scope -> let tempResult = ref
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g7 = (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g7 = (match _g2 with
         | HxExpr.EIdent __enum_param_7405 -> __enum_param_7405
         | _ -> failwith "Unexpected enum parameter" : string) in let elseArg = (_g7 : string) in let thenExpr = Obj.magic _g1 in let arg = (_g6 : string) in if (let __string_eq_left_7406 = arg in let __string_eq_right_7407 = name in HxString.equals __string_eq_left_7406 __string_eq_right_7407) && (let __string_eq_left_7408 = elseArg in let __string_eq_right_7409 = name in HxString.equals __string_eq_left_7408 __string_eq_right_7409) then let __assign_7410 = (inferExprCppType (Obj.magic thenExpr) scope : string) in (
         tempResult := __assign_7410;
@@ -29009,8 +29155,9 @@ and collectGenericFactoryLocalTypeOverridesFromStmt = fun stmt scope candidates 
       )) else ignore (let localType = (cppLocalTypeHint (typeHint : string) init scope : string) in if (let __string_receiver_7490 = localType in HxString.length __string_receiver_7490) > 0 then ignore (let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (local : string) localType) else ())
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectGenericFactoryLocalTypeOverridesFromExpr (Obj.magic cond) scope (Obj.magic candidates) (Obj.magic mapped));
       ignore (collectGenericFactoryLocalTypeOverridesFromStmt (Obj.magic thenBranch) scope (Obj.magic candidates) (Obj.magic mapped));
@@ -29220,7 +29367,8 @@ and collectGenericFactoryLocalTypeOverridesFromExpr = fun expr scope candidates 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g5 = (match _g3 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g5 = (match _g3 with
       | HxExpr.EIdent __enum_param_7517 -> __enum_param_7517
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g5 : string) in let field = (_g4 : string) in let rhs = Obj.magic _g2 in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore ((
       ignore (collectGenericFactoryLocalTypeOverridesFromExpr (Obj.magic rhs) scope (Obj.magic candidates) (Obj.magic mapped));
@@ -29279,7 +29427,8 @@ and collectGenericFactoryLocalTypeOverridesFromExpr = fun expr scope candidates 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g5 = (match _g3 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g5 = (match _g3 with
       | HxExpr.EIdent __enum_param_7518 -> __enum_param_7518
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g5 : string) in let key = Obj.magic _g4 in let value = Obj.magic _g2 in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore ((
       ignore (collectGenericFactoryLocalTypeOverridesFromExpr (Obj.magic key) scope (Obj.magic candidates) (Obj.magic mapped));
@@ -29442,8 +29591,9 @@ and collectDynamicLocalTypeOverridesFromStmt = fun stmt scope candidates -> igno
       )
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectDynamicLocalTypeOverridesFromExpr (Obj.magic cond) scope (Obj.magic candidates));
       ignore (collectDynamicLocalTypeOverridesFromStmt (Obj.magic thenBranch) scope (Obj.magic candidates));
@@ -29632,7 +29782,8 @@ and collectDynamicLocalTypeOverridesFromExprWithCandidates = fun expr scope cand
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
       | HxExpr.EIdent __enum_param_7696 -> __enum_param_7696
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_7697 = _g3 in let __string_eq_right_7698 = "push" in HxString.equals __string_eq_left_7697 __string_eq_right_7698 then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (let __array_read_receiver_7699 = _g1 in let __array_read_index_7700 = 0 in HxArray.get (Obj.magic __array_read_receiver_7699) __array_read_index_7700) in let value = Obj.magic _g5 in let name = (_g4 : string) in if (let __string_receiver_7701 = candidateLocalName (name : string) scope (Obj.magic candidates) in HxString.length __string_receiver_7701) > 0 then ignore ((
       ignore (collectDynamicLocalTypeOverridesFromExprWithCandidates (Obj.magic value) scope (Obj.magic candidates));
@@ -29780,7 +29931,8 @@ and collectDynamicLocalTypeOverridesFromExprWithCandidates = fun expr scope cand
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g3 = (match _g1 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g3 = (match _g1 with
     | HxExpr.EIdent __enum_param_7729 -> __enum_param_7729
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in let rhs = Obj.magic _g2 in if (let __string_receiver_7730 = candidateLocalName (name : string) scope (Obj.magic candidates) in HxString.length __string_receiver_7730) > 0 then ignore ((
     ignore (collectDynamicLocalTypeOverridesFromExprWithCandidates (Obj.magic rhs) scope (Obj.magic candidates));
@@ -29917,7 +30069,8 @@ and inferredLocalCallableType = fun init scope -> let tempResult = ref (HxString
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g = Obj.magic (let __enum_param_7807 = init in if __enum_param_7807 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7807 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g = Obj.magic (let __enum_param_7807 = init in if __enum_param_7807 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7807 with
     | HxExpr.ELambda (__enum_param_7806, _, _) -> __enum_param_7806
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_7809 = init in if __enum_param_7809 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_7809 with
     | HxExpr.ELambda (_, __enum_param_7808, _) -> __enum_param_7808
@@ -30017,10 +30170,11 @@ and collectBindCallableCandidatesFromStmt = fun stmt scope candidates -> ignore 
       )
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore ((
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore ((
     ignore _p0;
     let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
       ignore _p3;
+      ignore _p4;
       let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in (
         ignore (collectBindCallableCandidatesFromStmt (Obj.magic thenBranch) scope (Obj.magic candidates));
         if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore (collectBindCallableCandidatesFromStmt (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) scope (Obj.magic candidates)) else ()
@@ -30145,8 +30299,9 @@ and collectBindCallableEvidenceFromStmt = fun stmt scope candidates evidence exp
       let local = (name : string) in if (let __string_receiver_7863 = typeName in HxString.length __string_receiver_7863) > 0 then ignore (let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (local : string) typeName) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectBindCallableEvidenceFromExpr (Obj.magic cond) scope (Obj.magic candidates) (Obj.magic evidence) ("bool" : string));
       ignore (collectBindCallableEvidenceFromStmt (Obj.magic thenBranch) scope (Obj.magic candidates) (Obj.magic evidence) (expectedType : string));
@@ -30312,7 +30467,8 @@ and collectBindCallableEvidenceFromExpr = fun expr scope candidates evidence exp
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g2 = (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_7872 -> __enum_param_7872
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_7873 = _g2 in let __string_eq_right_7874 = "eq" in HxString.equals __string_eq_left_7873 __string_eq_right_7874 then ignore (let args = Obj.magic _g1 in if HxArray.length args >= 2 then ignore ((
     ignore (collectBindCallableEvidenceFromExpr (Obj.magic (let __array_read_receiver_7875 = args in let __array_read_index_7876 = 0 in HxArray.get (Obj.magic __array_read_receiver_7875) __array_read_index_7876)) scope (Obj.magic candidates) (Obj.magic evidence) ("" : string));
@@ -30495,7 +30651,8 @@ and recordBindCallableEvidence = fun callee callArgs expectedType scope candidat
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_7916 -> __enum_param_7916
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let __assign_7917 = (name : string) in (
       tempString := __assign_7917;
@@ -30678,8 +30835,9 @@ and collectHelperTypedAsLocalTypeOverridesFromStmt = fun stmt scope -> ignore (m
       let local = (name : string) in let localType = (inferredLocalTypeForArgInference (typeHint : string) (Obj.obj (HxEnum.unbox_or_obj "HxExpr" init)) scope : string) in if let __call_arg_0_8071 = localType in isUsefulHelperTypedAsOverrideType __call_arg_0_8071 then ignore (let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (local : string) localType) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectHelperTypedAsLocalTypeOverridesFromExpr (Obj.magic cond) scope);
       ignore (collectHelperTypedAsLocalTypeOverridesFromStmt (Obj.magic thenBranch) scope);
@@ -30838,7 +30996,8 @@ and collectHelperTypedAsLocalTypeOverridesFromExpr = fun expr scope -> ignore (m
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
     | HxExpr.EIdent __enum_param_8088 -> __enum_param_8088
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let expected = Obj.magic _g3 in let callee = Obj.magic _g in if isHelperMacrosTypedAsCallee (Obj.magic callee) then ignore ((
     ignore (collectHelperTypedAsLocalTypeOverridesFromExpr (Obj.magic expected) scope);
@@ -30979,7 +31138,7 @@ and collectForwardedConstructorArgTypeOverrides = fun stmts scope candidates -> 
     if (match stmt with
       | HxStmt.SBlock (_, _) -> 0
       | HxStmt.SVar (_, _, _, _, _) -> 1
-      | HxStmt.SIf (_, _, _, _) -> 2
+      | HxStmt.SIf (_, _, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
       | HxStmt.SWhile (_, _, _) -> 5
@@ -31046,7 +31205,8 @@ and collectForwardedConstructorArgTypeOverrides = fun stmts scope candidates -> 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then ignore (let _g3 = Obj.magic (match _g2 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then ignore (let _g3 = Obj.magic (match _g2 with
         | HxExpr.ECall (__enum_param_8174, _) -> __enum_param_8174
         | _ -> failwith "Unexpected enum parameter") in let _g4 = Obj.magic (match _g2 with
         | HxExpr.ECall (_, __enum_param_8175) -> __enum_param_8175
@@ -31097,7 +31257,8 @@ and collectForwardedConstructorArgTypeOverrides = fun stmts scope candidates -> 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then let args = Obj.magic _g4 in let _g5 = ref 0 in let _g6 = HxArray.length args in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 11 then let args = Obj.magic _g4 in let _g5 = ref 0 in let _g6 = HxArray.length args in (
         ignore (while !_g5 < _g6 do ignore (let i = let __old_8176 = !_g5 in let __new_8177 = HxInt.add __old_8176 1 in (
           ignore (_g5 := __new_8177);
           __old_8176
@@ -31148,7 +31309,8 @@ and collectForwardedConstructorArgTypeOverrides = fun stmts scope candidates -> 
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g8 = (match _g7 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g8 = (match _g7 with
           | HxExpr.EIdent __enum_param_8180 -> __enum_param_8180
           | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g8 : string) in if i < HxArray.length expectedTypes && HxMap.exists_string (Obj.magic candidates) (name : string) then ignore (let expectedType = (let __array_read_receiver_8181 = expectedTypes in let __array_read_index_8182 = i in HxArray.get (Obj.magic __array_read_receiver_8181) __array_read_index_8182 : string) in if (let __string_receiver_8183 = expectedType in HxString.length __string_receiver_8183) > 0 && (let __string_eq_left_8184 = expectedType in let __string_eq_right_8185 = "std::string" in not (HxString.equals __string_eq_left_8184 __string_eq_right_8185)) then ignore (let local = (name : string) in let _this = Obj.magic (Obj.obj (HxAnon.get scope "argTypeOverrides")) in (
           ignore (HxMap.set_string (Obj.magic _this) (local : string) expectedType);
@@ -31243,15 +31405,17 @@ and collectAssignedArgTypeOverridesFromStmt = fun stmt scope candidates -> ignor
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g5 = (let __enum_param_8199 = init in if __enum_param_8199 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_8199 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g5 = (let __enum_param_8199 = init in if __enum_param_8199 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_8199 with
           | HxExpr.EIdent __enum_param_8198 -> __enum_param_8198
           | _ -> failwith "Unexpected enum parameter" : string) in let argName = (_g5 : string) in if HxMap.exists_string (Obj.magic candidates) (argName : string) then ignore (setAssignedArgTypeOverride scope (argName : string) (localType : string)) else ignore ()) else ignore ()));
         let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (name : string) localType
       )) else ()
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectAssignedArgTypeOverridesFromExpr (Obj.magic cond) scope (Obj.magic candidates));
       ignore (collectAssignedArgTypeOverridesFromStmt (Obj.magic thenBranch) scope (Obj.magic candidates));
@@ -31410,7 +31574,8 @@ and collectAssignedArgTypeOverridesFromExpr = fun expr scope candidates -> ignor
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then ignore (let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then ignore (let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_8212, _) -> __enum_param_8212
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_8213) -> __enum_param_8213
@@ -31461,7 +31626,8 @@ and collectAssignedArgTypeOverridesFromExpr = fun expr scope candidates -> ignor
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g2 with
     | HxExpr.EIdent __enum_param_8214 -> __enum_param_8214
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_8215 = _g3 in let __string_eq_right_8216 = "push" in HxString.equals __string_eq_left_8215 __string_eq_right_8216 then ignore (if HxArray.length _g1 = 1 then ignore (let _g5 = Obj.magic (let __array_read_receiver_8217 = _g1 in let __array_read_index_8218 = 0 in HxArray.get (Obj.magic __array_read_receiver_8217) __array_read_index_8218) in let value = Obj.magic _g5 in let name = (_g4 : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore ((
     ignore (collectAssignedArgTypeOverridesFromExpr (Obj.magic value) scope (Obj.magic candidates));
@@ -31611,7 +31777,8 @@ and collectAssignedArgTypeOverridesFromExpr = fun expr scope candidates -> ignor
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g3 = (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g3 = (match _g2 with
     | HxExpr.EIdent __enum_param_8253 -> __enum_param_8253
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in let left = Obj.magic _g1 in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore (let targetType = (exprCppType (Obj.magic left) scope : string) in if (let __string_receiver_8254 = targetType in HxString.length __string_receiver_8254) > 0 && (let __string_eq_left_8255 = targetType in let __string_eq_right_8256 = "std::string" in not (HxString.equals __string_eq_left_8255 __string_eq_right_8256)) then ignore (setAssignedArgTypeOverride scope (name : string) (targetType : string)) else ()) else ignore (if (match _g1 with
     | HxExpr.EParenthesized (_, _) -> 0
@@ -31660,7 +31827,8 @@ and collectAssignedArgTypeOverridesFromExpr = fun expr scope candidates -> ignor
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g4 = (match _g1 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g4 = (match _g1 with
     | HxExpr.EIdent __enum_param_8257 -> __enum_param_8257
     | _ -> failwith "Unexpected enum parameter" : string) in let rhs = Obj.magic _g2 in let name2 = (_g4 : string) in if HxMap.exists_string (Obj.magic candidates) (name2 : string) then ignore ((
     ignore (collectAssignedArgTypeOverridesFromExpr (Obj.magic rhs) scope (Obj.magic candidates));
@@ -31718,7 +31886,8 @@ and collectAssignedArgTypeOverridesFromExpr = fun expr scope candidates -> ignor
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g3 = (match _g1 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g3 = (match _g1 with
     | HxExpr.EIdent __enum_param_8259 -> __enum_param_8259
     | _ -> failwith "Unexpected enum parameter" : string) in let rhs = Obj.magic _g2 in let name = (_g3 : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore ((
     ignore (collectAssignedArgTypeOverridesFromExpr (Obj.magic rhs) scope (Obj.magic candidates));
@@ -31799,8 +31968,9 @@ and collectCallableArgTypeOverridesFromStmt = fun stmt scope candidates expected
       let _this = Obj.magic (Obj.obj (HxAnon.get scope "localTypes")) in HxMap.set_string (Obj.magic _this) (name : string) localType
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (collectCallableArgTypeOverridesFromExpr (Obj.magic cond) scope (Obj.magic candidates) ("bool" : string));
       ignore (collectCallableArgTypeOverridesFromStmt (Obj.magic thenBranch) scope (Obj.magic candidates) (expectedType : string));
@@ -31969,7 +32139,8 @@ and collectCallableArgTypeOverridesFromExpr = fun expr scope candidates expected
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_8286 -> __enum_param_8286
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore (let argTypesStartTime = HxSys.time () in let _g3 = Obj.magic (let __represented_array_8287 = HxArray.create () in __represented_array_8287) in let _g4 = ref 0 in (
       ignore (while !_g4 < HxArray.length args do ignore (let arg = Obj.magic (let __array_read_receiver_8288 = args in let __array_read_index_8289 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_8288) __array_read_index_8289) in (
@@ -32254,7 +32425,8 @@ and binaryOperandExpectedType = fun expr operand other scope -> (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g = (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g = (match expr with
       | HxExpr.EBinop (__enum_param_8358, _, _) -> __enum_param_8358
       | _ -> failwith "Unexpected enum parameter" : string) in (
       ignore (match expr with
@@ -32440,7 +32612,8 @@ and collectForwardedCallArgTypeOverrides = fun callee args scope candidates -> i
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match arg with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match arg with
       | HxExpr.EIdent __enum_param_8452 -> __enum_param_8452
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let __assign_8453 = HxMap.exists_string (Obj.magic candidates) (name : string) in (
       tempResult := __assign_8453;
@@ -32666,7 +32839,8 @@ and applyTargetOwnedForwardedERegMapCallbackOverride = fun callee args scope can
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match callee with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match callee with
     | HxExpr.EField (__enum_param_8537, _) -> __enum_param_8537
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match callee with
     | HxExpr.EField (_, __enum_param_8538) -> __enum_param_8538
@@ -32717,7 +32891,8 @@ and applyTargetOwnedForwardedERegMapCallbackOverride = fun callee args scope can
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g3 = (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g3 = (match _g2 with
     | HxExpr.EIdent __enum_param_8541 -> __enum_param_8541
     | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then let local = (name : string) in let expectedType = eRegMapCallbackCppType () in (
     ignore (setAssignedArgTypeOverride scope (local : string) (expectedType : string));
@@ -32842,7 +33017,8 @@ and testGadtMacroRestValueExpr = fun arg scope -> let tempResult = ref (HxString
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g = Obj.magic (match arg with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g = Obj.magic (match arg with
     | HxExpr.EArrayDecl __enum_param_8796 -> __enum_param_8796
     | _ -> failwith "Unexpected enum parameter") in let elements = Obj.magic _g in let __assign_8797 = (let __string_part_8798 = "std::any(" in let __string_part_8799 = HxString.toStdString (testGadtMacroRestArrayExpr (Obj.magic elements) scope) in let __string_part_8800 = ")" in (__string_part_8798 ^ __string_part_8799) ^ __string_part_8800 : string) in (
     tempResult := __assign_8797;
@@ -32913,7 +33089,8 @@ and collectSameOwnerDeclaredArgTypeOverrides = fun methodName args scope candida
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g3 = (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g3 = (match _g2 with
       | HxExpr.EIdent __enum_param_8862 -> __enum_param_8862
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore (let expectedType = (concreteForwardedOverrideType (cppFunctionArgType (Obj.magic (let __array_read_receiver_8863 = params in let __array_read_index_8864 = i in HxArray.get (Obj.magic __array_read_receiver_8863) __array_read_index_8864)) scope : string) scope : string) in if (let __string_receiver_8865 = expectedType in HxString.length __string_receiver_8865) > 0 then ignore (setDynamicLocalTypeOverride scope (name : string) (expectedType : string)) else ()) else ignore ()) else ignore ()) done
   )
@@ -33079,7 +33256,8 @@ and applyForwardedArgTypeOverride = fun arg param inferredParamType scope candid
   | HxExpr.EDiscardThen (_, _) -> 43
   | HxExpr.ESourceGroup (_, _) -> 44
   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-  | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g = (match arg with
+  | HxExpr.EPrivateAccess (_, _) -> 46
+  | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g = (match arg with
   | HxExpr.EIdent __enum_param_8929 -> __enum_param_8929
   | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in if HxMap.exists_string (Obj.magic candidates) (name : string) then ignore (let tempString = ref (HxString.hx_null_string : string) in (
   ignore (if inferredParamType != HxString.hx_null_string && (let __string_receiver_8930 = inferredParamType in HxString.length __string_receiver_8930) > 0 then let __assign_8931 = (inferredParamType : string) in (
@@ -33409,7 +33587,8 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g5 = (let __enum_param_9225 = _g2 in if __enum_param_9225 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_9225 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g5 = (let __enum_param_9225 = _g2 in if __enum_param_9225 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_9225 with
         | HxExpr.EString __enum_param_9224 -> __enum_param_9224
         | _ -> failwith "Unexpected enum parameter" : string) in let value = (_g5 : string) in let typeHint = (_g1 : string) in let name = (_g : string) in let tempString3 = ref (HxString.hx_null_string : string) in (
         ignore (if typeHint == HxString.hx_null_string then let __assign_9226 = ("" : string) in (
@@ -33659,8 +33838,9 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
       ignore _p3;
+      ignore _p4;
       if _g2 == Obj.magic (HxRuntime.hx_null) then let cond = Obj.magic _g in if conditionKnownFalse (Obj.magic cond) scope then let __assign_9343 = Obj.magic (let __represented_array_9344 = HxArray.create () in __represented_array_9344) in (
         tempResult := __assign_9343;
         __assign_9343
@@ -33668,18 +33848,18 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
         ignore (HxArray.push __represented_array_9345 __represented_array_element_0_9346);
         __represented_array_9345
       )) in (
-        ignore (withLocalScope scope (fun () -> ignore (let _g4 = ref 0 in let _g5 = Obj.magic (renderStmtBlockContent (Obj.magic thenBranch) (HxString.toStdString indent ^ "  " : string) scope) in while !_g4 < HxArray.length _g5 do ignore (let line = (let __array_read_receiver_9351 = _g5 in let __array_read_index_9352 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_9351) __array_read_index_9352 : string) in (
-          ignore (let __old_9353 = !_g4 in let __new_9354 = HxInt.add __old_9353 1 in (
-            ignore (_g4 := __new_9354);
+        ignore (withLocalScope scope (fun () -> ignore (let _g5 = ref 0 in let _g6 = Obj.magic (renderStmtBlockContent (Obj.magic thenBranch) (HxString.toStdString indent ^ "  " : string) scope) in while !_g5 < HxArray.length _g6 do ignore (let line = (let __array_read_receiver_9351 = _g6 in let __array_read_index_9352 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_9351) __array_read_index_9352 : string) in (
+          ignore (let __old_9353 = !_g5 in let __new_9354 = HxInt.add __old_9353 1 in (
+            ignore (_g5 := __new_9354);
             __new_9354
           ));
           let __array_receiver_9355 = Obj.magic out in let __array_arg_0_9356 = (line : string) in HxArray.push __array_receiver_9355 __array_arg_0_9356
         )) done)));
         ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_9357 = Obj.magic out in let __array_arg_0_9358 = (HxString.toStdString indent ^ "}" : string) in HxArray.push __array_receiver_9357 __array_arg_0_9358) else ignore ((
           ignore (let __array_receiver_9359 = Obj.magic out in let __array_arg_0_9360 = (HxString.toStdString indent ^ "} else {" : string) in HxArray.push __array_receiver_9359 __array_arg_0_9360);
-          ignore (withLocalScope scope (fun () -> ignore (let _g4 = ref 0 in let _g5 = Obj.magic (renderStmtBlockContent (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (HxString.toStdString indent ^ "  " : string) scope) in while !_g4 < HxArray.length _g5 do ignore (let line = (let __array_read_receiver_9361 = _g5 in let __array_read_index_9362 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_9361) __array_read_index_9362 : string) in (
-            ignore (let __old_9363 = !_g4 in let __new_9364 = HxInt.add __old_9363 1 in (
-              ignore (_g4 := __new_9364);
+          ignore (withLocalScope scope (fun () -> ignore (let _g5 = ref 0 in let _g6 = Obj.magic (renderStmtBlockContent (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (HxString.toStdString indent ^ "  " : string) scope) in while !_g5 < HxArray.length _g6 do ignore (let line = (let __array_read_receiver_9361 = _g6 in let __array_read_index_9362 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_9361) __array_read_index_9362 : string) in (
+            ignore (let __old_9363 = !_g5 in let __new_9364 = HxInt.add __old_9363 1 in (
+              ignore (_g5 := __new_9364);
               __new_9364
             ));
             let __array_receiver_9365 = Obj.magic out in let __array_arg_0_9366 = (line : string) in HxArray.push __array_receiver_9365 __array_arg_0_9366
@@ -33694,18 +33874,18 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
         ignore (HxArray.push __represented_array_9370 __represented_array_element_0_9371);
         __represented_array_9370
       )) in (
-        ignore (withLocalScope scope (fun () -> ignore (let _g4 = ref 0 in let _g5 = Obj.magic (renderStmtBlockContent (Obj.magic thenBranch) (HxString.toStdString indent ^ "  " : string) scope) in while !_g4 < HxArray.length _g5 do ignore (let line = (let __array_read_receiver_9376 = _g5 in let __array_read_index_9377 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_9376) __array_read_index_9377 : string) in (
-          ignore (let __old_9378 = !_g4 in let __new_9379 = HxInt.add __old_9378 1 in (
-            ignore (_g4 := __new_9379);
+        ignore (withLocalScope scope (fun () -> ignore (let _g5 = ref 0 in let _g6 = Obj.magic (renderStmtBlockContent (Obj.magic thenBranch) (HxString.toStdString indent ^ "  " : string) scope) in while !_g5 < HxArray.length _g6 do ignore (let line = (let __array_read_receiver_9376 = _g6 in let __array_read_index_9377 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_9376) __array_read_index_9377 : string) in (
+          ignore (let __old_9378 = !_g5 in let __new_9379 = HxInt.add __old_9378 1 in (
+            ignore (_g5 := __new_9379);
             __new_9379
           ));
           let __array_receiver_9380 = Obj.magic out in let __array_arg_0_9381 = (line : string) in HxArray.push __array_receiver_9380 __array_arg_0_9381
         )) done)));
         ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then ignore (let __array_receiver_9382 = Obj.magic out in let __array_arg_0_9383 = (HxString.toStdString indent ^ "}" : string) in HxArray.push __array_receiver_9382 __array_arg_0_9383) else ignore ((
           ignore (let __array_receiver_9384 = Obj.magic out in let __array_arg_0_9385 = (HxString.toStdString indent ^ "} else {" : string) in HxArray.push __array_receiver_9384 __array_arg_0_9385);
-          ignore (withLocalScope scope (fun () -> ignore (let _g4 = ref 0 in let _g5 = Obj.magic (renderStmtBlockContent (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (HxString.toStdString indent ^ "  " : string) scope) in while !_g4 < HxArray.length _g5 do ignore (let line = (let __array_read_receiver_9386 = _g5 in let __array_read_index_9387 = !_g4 in HxArray.get (Obj.magic __array_read_receiver_9386) __array_read_index_9387 : string) in (
-            ignore (let __old_9388 = !_g4 in let __new_9389 = HxInt.add __old_9388 1 in (
-              ignore (_g4 := __new_9389);
+          ignore (withLocalScope scope (fun () -> ignore (let _g5 = ref 0 in let _g6 = Obj.magic (renderStmtBlockContent (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) (HxString.toStdString indent ^ "  " : string) scope) in while !_g5 < HxArray.length _g6 do ignore (let line = (let __array_read_receiver_9386 = _g6 in let __array_read_index_9387 = !_g5 in HxArray.get (Obj.magic __array_read_receiver_9386) __array_read_index_9387 : string) in (
+            ignore (let __old_9388 = !_g5 in let __new_9389 = HxInt.add __old_9388 1 in (
+              ignore (_g5 := __new_9389);
               __new_9389
             ));
             let __array_receiver_9390 = Obj.magic out in let __array_arg_0_9391 = (line : string) in HxArray.push __array_receiver_9390 __array_arg_0_9391
@@ -33932,7 +34112,8 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
             | HxExpr.EIdent __enum_param_9486 -> __enum_param_9486
             | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_9487 = _g6 in let __string_eq_right_9488 = "Sys" in HxString.equals __string_eq_left_9487 __string_eq_right_9488 then if let __string_eq_left_9489 = _g5 in let __string_eq_right_9490 = "println" in HxString.equals __string_eq_left_9489 __string_eq_right_9490 then let args = Obj.magic _g3 in if HxArray.length args = 1 then let __assign_9491 = Obj.magic (let __represented_array_9492 = HxArray.create () in let __represented_array_element_0_9493 = let __string_part_9496 = HxString.toStdString indent in let __string_part_9497 = "std::cout << " in let __string_part_9498 = HxString.toStdString (stringExpr (Obj.magic (let __array_read_receiver_9494 = args in let __array_read_index_9495 = 0 in HxArray.get (Obj.magic __array_read_receiver_9494) __array_read_index_9495)) scope) in let __string_part_9499 = " << std::endl;" in ((__string_part_9496 ^ __string_part_9497) ^ __string_part_9498) ^ __string_part_9499 in (
             ignore (HxArray.push __represented_array_9492 __represented_array_element_0_9493);
@@ -34064,7 +34245,8 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then if (match _g4 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then if (match _g4 with
           | HxExpr.EParenthesized (_, _) -> 0
           | HxExpr.ESourceTry (_, _, _) -> 1
           | HxExpr.ESourceFor (_, _, _, _) -> 2
@@ -34111,7 +34293,8 @@ and renderStmt = fun stmt indent scope -> let tempResult = ref (Obj.magic (HxRun
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g5 = Obj.magic (match _g4 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g5 = Obj.magic (match _g4 with
           | HxExpr.EAnon (__enum_param_9522, _) -> __enum_param_9522
           | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g4 with
           | HxExpr.EAnon (_, __enum_param_9523) -> __enum_param_9523
@@ -34281,7 +34464,8 @@ and renderForInBody = fun name iterable indent scope renderBody -> let timingEna
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 32 then let _g = Obj.magic (match iterable with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 32 then let _g = Obj.magic (match iterable with
           | HxExpr.ERange (__enum_param_9628, _) -> __enum_param_9628
           | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match iterable with
           | HxExpr.ERange (_, __enum_param_9629) -> __enum_param_9629
@@ -34726,7 +34910,7 @@ and renderStmtBlockContent = fun stmt indent scope -> let tempResult = ref (Obj.
   ignore (if (match stmt with
     | HxStmt.SBlock (_, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
-    | HxStmt.SIf (_, _, _, _) -> 2
+    | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
     | HxStmt.SWhile (_, _, _) -> 5
@@ -34879,7 +35063,8 @@ and returnStmtForExpr = fun expr scope -> (try let tempString = ref (HxString.hx
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_10049 = let __string_part_10050 = "return " in let __string_part_10051 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_10052 = ";" in (__string_part_10050 ^ __string_part_10051) ^ __string_part_10052 in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_10049 = let __string_part_10050 = "return " in let __string_part_10051 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_10052 = ";" in (__string_part_10050 ^ __string_part_10051) ^ __string_part_10052 in (
           tempResult1 := __assign_10049;
           __assign_10049
         ) else let __assign_10053 = let __string_part_10054 = "return " in let __string_part_10055 = HxString.toStdString (valueExprForExpectedType (Obj.magic expr) (returnType : string) scope) in let __string_part_10056 = ";" in (__string_part_10054 ^ __string_part_10055) ^ __string_part_10056 in (
@@ -34944,7 +35129,8 @@ and returnStmtForExpr = fun expr scope -> (try let tempString = ref (HxString.hx
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_10076 = let __string_part_10077 = "return " in let __string_part_10078 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_10079 = ";" in (__string_part_10077 ^ __string_part_10078) ^ __string_part_10079 in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_10076 = let __string_part_10077 = "return " in let __string_part_10078 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_10079 = ";" in (__string_part_10077 ^ __string_part_10078) ^ __string_part_10079 in (
           tempResult1 := __assign_10076;
           __assign_10076
         ) else let __assign_10080 = let __string_part_10081 = "return " in let __string_part_10082 = HxString.toStdString (renderExpr (Obj.magic expr) scope) in let __string_part_10083 = ";" in (__string_part_10081 ^ __string_part_10082) ^ __string_part_10083 in (
@@ -35000,7 +35186,8 @@ and returnStmtForExpr = fun expr scope -> (try let tempString = ref (HxString.hx
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_10089 = let __string_part_10090 = "return " in let __string_part_10091 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_10092 = ";" in (__string_part_10090 ^ __string_part_10091) ^ __string_part_10092 in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_10089 = let __string_part_10090 = "return " in let __string_part_10091 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_10092 = ";" in (__string_part_10090 ^ __string_part_10091) ^ __string_part_10092 in (
           tempResult1 := __assign_10089;
           __assign_10089
         ) else let __assign_10093 = let __string_part_10094 = "return " in let __string_part_10095 = HxString.toStdString (renderExpr (Obj.magic expr) scope) in let __string_part_10096 = ";" in (__string_part_10094 ^ __string_part_10095) ^ __string_part_10096 in (
@@ -35086,7 +35273,8 @@ and returnStmtForExpr = fun expr scope -> (try let tempString = ref (HxString.hx
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_9966 = let __string_part_9967 = "return " in let __string_part_9968 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_9969 = ";" in (__string_part_9967 ^ __string_part_9968) ^ __string_part_9969 in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_9966 = let __string_part_9967 = "return " in let __string_part_9968 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_9969 = ";" in (__string_part_9967 ^ __string_part_9968) ^ __string_part_9969 in (
           tempResult1 := __assign_9966;
           __assign_9966
         ) else let __assign_9970 = let __string_part_9971 = "return " in let __string_part_9972 = HxString.toStdString (valueExprForExpectedType (Obj.magic expr) (returnType : string) scope) in let __string_part_9973 = ";" in (__string_part_9971 ^ __string_part_9972) ^ __string_part_9973 in (
@@ -35151,7 +35339,8 @@ and returnStmtForExpr = fun expr scope -> (try let tempString = ref (HxString.hx
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_9993 = let __string_part_9994 = "return " in let __string_part_9995 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_9996 = ";" in (__string_part_9994 ^ __string_part_9995) ^ __string_part_9996 in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_9993 = let __string_part_9994 = "return " in let __string_part_9995 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_9996 = ";" in (__string_part_9994 ^ __string_part_9995) ^ __string_part_9996 in (
           tempResult1 := __assign_9993;
           __assign_9993
         ) else let __assign_9997 = let __string_part_9998 = "return " in let __string_part_9999 = HxString.toStdString (renderExpr (Obj.magic expr) scope) in let __string_part_10000 = ";" in (__string_part_9998 ^ __string_part_9999) ^ __string_part_10000 in (
@@ -35207,7 +35396,8 @@ and returnStmtForExpr = fun expr scope -> (try let tempString = ref (HxString.hx
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_10006 = let __string_part_10007 = "return " in let __string_part_10008 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_10009 = ";" in (__string_part_10007 ^ __string_part_10008) ^ __string_part_10009 in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_10006 = let __string_part_10007 = "return " in let __string_part_10008 = HxString.toStdString (cppDefaultValue (returnType : string) scope) in let __string_part_10009 = ";" in (__string_part_10007 ^ __string_part_10008) ^ __string_part_10009 in (
           tempResult1 := __assign_10006;
           __assign_10006
         ) else let __assign_10010 = let __string_part_10011 = "return " in let __string_part_10012 = HxString.toStdString (renderExpr (Obj.magic expr) scope) in let __string_part_10013 = ";" in (__string_part_10011 ^ __string_part_10012) ^ __string_part_10013 in (
@@ -35380,7 +35570,8 @@ and optionalReturnExpr = fun expr scope -> let tempResult = ref (HxString.hx_nul
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_10175 = ("std::nullopt" : string) in (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_10175 = ("std::nullopt" : string) in (
     tempResult := __assign_10175;
     __assign_10175
   ) else if scope != Obj.magic (HxRuntime.hx_null) && (let __string_eq_left_10176 = exprCppType (Obj.magic expr) scope in let __string_eq_right_10177 = Obj.obj (HxAnon.get scope "returnType") in HxString.equals __string_eq_left_10176 __string_eq_right_10177) then let __assign_10178 = (optionalStorageExpr (Obj.magic expr) scope : string) in (
@@ -35483,7 +35674,8 @@ and valueExprForExpectedType = fun expr expectedType scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 43 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 43 then let _g = Obj.magic (match expr with
     | HxExpr.EDiscardThen (__enum_param_10201, _) -> __enum_param_10201
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.EDiscardThen (_, __enum_param_10202) -> __enum_param_10202
@@ -35608,7 +35800,8 @@ and valueExprForExpectedType = fun expr expectedType scope -> (try (
                                           | HxExpr.EDiscardThen (_, _) -> 43
                                           | HxExpr.ESourceGroup (_, _) -> 44
                                           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                                          | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then ignore (let _g4 = Obj.magic (match _g2 with
+                                          | HxExpr.EPrivateAccess (_, _) -> 46
+                                          | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then ignore (let _g4 = Obj.magic (match _g2 with
                                           | HxExpr.ELambda (__enum_param_10258, _, _) -> __enum_param_10258
                                           | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
                                           | HxExpr.ELambda (_, __enum_param_10259, _) -> __enum_param_10259
@@ -35671,7 +35864,8 @@ and valueExprForExpectedType = fun expr expectedType scope -> (try (
                                           | HxExpr.EDiscardThen (_, _) -> 43
                                           | HxExpr.ESourceGroup (_, _) -> 44
                                           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                                          | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then ignore (let _g4 = Obj.magic (match _g2 with
+                                          | HxExpr.EPrivateAccess (_, _) -> 46
+                                          | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then ignore (let _g4 = Obj.magic (match _g2 with
                                           | HxExpr.ELambda (__enum_param_10266, _, _) -> __enum_param_10266
                                           | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
                                           | HxExpr.ELambda (_, __enum_param_10267, _) -> __enum_param_10267
@@ -35747,7 +35941,8 @@ and valueExprForExpectedType = fun expr expectedType scope -> (try (
                                           | HxExpr.EDiscardThen (_, _) -> 43
                                           | HxExpr.ESourceGroup (_, _) -> 44
                                           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                                          | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then ignore ((
+                                          | HxExpr.EPrivateAccess (_, _) -> 46
+                                          | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then ignore ((
                                           ignore (match expr with
                                             | HxExpr.ECall (__enum_param_10279, _) -> __enum_param_10279
                                             | _ -> failwith "Unexpected enum parameter");
@@ -35832,7 +36027,8 @@ and valueExprForExpectedType = fun expr expectedType scope -> (try (
                                               | HxExpr.EDiscardThen (_, _) -> 43
                                               | HxExpr.ESourceGroup (_, _) -> 44
                                               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                                              | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g = Obj.magic (match expr with
+                                              | HxExpr.EPrivateAccess (_, _) -> 46
+                                              | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g = Obj.magic (match expr with
                                               | HxExpr.ELambda (__enum_param_10328, _, _) -> __enum_param_10328
                                               | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
                                               | HxExpr.ELambda (_, __enum_param_10329, _) -> __enum_param_10329
@@ -35906,7 +36102,8 @@ and valueExprForExpectedType = fun expr expectedType scope -> (try (
                                           | HxExpr.EDiscardThen (_, _) -> 43
                                           | HxExpr.ESourceGroup (_, _) -> 44
                                           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                                          | HxExpr.EPrivateAccess (_, _) -> 46) = 22 then let _g = (match expr with
+                                          | HxExpr.EPrivateAccess (_, _) -> 46
+                                          | HxExpr.ERegexLiteral (_, _) -> 47) = 22 then let _g = (match expr with
                                           | HxExpr.ENew (__enum_param_10333, _) -> __enum_param_10333
                                           | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match expr with
                                           | HxExpr.ENew (_, __enum_param_10334) -> __enum_param_10334
@@ -35981,7 +36178,8 @@ and jsonParseValueExprForExpectedType = fun expr expectedType scope -> let tempR
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
     | HxExpr.ECall (__enum_param_10336, _) -> __enum_param_10336
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ECall (_, __enum_param_10337) -> __enum_param_10337
@@ -36032,7 +36230,8 @@ and jsonParseValueExprForExpectedType = fun expr expectedType scope -> let tempR
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_10338, _) -> __enum_param_10338
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_10339) -> __enum_param_10339
@@ -36128,7 +36327,8 @@ and dynamicIdentityCallExprForExpectedFunction = fun expr expectedType scope -> 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
       | HxExpr.ECall (__enum_param_10428, _) -> __enum_param_10428
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
       | HxExpr.ECall (_, __enum_param_10429) -> __enum_param_10429
@@ -36179,7 +36379,8 @@ and dynamicIdentityCallExprForExpectedFunction = fun expr expectedType scope -> 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_10430 -> __enum_param_10430
       | _ -> failwith "Unexpected enum parameter" : string) in if HxArray.length _g1 = 1 then let _g3 = Obj.magic (let __array_read_receiver_10431 = _g1 in let __array_read_index_10432 = 0 in HxArray.get (Obj.magic __array_read_receiver_10431) __array_read_index_10432) in let arg = Obj.magic _g3 in let name = (_g2 : string) in let fn = Obj.magic (currentOwnerMethod (name : string) scope) in if isDynamicIdentityFunction (Obj.magic fn) then let __assign_10433 = Obj.magic (valueExprForExpectedType (Obj.magic arg) (expectedType : string) scope : string) in (
       tempResult := __assign_10433;
@@ -36257,7 +36458,8 @@ and stringMapBackedAbstractValueExprForExpectedType = fun expr expectedType scop
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g = Obj.magic (match expr with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g = Obj.magic (match expr with
             | HxExpr.EArrayDecl __enum_param_10465 -> __enum_param_10465
             | _ -> failwith "Unexpected enum parameter") in let elements = Obj.magic _g in let __assign_10466 = Obj.magic (let __string_part_10471 = HxString.toStdString baseName in let __string_part_10472 = "<" in let __string_part_10473 = HxString.toStdString (let __array_read_receiver_10467 = templateArgs in let __array_read_index_10468 = 0 in HxArray.get (Obj.magic __array_read_receiver_10467) __array_read_index_10468) in let __string_part_10474 = ">::fromArray(" in let __string_part_10475 = HxString.toStdString (arrayExprWithElementType (Obj.magic elements) (let __array_read_receiver_10469 = templateArgs in let __array_read_index_10470 = 0 in HxArray.get (Obj.magic __array_read_receiver_10469) __array_read_index_10470 : string) scope) in let __string_part_10476 = ")" in ((((__string_part_10471 ^ __string_part_10472) ^ __string_part_10473) ^ __string_part_10474) ^ __string_part_10475) ^ __string_part_10476 : string) in (
             tempResult := __assign_10466;
@@ -36411,7 +36613,8 @@ and conditionExpr = fun expr scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then (
       ignore (match expr with
         | HxExpr.EBinop (__enum_param_10518, _, _) -> __enum_param_10518
         | _ -> failwith "Unexpected enum parameter");
@@ -36503,7 +36706,8 @@ and conditionKnownFalse = fun expr scope -> let tempResult = ref (false : bool) 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let left = Obj.magic _g1 in if exprHasNonNullableValueType (Obj.magic left) scope then let __assign_10534 = true in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let left = Obj.magic _g1 in if exprHasNonNullableValueType (Obj.magic left) scope then let __assign_10534 = true in (
       tempResult := __assign_10534;
       __assign_10534
     ) else if (match _g1 with
@@ -36553,7 +36757,8 @@ and conditionKnownFalse = fun expr scope -> let tempResult = ref (false : bool) 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let right = Obj.magic _g2 in if exprHasNonNullableValueType (Obj.magic right) scope then let __assign_10535 = true in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let right = Obj.magic _g2 in if exprHasNonNullableValueType (Obj.magic right) scope then let __assign_10535 = true in (
       tempResult := __assign_10535;
       __assign_10535
     ) else let __assign_10536 = false in (
@@ -36609,7 +36814,8 @@ and conditionKnownFalse = fun expr scope -> let tempResult = ref (false : bool) 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let right = Obj.magic _g2 in if exprHasNonNullableValueType (Obj.magic right) scope then let __assign_10538 = true in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let right = Obj.magic _g2 in if exprHasNonNullableValueType (Obj.magic right) scope then let __assign_10538 = true in (
       tempResult := __assign_10538;
       __assign_10538
     ) else let __assign_10539 = false in (
@@ -36695,7 +36901,8 @@ and renderExpr = fun expr scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 43 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 43 then let _g = Obj.magic (match expr with
     | HxExpr.EDiscardThen (__enum_param_10546, _) -> __enum_param_10546
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.EDiscardThen (_, __enum_param_10547) -> __enum_param_10547
@@ -36750,7 +36957,8 @@ and renderExpr = fun expr scope -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
         | HxExpr.ECall (__enum_param_10553, _) -> __enum_param_10553
         | _ -> failwith "Unexpected enum parameter") in (
         ignore (match expr with
@@ -36803,7 +37011,8 @@ and renderExpr = fun expr scope -> (try (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
           | HxExpr.EField (__enum_param_10555, _) -> __enum_param_10555
           | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
           | HxExpr.EField (_, __enum_param_10556) -> __enum_param_10556
@@ -36854,7 +37063,8 @@ and renderExpr = fun expr scope -> (try (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g4 = Obj.magic (match _g2 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g4 = Obj.magic (match _g2 with
           | HxExpr.ECall (__enum_param_10557, _) -> __enum_param_10557
           | _ -> failwith "Unexpected enum parameter") in (
           ignore (match _g2 with
@@ -36907,7 +37117,8 @@ and renderExpr = fun expr scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
             | HxExpr.EField (__enum_param_10559, _) -> __enum_param_10559
             | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
             | HxExpr.EField (_, __enum_param_10560) -> __enum_param_10560
@@ -36958,7 +37169,8 @@ and renderExpr = fun expr scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then (
             ignore (match _g6 with
               | HxExpr.EIdent __enum_param_10561 -> __enum_param_10561
               | _ -> failwith "Unexpected enum parameter");
@@ -37798,7 +38010,8 @@ and renderExpr = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
                   | HxExpr.EField (__enum_param_11233, _) -> __enum_param_11233
                   | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
                   | HxExpr.EField (_, __enum_param_11234) -> __enum_param_11234
@@ -38831,7 +39044,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g5 = (match _g3 with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g5 = (match _g3 with
                     | HxExpr.EString __enum_param_11780 -> __enum_param_11780
                     | _ -> failwith "Unexpected enum parameter" : string) in if (match _g4 with
                     | HxExpr.EParenthesized (_, _) -> 0
@@ -38880,7 +39094,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g6 = (match _g4 with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g6 = (match _g4 with
                     | HxExpr.EString __enum_param_11781 -> __enum_param_11781
                     | _ -> failwith "Unexpected enum parameter" : string) in let suffix = (_g6 : string) in let raw = (_g5 : string) in let __assign_11782 = (let __string_part_11785 = "__hxhx_int_literal(" in let __string_part_11786 = HxString.toStdString (let __call_arg_0_11783 = raw in quoteString __call_arg_0_11783) in let __string_part_11787 = ", " in let __string_part_11788 = HxString.toStdString (let __call_arg_0_11784 = suffix in quoteString __call_arg_0_11784) in let __string_part_11789 = ")" in (((__string_part_11785 ^ __string_part_11786) ^ __string_part_11787) ^ __string_part_11788) ^ __string_part_11789 : string) in (
                     tempResult := __assign_11782;
@@ -39060,7 +39275,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g7 = (match _g5 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g7 = (match _g5 with
                       | HxExpr.EIdent __enum_param_11886 -> __enum_param_11886
                       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_11887 = _g7 in let __string_eq_right_11888 = "__hxhx_rest_lambda" in HxString.equals __string_eq_left_11887 __string_eq_right_11888 then if HxArray.length _g6 = 2 then let _g8 = Obj.magic (let __array_read_receiver_11889 = _g6 in let __array_read_index_11890 = 0 in HxArray.get (Obj.magic __array_read_receiver_11889) __array_read_index_11890) in let _g9 = Obj.magic (let __array_read_receiver_11891 = _g6 in let __array_read_index_11892 = 1 in HxArray.get (Obj.magic __array_read_receiver_11891) __array_read_index_11892) in if (match _g8 with
                       | HxExpr.EParenthesized (_, _) -> 0
@@ -39109,7 +39325,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g10 = Obj.magic (match _g8 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g10 = Obj.magic (match _g8 with
                       | HxExpr.ELambda (__enum_param_11893, _, _) -> __enum_param_11893
                       | _ -> failwith "Unexpected enum parameter") in let _g11 = Obj.magic (match _g8 with
                       | HxExpr.ELambda (_, __enum_param_11894, _) -> __enum_param_11894
@@ -39164,7 +39381,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then (
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then (
                         ignore (match _g9 with
                           | HxExpr.EInt __enum_param_11896 -> __enum_param_11896
                           | _ -> failwith "Unexpected enum parameter");
@@ -39215,7 +39433,8 @@ and renderExpr = fun expr scope -> (try (
                           | HxExpr.EDiscardThen (_, _) -> 43
                           | HxExpr.ESourceGroup (_, _) -> 44
                           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                          | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+                          | HxExpr.EPrivateAccess (_, _) -> 46
+                          | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
                           ignore (match _g4 with
                             | HxExpr.EArrayDecl __enum_param_11897 -> __enum_param_11897
                             | _ -> failwith "Unexpected enum parameter");
@@ -39383,7 +39602,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
                         ignore (match _g4 with
                           | HxExpr.EArrayDecl __enum_param_11995 -> __enum_param_11995
                           | _ -> failwith "Unexpected enum parameter");
@@ -40224,7 +40444,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g5 = Obj.magic (match _g4 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g5 = Obj.magic (match _g4 with
                       | HxExpr.ECall (__enum_param_13137, _) -> __enum_param_13137
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g4 with
                       | HxExpr.ECall (_, __enum_param_13138) -> __enum_param_13138
@@ -40275,7 +40496,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                       ignore (match _g5 with
                         | HxExpr.EField (__enum_param_13139, _) -> __enum_param_13139
                         | _ -> failwith "Unexpected enum parameter");
@@ -41528,7 +41750,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                         | HxExpr.ECall (__enum_param_14504, _) -> __enum_param_14504
                         | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                         | HxExpr.ECall (_, __enum_param_14505) -> __enum_param_14505
@@ -41579,7 +41802,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                         ignore (match _g6 with
                           | HxExpr.EField (__enum_param_14506, _) -> __enum_param_14506
                           | _ -> failwith "Unexpected enum parameter");
@@ -42194,7 +42418,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 36 then let _g6 = (match _g5 with
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 36 then let _g6 = (match _g5 with
                         | HxExpr.EUnsupported __enum_param_14827 -> __enum_param_14827
                         | _ -> failwith "Unexpected enum parameter" : string) in let raw = (_g6 : string) in if raw != HxString.hx_null_string && (let __call_arg_0_14828 = raw in let __call_arg_1_14829 = "for_expr:" in StringTools.startsWith __call_arg_0_14828 __call_arg_1_14829) then let __assign_14830 = ("true" : string) in (
                         tempResult := __assign_14830;
@@ -42328,7 +42553,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 36 then let _g6 = (match _g5 with
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 36 then let _g6 = (match _g5 with
                         | HxExpr.EUnsupported __enum_param_14867 -> __enum_param_14867
                         | _ -> failwith "Unexpected enum parameter" : string) in let raw = (_g6 : string) in if raw != HxString.hx_null_string && (let __call_arg_0_14868 = raw in let __call_arg_1_14869 = "for_expr:" in StringTools.startsWith __call_arg_0_14868 __call_arg_1_14869) then let __assign_14870 = (let __call_arg_0_14871 = "Int has no field keyValueIterator" in quoteString __call_arg_0_14871 : string) in (
                         tempResult := __assign_14870;
@@ -43350,7 +43576,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                         | HxExpr.ECall (__enum_param_15471, _) -> __enum_param_15471
                         | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                         | HxExpr.ECall (_, __enum_param_15472) -> __enum_param_15472
@@ -43401,7 +43628,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                         ignore (match _g6 with
                           | HxExpr.EField (__enum_param_15473, _) -> __enum_param_15473
                           | _ -> failwith "Unexpected enum parameter");
@@ -44707,7 +44935,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                         | HxExpr.ECall (__enum_param_16163, _) -> __enum_param_16163
                         | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                         | HxExpr.ECall (_, __enum_param_16164) -> __enum_param_16164
@@ -44758,7 +44987,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                         ignore (match _g6 with
                           | HxExpr.EField (__enum_param_16165, _) -> __enum_param_16165
                           | _ -> failwith "Unexpected enum parameter");
@@ -46191,7 +46421,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                         | HxExpr.ECall (__enum_param_17082, _) -> __enum_param_17082
                         | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                         | HxExpr.ECall (_, __enum_param_17083) -> __enum_param_17083
@@ -46242,7 +46473,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                         ignore (match _g6 with
                           | HxExpr.EField (__enum_param_17084, _) -> __enum_param_17084
                           | _ -> failwith "Unexpected enum parameter");
@@ -47693,7 +47925,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                         | HxExpr.ECall (__enum_param_18012, _) -> __enum_param_18012
                         | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                         | HxExpr.ECall (_, __enum_param_18013) -> __enum_param_18013
@@ -47744,7 +47977,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                         ignore (match _g6 with
                           | HxExpr.EField (__enum_param_18014, _) -> __enum_param_18014
                           | _ -> failwith "Unexpected enum parameter");
@@ -49518,7 +49752,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                         | HxExpr.ECall (__enum_param_13812, _) -> __enum_param_13812
                         | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                         | HxExpr.ECall (_, __enum_param_13813) -> __enum_param_13813
@@ -49569,7 +49804,8 @@ and renderExpr = fun expr scope -> (try (
                         | HxExpr.EDiscardThen (_, _) -> 43
                         | HxExpr.ESourceGroup (_, _) -> 44
                         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                        | HxExpr.EPrivateAccess (_, _) -> 46
+                        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                         ignore (match _g6 with
                           | HxExpr.EField (__enum_param_13814, _) -> __enum_param_13814
                           | _ -> failwith "Unexpected enum parameter");
@@ -50893,7 +51129,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g7 = Obj.magic (match _g6 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g7 = Obj.magic (match _g6 with
                       | HxExpr.ECall (__enum_param_19088, _) -> __enum_param_19088
                       | _ -> failwith "Unexpected enum parameter") in let _g8 = Obj.magic (match _g6 with
                       | HxExpr.ECall (_, __enum_param_19089) -> __enum_param_19089
@@ -50944,7 +51181,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                       ignore (match _g7 with
                         | HxExpr.EField (__enum_param_19090, _) -> __enum_param_19090
                         | _ -> failwith "Unexpected enum parameter");
@@ -51337,7 +51575,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                       | HxExpr.EIdent __enum_param_19280 -> __enum_param_19280
                       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_19281 = _g6 in let __string_eq_right_19282 = "haxe" in HxString.equals __string_eq_left_19281 __string_eq_right_19282 then let args10 = Obj.magic _g1 in if HxArray.length args10 = 1 then let __assign_19283 = (let __string_part_19286 = "__hxhx_quote_unix_arg(" in let __string_part_19287 = HxString.toStdString (stringExpr (Obj.magic (let __array_read_receiver_19284 = args10 in let __array_read_index_19285 = 0 in HxArray.get (Obj.magic __array_read_receiver_19284) __array_read_index_19285)) scope) in let __string_part_19288 = ")" in (__string_part_19286 ^ __string_part_19287) ^ __string_part_19288 : string) in (
                       tempResult := __assign_19283;
@@ -51495,7 +51734,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                       | HxExpr.EIdent __enum_param_19334 -> __enum_param_19334
                       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_19335 = _g6 in let __string_eq_right_19336 = "haxe" in HxString.equals __string_eq_left_19335 __string_eq_right_19336 then let args10 = Obj.magic _g1 in if HxArray.length args10 = 2 then let __assign_19337 = (let __string_part_19342 = "__hxhx_quote_win_arg(" in let __string_part_19343 = HxString.toStdString (stringExpr (Obj.magic (let __array_read_receiver_19338 = args10 in let __array_read_index_19339 = 0 in HxArray.get (Obj.magic __array_read_receiver_19338) __array_read_index_19339)) scope) in let __string_part_19344 = ", " in let __string_part_19345 = HxString.toStdString (renderExpr (Obj.magic (let __array_read_receiver_19340 = args10 in let __array_read_index_19341 = 1 in HxArray.get (Obj.magic __array_read_receiver_19340) __array_read_index_19341)) scope) in let __string_part_19346 = ")" in (((__string_part_19342 ^ __string_part_19343) ^ __string_part_19344) ^ __string_part_19345) ^ __string_part_19346 : string) in (
                       tempResult := __assign_19337;
@@ -51875,7 +52115,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                       | HxExpr.EIdent __enum_param_19523 -> __enum_param_19523
                       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_19524 = _g6 in let __string_eq_right_19525 = "unit" in HxString.equals __string_eq_left_19524 __string_eq_right_19525 then if HxArray.length _g1 = 1 then let _g7 = Obj.magic (let __array_read_receiver_19526 = _g1 in let __array_read_index_19527 = 0 in HxArray.get (Obj.magic __array_read_receiver_19526) __array_read_index_19527) in if (match _g7 with
                       | HxExpr.EParenthesized (_, _) -> 0
@@ -51924,7 +52165,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 36 then let _g8 = (match _g7 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 36 then let _g8 = (match _g7 with
                       | HxExpr.EUnsupported __enum_param_19528 -> __enum_param_19528
                       | _ -> failwith "Unexpected enum parameter" : string) in let raw = (_g8 : string) in if raw != HxString.hx_null_string && (let __call_arg_0_19529 = raw in let __call_arg_1_19530 = "for_expr:" in StringTools.startsWith __call_arg_0_19529 __call_arg_1_19530) then let __assign_19531 = ("true" : string) in (
                       tempResult := __assign_19531;
@@ -52130,7 +52372,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                       | HxExpr.EIdent __enum_param_19595 -> __enum_param_19595
                       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_19596 = _g6 in let __string_eq_right_19597 = "unit" in HxString.equals __string_eq_left_19596 __string_eq_right_19597 then if HxArray.length _g1 = 1 then let _g7 = Obj.magic (let __array_read_receiver_19598 = _g1 in let __array_read_index_19599 = 0 in HxArray.get (Obj.magic __array_read_receiver_19598) __array_read_index_19599) in if (match _g7 with
                       | HxExpr.EParenthesized (_, _) -> 0
@@ -52179,7 +52422,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 36 then let _g8 = (match _g7 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 36 then let _g8 = (match _g7 with
                       | HxExpr.EUnsupported __enum_param_19600 -> __enum_param_19600
                       | _ -> failwith "Unexpected enum parameter" : string) in let raw = (_g8 : string) in if raw != HxString.hx_null_string && (let __call_arg_0_19601 = raw in let __call_arg_1_19602 = "for_expr:" in StringTools.startsWith __call_arg_0_19601 __call_arg_1_19602) then let __assign_19603 = (let __call_arg_0_19604 = "Int has no field keyValueIterator" in quoteString __call_arg_0_19604 : string) in (
                       tempResult := __assign_19603;
@@ -52521,7 +52765,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
                     | HxExpr.EField (__enum_param_19725, _) -> __enum_param_19725
                     | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
                     | HxExpr.EField (_, __enum_param_19726) -> __enum_param_19726
@@ -53397,7 +53642,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g9 = Obj.magic (match _g8 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g9 = Obj.magic (match _g8 with
                       | HxExpr.ECall (__enum_param_20135, _) -> __enum_param_20135
                       | _ -> failwith "Unexpected enum parameter") in let _g10 = Obj.magic (match _g8 with
                       | HxExpr.ECall (_, __enum_param_20136) -> __enum_param_20136
@@ -53448,7 +53694,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                       ignore (match _g9 with
                         | HxExpr.EField (__enum_param_20137, _) -> __enum_param_20137
                         | _ -> failwith "Unexpected enum parameter");
@@ -55314,7 +55561,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g7 = Obj.magic (match _g6 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g7 = Obj.magic (match _g6 with
                       | HxExpr.ECall (__enum_param_21046, _) -> __enum_param_21046
                       | _ -> failwith "Unexpected enum parameter") in let _g8 = Obj.magic (match _g6 with
                       | HxExpr.ECall (_, __enum_param_21047) -> __enum_param_21047
@@ -55365,7 +55613,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                       ignore (match _g7 with
                         | HxExpr.EField (__enum_param_21048, _) -> __enum_param_21048
                         | _ -> failwith "Unexpected enum parameter");
@@ -56689,7 +56938,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                       | HxExpr.ECall (__enum_param_21744, _) -> __enum_param_21744
                       | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                       | HxExpr.ECall (_, __enum_param_21745) -> __enum_param_21745
@@ -56740,7 +56990,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                       ignore (match _g6 with
                         | HxExpr.EField (__enum_param_21746, _) -> __enum_param_21746
                         | _ -> failwith "Unexpected enum parameter");
@@ -58067,7 +58318,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g5 = Obj.magic (match _g4 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g5 = Obj.magic (match _g4 with
                       | HxExpr.ECall (__enum_param_12454, _) -> __enum_param_12454
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g4 with
                       | HxExpr.ECall (_, __enum_param_12455) -> __enum_param_12455
@@ -58118,7 +58370,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                       ignore (match _g5 with
                         | HxExpr.EField (__enum_param_12456, _) -> __enum_param_12456
                         | _ -> failwith "Unexpected enum parameter");
@@ -58946,7 +59199,8 @@ and renderExpr = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g4 = Obj.magic (match _g2 with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g4 = Obj.magic (match _g2 with
                   | HxExpr.ELambda (__enum_param_22161, _, _) -> __enum_param_22161
                   | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
                   | HxExpr.ELambda (_, __enum_param_22162, _) -> __enum_param_22162
@@ -59051,7 +59305,8 @@ and renderExpr = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g4 = Obj.magic (match _g2 with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g4 = Obj.magic (match _g2 with
                   | HxExpr.ELambda (__enum_param_22200, _, _) -> __enum_param_22200
                   | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
                   | HxExpr.ELambda (_, __enum_param_22201, _) -> __enum_param_22201
@@ -59258,7 +59513,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g5 = Obj.magic (match _g3 with
                       | HxExpr.EField (__enum_param_22483, _) -> __enum_param_22483
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
                       | HxExpr.EField (_, __enum_param_22484) -> __enum_param_22484
@@ -59434,7 +59690,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g5 = Obj.magic (match _g3 with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g5 = Obj.magic (match _g3 with
                     | HxExpr.EField (__enum_param_22598, _) -> __enum_param_22598
                     | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
                     | HxExpr.EField (_, __enum_param_22599) -> __enum_param_22599
@@ -59485,7 +59742,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let args = Obj.magic _g4 in let hx_method = (_g6 : string) in let receiver = Obj.magic _g5 in if isTypedLocalERegCaptureCall (Obj.magic receiver) (hx_method : string) (HxArray.length args) scope then if let __string_eq_left_22600 = hx_method in let __string_eq_right_22601 = "matched" in HxString.equals __string_eq_left_22600 __string_eq_right_22601 then let __assign_22602 = (let __string_part_22603 = "(" in let __string_part_22604 = HxString.toStdString (typedLocalERegCaptureCallExpr (Obj.magic receiver) (hx_method : string) (Obj.magic args) scope) in let __string_part_22605 = ".has_value())" in (__string_part_22603 ^ __string_part_22604) ^ __string_part_22605 : string) in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let args = Obj.magic _g4 in let hx_method = (_g6 : string) in let receiver = Obj.magic _g5 in if isTypedLocalERegCaptureCall (Obj.magic receiver) (hx_method : string) (HxArray.length args) scope then if let __string_eq_left_22600 = hx_method in let __string_eq_right_22601 = "matched" in HxString.equals __string_eq_left_22600 __string_eq_right_22601 then let __assign_22602 = (let __string_part_22603 = "(" in let __string_part_22604 = HxString.toStdString (typedLocalERegCaptureCallExpr (Obj.magic receiver) (hx_method : string) (Obj.magic args) scope) in let __string_part_22605 = ".has_value())" in (__string_part_22603 ^ __string_part_22604) ^ __string_part_22605 : string) in (
                     tempResult := __assign_22602;
                     __assign_22602
                   ) else let __assign_22606 = ("true" : string) in (
@@ -59607,7 +59865,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let left = Obj.magic _g1 in if exprHasOptionalType (Obj.magic left) scope then let __assign_22704 = (let __string_part_22705 = "(" in let __string_part_22706 = HxString.toStdString (optionalStorageExpr (Obj.magic left) scope) in let __string_part_22707 = ".has_value())" in (__string_part_22705 ^ __string_part_22706) ^ __string_part_22707 : string) in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let left = Obj.magic _g1 in if exprHasOptionalType (Obj.magic left) scope then let __assign_22704 = (let __string_part_22705 = "(" in let __string_part_22706 = HxString.toStdString (optionalStorageExpr (Obj.magic left) scope) in let __string_part_22707 = ".has_value())" in (__string_part_22705 ^ __string_part_22706) ^ __string_part_22707 : string) in (
                     tempResult := __assign_22704;
                     __assign_22704
                   ) else let left2 = Obj.magic _g1 in if isScopedGenericCppType (exprCppType (Obj.magic left2) scope : string) scope then let __assign_22708 = (let __string_part_22709 = "(!::__hxhx_generic_is_null(" in let __string_part_22710 = HxString.toStdString (renderExpr (Obj.magic left2) scope) in let __string_part_22711 = "))" in (__string_part_22709 ^ __string_part_22710) ^ __string_part_22711 : string) in (
@@ -59724,7 +59983,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let left = Obj.magic _g1 in if exprHasOptionalType (Obj.magic left) scope then let __assign_22271 = (let __string_part_22272 = "(" in let __string_part_22273 = HxString.toStdString (optionalStorageExpr (Obj.magic left) scope) in let __string_part_22274 = ".has_value())" in (__string_part_22272 ^ __string_part_22273) ^ __string_part_22274 : string) in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let left = Obj.magic _g1 in if exprHasOptionalType (Obj.magic left) scope then let __assign_22271 = (let __string_part_22272 = "(" in let __string_part_22273 = HxString.toStdString (optionalStorageExpr (Obj.magic left) scope) in let __string_part_22274 = ".has_value())" in (__string_part_22272 ^ __string_part_22273) ^ __string_part_22274 : string) in (
                     tempResult := __assign_22271;
                     __assign_22271
                   ) else let left2 = Obj.magic _g1 in if isScopedGenericCppType (exprCppType (Obj.magic left2) scope : string) scope then let __assign_22275 = (let __string_part_22276 = "(!::__hxhx_generic_is_null(" in let __string_part_22277 = HxString.toStdString (renderExpr (Obj.magic left2) scope) in let __string_part_22278 = "))" in (__string_part_22276 ^ __string_part_22277) ^ __string_part_22278 : string) in (
@@ -59947,7 +60207,8 @@ and renderExpr = fun expr scope -> (try (
                       | HxExpr.EDiscardThen (_, _) -> 43
                       | HxExpr.ESourceGroup (_, _) -> 44
                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g5 = Obj.magic (match _g3 with
+                      | HxExpr.EPrivateAccess (_, _) -> 46
+                      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g5 = Obj.magic (match _g3 with
                       | HxExpr.EField (__enum_param_23112, _) -> __enum_param_23112
                       | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
                       | HxExpr.EField (_, __enum_param_23113) -> __enum_param_23113
@@ -60123,7 +60384,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g5 = Obj.magic (match _g3 with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g5 = Obj.magic (match _g3 with
                     | HxExpr.EField (__enum_param_23227, _) -> __enum_param_23227
                     | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
                     | HxExpr.EField (_, __enum_param_23228) -> __enum_param_23228
@@ -60174,7 +60436,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let args = Obj.magic _g4 in let hx_method = (_g6 : string) in let receiver = Obj.magic _g5 in if isTypedLocalERegCaptureCall (Obj.magic receiver) (hx_method : string) (HxArray.length args) scope then if let __string_eq_left_23229 = hx_method in let __string_eq_right_23230 = "matched" in HxString.equals __string_eq_left_23229 __string_eq_right_23230 then let __assign_23231 = (let __string_part_23232 = "(!" in let __string_part_23233 = HxString.toStdString (typedLocalERegCaptureCallExpr (Obj.magic receiver) (hx_method : string) (Obj.magic args) scope) in let __string_part_23234 = ".has_value())" in (__string_part_23232 ^ __string_part_23233) ^ __string_part_23234 : string) in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let args = Obj.magic _g4 in let hx_method = (_g6 : string) in let receiver = Obj.magic _g5 in if isTypedLocalERegCaptureCall (Obj.magic receiver) (hx_method : string) (HxArray.length args) scope then if let __string_eq_left_23229 = hx_method in let __string_eq_right_23230 = "matched" in HxString.equals __string_eq_left_23229 __string_eq_right_23230 then let __assign_23231 = (let __string_part_23232 = "(!" in let __string_part_23233 = HxString.toStdString (typedLocalERegCaptureCallExpr (Obj.magic receiver) (hx_method : string) (Obj.magic args) scope) in let __string_part_23234 = ".has_value())" in (__string_part_23232 ^ __string_part_23233) ^ __string_part_23234 : string) in (
                     tempResult := __assign_23231;
                     __assign_23231
                   ) else let __assign_23235 = ("false" : string) in (
@@ -60296,7 +60559,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let left = Obj.magic _g1 in if exprHasOptionalType (Obj.magic left) scope then let __assign_23333 = (let __string_part_23334 = "(!" in let __string_part_23335 = HxString.toStdString (optionalStorageExpr (Obj.magic left) scope) in let __string_part_23336 = ".has_value())" in (__string_part_23334 ^ __string_part_23335) ^ __string_part_23336 : string) in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let left = Obj.magic _g1 in if exprHasOptionalType (Obj.magic left) scope then let __assign_23333 = (let __string_part_23334 = "(!" in let __string_part_23335 = HxString.toStdString (optionalStorageExpr (Obj.magic left) scope) in let __string_part_23336 = ".has_value())" in (__string_part_23334 ^ __string_part_23335) ^ __string_part_23336 : string) in (
                     tempResult := __assign_23333;
                     __assign_23333
                   ) else let left2 = Obj.magic _g1 in if isScopedGenericCppType (exprCppType (Obj.magic left2) scope : string) scope then let __assign_23337 = (let __string_part_23338 = "::__hxhx_generic_is_null(" in let __string_part_23339 = HxString.toStdString (renderExpr (Obj.magic left2) scope) in let __string_part_23340 = ")" in (__string_part_23338 ^ __string_part_23339) ^ __string_part_23340 : string) in (
@@ -60413,7 +60677,8 @@ and renderExpr = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let left = Obj.magic _g1 in if exprHasOptionalType (Obj.magic left) scope then let __assign_22900 = (let __string_part_22901 = "(!" in let __string_part_22902 = HxString.toStdString (optionalStorageExpr (Obj.magic left) scope) in let __string_part_22903 = ".has_value())" in (__string_part_22901 ^ __string_part_22902) ^ __string_part_22903 : string) in (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let left = Obj.magic _g1 in if exprHasOptionalType (Obj.magic left) scope then let __assign_22900 = (let __string_part_22901 = "(!" in let __string_part_22902 = HxString.toStdString (optionalStorageExpr (Obj.magic left) scope) in let __string_part_22903 = ".has_value())" in (__string_part_22901 ^ __string_part_22902) ^ __string_part_22903 : string) in (
                     tempResult := __assign_22900;
                     __assign_22900
                   ) else let left2 = Obj.magic _g1 in if isScopedGenericCppType (exprCppType (Obj.magic left2) scope : string) scope then let __assign_22904 = (let __string_part_22905 = "::__hxhx_generic_is_null(" in let __string_part_22906 = HxString.toStdString (renderExpr (Obj.magic left2) scope) in let __string_part_22907 = ")" in (__string_part_22905 ^ __string_part_22906) ^ __string_part_22907 : string) in (
@@ -60684,7 +60949,8 @@ and knownPlainInstanceFieldReadExpr = fun expr scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match expr with
       | HxExpr.EField (__enum_param_23534, _) -> __enum_param_23534
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
       | HxExpr.EField (_, __enum_param_23535) -> __enum_param_23535
@@ -60890,7 +61156,8 @@ and renderLocalInitExpr = fun init declaredType localType scope -> (try let timi
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
               | HxExpr.EField (__enum_param_23722, _) -> __enum_param_23722
               | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
               | HxExpr.EField (_, __enum_param_23723) -> __enum_param_23723
@@ -60941,7 +61208,8 @@ and renderLocalInitExpr = fun init declaredType localType scope -> (try let timi
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g2 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g2 with
               | HxExpr.EIdent __enum_param_23724 -> __enum_param_23724
               | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_23725 = _g4 in let __string_eq_right_23726 = "NativeArray" in HxString.equals __string_eq_left_23725 __string_eq_right_23726 then if let __string_eq_left_23727 = _g3 in let __string_eq_right_23728 = "create" in HxString.equals __string_eq_left_23727 __string_eq_right_23728 then let args = Obj.magic _g1 in if HxArray.length args = 1 then let __assign_23729 = (nativeArrayCreateExpr (Obj.magic (let __array_read_receiver_23730 = args in let __array_read_index_23731 = 0 in HxArray.get (Obj.magic __array_read_receiver_23730) __array_read_index_23731)) scope (localType : string) : string) in (
               tempResult := __assign_23729;
@@ -62069,7 +62337,8 @@ and primitiveBackedAbstractNewExpr = fun typePath args scope -> (try let valueTy
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_24300 = (cppDefaultValue (valueType : string) scope : string) in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_24300 = (cppDefaultValue (valueType : string) scope : string) in (
       tempString := __assign_24300;
       __assign_24300
     ) else let __assign_24301 = (valueExprForExpectedType (Obj.magic (let __array_read_receiver_24302 = args in let __array_read_index_24303 = 0 in HxArray.get (Obj.magic __array_read_receiver_24302) __array_read_index_24303)) (valueType : string) scope : string) in (
@@ -62290,7 +62559,8 @@ and constructorArgExpr = fun arg expectedType scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then ignore (if currentOwnerIsOrExtends (expectedClass : string) scope then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_24491 = expectedClass in let __call_arg_1_24492 = "this" in Backend_cpp_CppRuntimeSupport.borrowedSharedPtrExpr __call_arg_0_24491 __call_arg_1_24492))) else ignore ()) else ignore ()) else ());
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then ignore (if currentOwnerIsOrExtends (expectedClass : string) scope then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __call_arg_0_24491 = expectedClass in let __call_arg_1_24492 = "this" in Backend_cpp_CppRuntimeSupport.borrowedSharedPtrExpr __call_arg_0_24491 __call_arg_1_24492))) else ignore ()) else ignore ()) else ());
     renderExpr (Obj.magic arg) scope
   )
 ) with
@@ -62966,7 +63236,8 @@ and jsonValueArgExpr = fun expr scope -> let tempResult = ref (HxString.hx_null_
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 23 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 23 then let _g = Obj.magic (match expr with
     | HxExpr.EUnop (__enum_param_25462, _, _) -> __enum_param_25462
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.EUnop (_, __enum_param_25463, _) -> __enum_param_25463
@@ -63019,7 +63290,8 @@ and jsonValueArgExpr = fun expr scope -> let tempResult = ref (HxString.hx_null_
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 8 then let _g3 = match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 8 then let _g3 = match _g2 with
     | HxExpr.EFloat __enum_param_25465 -> __enum_param_25465
     | _ -> failwith "Unexpected enum parameter" in let value = _g3 in let fixity = Obj.magic _g1 in let op = Obj.magic _g in if (let __enum_eq_left_25466 = op in let __enum_eq_right_25467 = HxUnaryOperator.Negate in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_25466) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_25467)) && (let __enum_eq_left_25468 = fixity in let __enum_eq_right_25469 = HxUnaryFixity.Prefix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_25468) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_25469)) && value = float_of_int 0 then let __assign_25470 = ("-0.0" : string) in (
     tempResult := __assign_25470;
@@ -63235,7 +63507,8 @@ and directParsedXmlNodeValueExpr = fun expr scope -> let tempResult = ref (Obj.m
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match expr with
     | HxExpr.EField (__enum_param_25664, _) -> __enum_param_25664
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
     | HxExpr.EField (_, __enum_param_25665) -> __enum_param_25665
@@ -63286,7 +63559,8 @@ and directParsedXmlNodeValueExpr = fun expr scope -> let tempResult = ref (Obj.m
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g2 = Obj.magic (match _g with
     | HxExpr.ECall (__enum_param_25666, _) -> __enum_param_25666
     | _ -> failwith "Unexpected enum parameter") in let _g3 = Obj.magic (match _g with
     | HxExpr.ECall (_, __enum_param_25667) -> __enum_param_25667
@@ -63337,7 +63611,8 @@ and directParsedXmlNodeValueExpr = fun expr scope -> let tempResult = ref (Obj.m
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
     | HxExpr.EField (__enum_param_25668, _) -> __enum_param_25668
     | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
     | HxExpr.EField (_, __enum_param_25669) -> __enum_param_25669
@@ -63388,7 +63663,8 @@ and directParsedXmlNodeValueExpr = fun expr scope -> let tempResult = ref (Obj.m
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g4 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g4 with
     | HxExpr.ECall (__enum_param_25670, _) -> __enum_param_25670
     | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g4 with
     | HxExpr.ECall (_, __enum_param_25671) -> __enum_param_25671
@@ -63439,7 +63715,8 @@ and directParsedXmlNodeValueExpr = fun expr scope -> let tempResult = ref (Obj.m
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g8 = Obj.magic (match _g6 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g8 = Obj.magic (match _g6 with
     | HxExpr.EField (__enum_param_25672, _) -> __enum_param_25672
     | _ -> failwith "Unexpected enum parameter") in let _g9 = (match _g6 with
     | HxExpr.EField (_, __enum_param_25673) -> __enum_param_25673
@@ -63490,7 +63767,8 @@ and directParsedXmlNodeValueExpr = fun expr scope -> let tempResult = ref (Obj.m
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g10 = (match _g8 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g10 = (match _g8 with
     | HxExpr.EIdent __enum_param_25674 -> __enum_param_25674
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_25675 = _g10 in let __string_eq_right_25676 = "Xml" in HxString.equals __string_eq_left_25675 __string_eq_right_25676 then if let __string_eq_left_25677 = _g9 in let __string_eq_right_25678 = "parse" in HxString.equals __string_eq_left_25677 __string_eq_right_25678 then if let __string_eq_left_25679 = _g5 in let __string_eq_right_25680 = "firstChild" in HxString.equals __string_eq_left_25679 __string_eq_right_25680 then let parseArgs = Obj.magic _g7 in let firstChildArgs = Obj.magic _g3 in let field = (_g1 : string) in if HxArray.length parseArgs = 1 && HxArray.length firstChildArgs = 0 && (let __string_eq_left_25681 = let __call_arg_0_25683 = field in sanitizeIdentifier __call_arg_0_25683 in let __string_eq_right_25682 = "nodeValue" in HxString.equals __string_eq_left_25681 __string_eq_right_25682) && not (exprNameHasLocalStorage ("Xml" : string) scope) then let __assign_25684 = Obj.magic (knownPlainInstanceFieldReadExpr (Obj.magic expr) scope : string) in (
     tempResult := __assign_25684;
@@ -63578,7 +63856,8 @@ and isTypedLocalXmlElementsNamedNextCall = fun receiver hx_method args scope -> 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match receiver with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match receiver with
       | HxExpr.ECall (__enum_param_25698, _) -> __enum_param_25698
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match receiver with
       | HxExpr.ECall (_, __enum_param_25699) -> __enum_param_25699
@@ -63629,7 +63908,8 @@ and isTypedLocalXmlElementsNamedNextCall = fun receiver hx_method args scope -> 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_25700, _) -> __enum_param_25700
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_25701) -> __enum_param_25701
@@ -63680,7 +63960,8 @@ and isTypedLocalXmlElementsNamedNextCall = fun receiver hx_method args scope -> 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then (
       ignore (match _g2 with
         | HxExpr.EIdent __enum_param_25702 -> __enum_param_25702
         | _ -> failwith "Unexpected enum parameter");
@@ -63750,7 +64031,8 @@ and directTypedLocalXmlElementsNamedNextExpr = fun expr scope -> let tempResult 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
     | HxExpr.ECall (__enum_param_25713, _) -> __enum_param_25713
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ECall (_, __enum_param_25714) -> __enum_param_25714
@@ -63801,7 +64083,8 @@ and directTypedLocalXmlElementsNamedNextExpr = fun expr scope -> let tempResult 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_25715, _) -> __enum_param_25715
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_25716) -> __enum_param_25716
@@ -63852,7 +64135,8 @@ and directTypedLocalXmlElementsNamedNextExpr = fun expr scope -> let tempResult 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g4 = Obj.magic (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g4 = Obj.magic (match _g2 with
     | HxExpr.ECall (__enum_param_25717, _) -> __enum_param_25717
     | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
     | HxExpr.ECall (_, __enum_param_25718) -> __enum_param_25718
@@ -63903,7 +64187,8 @@ and directTypedLocalXmlElementsNamedNextExpr = fun expr scope -> let tempResult 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
     | HxExpr.EField (__enum_param_25719, _) -> __enum_param_25719
     | _ -> failwith "Unexpected enum parameter") in (
     ignore (match _g4 with
@@ -64250,7 +64535,8 @@ and sameOwnerGenericCallSpecialization = fun fn owner args expectedType scope in
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g3 = Obj.magic (match _g2 with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g3 = Obj.magic (match _g2 with
                     | HxExpr.EArrayDecl __enum_param_25988 -> __enum_param_25988
                     | _ -> failwith "Unexpected enum parameter") in let values = Obj.magic _g3 in let __assign_25989 = HxArray.length values = 0 in (
                     tempBool := __assign_25989;
@@ -64398,7 +64684,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g1 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g1 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_26262, _) -> __enum_param_26262
       | _ -> failwith "Unexpected enum parameter") in let _g2 = (match _g with
       | HxExpr.EField (_, __enum_param_26263) -> __enum_param_26263
@@ -64449,7 +64736,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g3 = Obj.magic (match _g1 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g3 = Obj.magic (match _g1 with
       | HxExpr.ECall (__enum_param_26264, _) -> __enum_param_26264
       | _ -> failwith "Unexpected enum parameter") in let _g4 = Obj.magic (match _g1 with
       | HxExpr.ECall (_, __enum_param_26265) -> __enum_param_26265
@@ -64500,7 +64788,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g5 = Obj.magic (match _g3 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g5 = Obj.magic (match _g3 with
       | HxExpr.EField (__enum_param_26266, _) -> __enum_param_26266
       | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
       | HxExpr.EField (_, __enum_param_26267) -> __enum_param_26267
@@ -64551,7 +64840,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then (
       ignore (match _g5 with
         | HxExpr.ECall (__enum_param_26268, _) -> __enum_param_26268
         | _ -> failwith "Unexpected enum parameter");
@@ -64629,7 +64919,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g1 = Obj.magic (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g1 = Obj.magic (match _g with
         | HxExpr.EField (__enum_param_26286, _) -> __enum_param_26286
         | _ -> failwith "Unexpected enum parameter") in let _g2 = (match _g with
         | HxExpr.EField (_, __enum_param_26287) -> __enum_param_26287
@@ -64680,7 +64971,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g3 = Obj.magic (match _g1 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g3 = Obj.magic (match _g1 with
         | HxExpr.ECall (__enum_param_26288, _) -> __enum_param_26288
         | _ -> failwith "Unexpected enum parameter") in let _g4 = Obj.magic (match _g1 with
         | HxExpr.ECall (_, __enum_param_26289) -> __enum_param_26289
@@ -64731,7 +65023,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g5 = Obj.magic (match _g3 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g5 = Obj.magic (match _g3 with
         | HxExpr.EField (__enum_param_26290, _) -> __enum_param_26290
         | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
         | HxExpr.EField (_, __enum_param_26291) -> __enum_param_26291
@@ -64782,7 +65075,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then (
         ignore (match _g5 with
           | HxExpr.ECall (__enum_param_26292, _) -> __enum_param_26292
           | _ -> failwith "Unexpected enum parameter");
@@ -64863,7 +65157,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g1 = Obj.magic (match _g with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g1 = Obj.magic (match _g with
           | HxExpr.ECall (__enum_param_26311, _) -> __enum_param_26311
           | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (match _g with
           | HxExpr.ECall (_, __enum_param_26312) -> __enum_param_26312
@@ -64914,7 +65209,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g3 = Obj.magic (match _g1 with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g3 = Obj.magic (match _g1 with
           | HxExpr.EField (__enum_param_26313, _) -> __enum_param_26313
           | _ -> failwith "Unexpected enum parameter") in let _g4 = (match _g1 with
           | HxExpr.EField (_, __enum_param_26314) -> __enum_param_26314
@@ -64965,7 +65261,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then (
           ignore (match _g3 with
             | HxExpr.ECall (__enum_param_26315, _) -> __enum_param_26315
             | _ -> failwith "Unexpected enum parameter");
@@ -65043,7 +65340,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g1 = Obj.magic (match _g with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g1 = Obj.magic (match _g with
             | HxExpr.ECall (__enum_param_26330, _) -> __enum_param_26330
             | _ -> failwith "Unexpected enum parameter") in let _g2 = Obj.magic (match _g with
             | HxExpr.ECall (_, __enum_param_26331) -> __enum_param_26331
@@ -65094,7 +65392,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g3 = Obj.magic (match _g1 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g3 = Obj.magic (match _g1 with
             | HxExpr.EField (__enum_param_26332, _) -> __enum_param_26332
             | _ -> failwith "Unexpected enum parameter") in let _g4 = (match _g1 with
             | HxExpr.EField (_, __enum_param_26333) -> __enum_param_26333
@@ -65145,7 +65444,8 @@ and renderEqCallArgs = fun args scope -> (try let out = Obj.magic (HxArray.creat
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then (
             ignore (match _g3 with
               | HxExpr.ECall (__enum_param_26334, _) -> __enum_param_26334
               | _ -> failwith "Unexpected enum parameter");
@@ -65403,7 +65703,8 @@ and directTypedLocalERegSplitJoinConcatExpr = fun expr scope -> let tempResult =
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g = (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g = (match expr with
     | HxExpr.EBinop (__enum_param_26517, _, _) -> __enum_param_26517
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (match expr with
@@ -65476,7 +65777,8 @@ and isTypedLocalERegSplitJoinConcatExpr = fun expr scope -> let tempResult = ref
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g = (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g = (match expr with
     | HxExpr.EBinop (__enum_param_26526, _, _) -> __enum_param_26526
     | _ -> failwith "Unexpected enum parameter" : string) in (
     ignore (match expr with
@@ -65584,7 +65886,8 @@ and directTypedLocalERegSplitJoinConcatNode = fun expr scope renderNode -> let t
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_26557, _) -> __enum_param_26557
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_26558) -> __enum_param_26558
@@ -65635,7 +65938,8 @@ and directTypedLocalERegSplitJoinConcatNode = fun expr scope renderNode -> let t
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g4 = Obj.magic (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g4 = Obj.magic (match _g2 with
       | HxExpr.ECall (__enum_param_26559, _) -> __enum_param_26559
       | _ -> failwith "Unexpected enum parameter") in let _g5 = Obj.magic (match _g2 with
       | HxExpr.ECall (_, __enum_param_26560) -> __enum_param_26560
@@ -65686,7 +65990,8 @@ and directTypedLocalERegSplitJoinConcatNode = fun expr scope renderNode -> let t
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
       | HxExpr.EField (__enum_param_26561, _) -> __enum_param_26561
       | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
       | HxExpr.EField (_, __enum_param_26562) -> __enum_param_26562
@@ -65800,7 +66105,8 @@ and stringCodeAccessOptionalExpr = fun expr scope -> let tempResult = ref (Obj.m
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_26599, _) -> __enum_param_26599
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_26600) -> __enum_param_26600
@@ -65877,7 +66183,8 @@ and isCppVectorLengthExpr = fun expr scope -> let tempResult = ref (false : bool
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g2 = Obj.magic (match _g with
       | HxExpr.ECall (__enum_param_26630, _) -> __enum_param_26630
       | _ -> failwith "Unexpected enum parameter") in let _g3 = Obj.magic (match _g with
       | HxExpr.ECall (_, __enum_param_26631) -> __enum_param_26631
@@ -65928,7 +66235,8 @@ and isCppVectorLengthExpr = fun expr scope -> let tempResult = ref (false : bool
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
       | HxExpr.EField (__enum_param_26632, _) -> __enum_param_26632
       | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
       | HxExpr.EField (_, __enum_param_26633) -> __enum_param_26633
@@ -66001,7 +66309,8 @@ and isCppVectorLengthExpr = fun expr scope -> let tempResult = ref (false : bool
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_26650, _) -> __enum_param_26650
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_26651) -> __enum_param_26651
@@ -66076,7 +66385,8 @@ and vectorMapMapperExpr = fun mapper scope -> (try let instanceValue = (instance
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match mapper with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match mapper with
       | HxExpr.EIdent __enum_param_26657 -> __enum_param_26657
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let fn = Obj.magic (currentOwnerMethod (name : string) scope) in if fn == Obj.magic (HxRuntime.hx_null) then let __assign_26658 = (renderExpr (Obj.magic mapper) scope : string) in (
       tempResult := __assign_26658;
@@ -66224,7 +66534,8 @@ and reflectCompareMethodIdentityExpr = fun expr scope -> (try (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then if Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) then let __assign_26734 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then if Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) then let __assign_26734 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
           tempMaybeString := __assign_26734;
           __assign_26734
         ) else let __assign_26735 = Obj.magic (let __call_arg_0_26736 = HxClassDecl.getName (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) in sanitizeTypePath __call_arg_0_26736 : string) in (
@@ -66366,7 +66677,8 @@ and propertyCompoundAssignmentExpr = fun op left right scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match left with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match left with
       | HxExpr.EField (__enum_param_26810, _) -> __enum_param_26810
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match left with
       | HxExpr.EField (_, __enum_param_26811) -> __enum_param_26811
@@ -66626,7 +66938,8 @@ and lambdaArrayStructuralIteratorExpr = fun iterable scope -> (try let tempResul
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match iterable with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match iterable with
     | HxExpr.EAnon (__enum_param_27077, _) -> __enum_param_27077
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match iterable with
     | HxExpr.EAnon (_, __enum_param_27078) -> __enum_param_27078
@@ -66720,7 +67033,8 @@ and iteratorProviderCallExpr = fun provider scope -> let tempResult = ref (HxStr
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_27106, _) -> __enum_param_27106
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_27107) -> __enum_param_27107
@@ -66771,7 +67085,8 @@ and iteratorProviderCallExpr = fun provider scope -> let tempResult = ref (HxStr
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
       | HxExpr.EField (__enum_param_27108, _) -> __enum_param_27108
       | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
       | HxExpr.EField (_, __enum_param_27109) -> __enum_param_27109
@@ -66905,7 +67220,8 @@ and iteratorProviderElementType = fun provider scope -> let tempResult = ref (Hx
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_27165, _) -> __enum_param_27165
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_27166) -> __enum_param_27166
@@ -66956,7 +67272,8 @@ and iteratorProviderElementType = fun provider scope -> let tempResult = ref (Hx
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
       | HxExpr.EField (__enum_param_27167, _) -> __enum_param_27167
       | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
       | HxExpr.EField (_, __enum_param_27168) -> __enum_param_27168
@@ -67707,7 +68024,8 @@ and callArgExprForParam = fun arg param scope expectedParamType -> (try let para
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g = (match arg with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g = (match arg with
       | HxExpr.EString __enum_param_27664 -> __enum_param_27664
       | _ -> failwith "Unexpected enum parameter" : string) in let value = (_g : string) in let __assign_27665 = (let __string_part_27667 = "std::string(" in let __string_part_27668 = HxString.toStdString (let __call_arg_0_27666 = value in quoteString __call_arg_0_27666) in let __string_part_27669 = ")" in (__string_part_27667 ^ __string_part_27668) ^ __string_part_27669 : string) in (
       tempResult := __assign_27665;
@@ -67765,7 +68083,8 @@ and callArgExprForParam = fun arg param scope expectedParamType -> (try let para
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then ignore (let _g = Obj.magic (match arg with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then ignore (let _g = Obj.magic (match arg with
     | HxExpr.EArrayDecl __enum_param_27677 -> __enum_param_27677
     | _ -> failwith "Unexpected enum parameter") in if HxArray.length _g = 0 then ignore (let callable = Obj.magic (emittedCallableForArgument (Obj.magic param) scope) in if callable != Obj.magic (HxRuntime.hx_null) && Backend_cpp_CppEmittedCallableContract.hasIndependentDeductionFor (Obj.magic callable) (Obj.magic parameter) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr "{}")) else ()) else ignore (let values = Obj.magic _g in if HxArray.length values > 0 then ignore (let actualVector = (inferExprCppType (Obj.magic arg) scope : string) in if let __call_arg_0_27678 = actualVector in isCppVectorType __call_arg_0_27678 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) (actualVector : string) scope))) else ()) else ignore ())) else ignore ()) else ());
   let timingEnabled = traceCppScopeStmtTimingEnabled scope in let detailTimingEnabled = traceCppCallArgDetailPhaseTimingEnabled scope in let tempNumber = ref (0. : float) in (
@@ -67913,7 +68232,8 @@ and callArgExprForParam = fun arg param scope expectedParamType -> (try let para
                                 | HxExpr.EDiscardThen (_, _) -> 43
                                 | HxExpr.ESourceGroup (_, _) -> 44
                                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                                | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let tempNumber6 = ref (0. : float) in (
+                                | HxExpr.EPrivateAccess (_, _) -> 46
+                                | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let tempNumber6 = ref (0. : float) in (
                                 ignore (if timingEnabled then let __assign_27714 = HxSys.time () in (
                                   tempNumber6 := __assign_27714;
                                   __assign_27714
@@ -67992,7 +68312,8 @@ and callArgExprForParam = fun arg param scope expectedParamType -> (try let para
                                     | HxExpr.EDiscardThen (_, _) -> 43
                                     | HxExpr.ESourceGroup (_, _) -> 44
                                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                                    | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then ignore (if currentOwnerIsOrExtends (expectedClass : string) scope then let rendered = let __call_arg_0_27722 = expectedClass in let __call_arg_1_27723 = "this" in Backend_cpp_CppRuntimeSupport.borrowedSharedPtrExpr __call_arg_0_27722 __call_arg_1_27723 in (
+                                    | HxExpr.EPrivateAccess (_, _) -> 46
+                                    | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then ignore (if currentOwnerIsOrExtends (expectedClass : string) scope then let rendered = let __call_arg_0_27722 = expectedClass in let __call_arg_1_27723 = "this" in Backend_cpp_CppRuntimeSupport.borrowedSharedPtrExpr __call_arg_0_27722 __call_arg_1_27723 in (
                                     ignore (if timingEnabled then ignore (traceCallArgRenderPhase scope (Obj.magic arg) (Obj.magic param) ("this_shared_ptr" : string) 0.0 (declaredParamType : string) (paramType : string) (valueType : string) HxString.hx_null_string HxString.hx_null_string) else ());
                                     Stdlib.raise (HxRuntime.Hx_return (Obj.repr rendered))
                                   ) else ignore ()) else ignore ()) else ());
@@ -68224,7 +68545,8 @@ and callArgExprForParam = fun arg param scope expectedParamType -> (try let para
                                                       | HxExpr.EDiscardThen (_, _) -> 43
                                                       | HxExpr.ESourceGroup (_, _) -> 44
                                                       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                                                      | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then let _g = Obj.magic (match arg with
+                                                      | HxExpr.EPrivateAccess (_, _) -> 46
+                                                      | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then let _g = Obj.magic (match arg with
                                                       | HxExpr.EArrayDecl __enum_param_27824 -> __enum_param_27824
                                                       | _ -> failwith "Unexpected enum parameter") in if HxArray.length _g = 0 then let rendered = HxString.toStdString valueType ^ "{}" in (
                                                       ignore (if timingEnabled then ignore (traceCallArgRenderPhase scope (Obj.magic arg) (Obj.magic param) ("empty_vector_literal" : string) 0.0 (declaredParamType : string) (paramType : string) (valueType : string) (actualType : string) HxString.hx_null_string) else ());
@@ -68366,7 +68688,8 @@ and eRegMapCallbackArgExpr = fun arg scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g = Obj.magic (match arg with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g = Obj.magic (match arg with
     | HxExpr.ELambda (__enum_param_27847, _, _) -> __enum_param_27847
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match arg with
     | HxExpr.ELambda (_, __enum_param_27848, _) -> __enum_param_27848
@@ -68437,7 +68760,8 @@ and eRegIntCallArgExpr = fun arg preserveOptionalStorage scope -> (try let liter
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) ("int" : string) scope))) else ignore ());
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic arg) ("int" : string) scope))) else ignore ());
     ignore (if let __string_eq_left_27859 = actualType in let __string_eq_right_27860 = "std::any" in HxString.equals __string_eq_left_27859 __string_eq_right_27860 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __string_part_27861 = "static_cast<int>(__hxhx_any_double(" in let __string_part_27862 = HxString.toStdString (renderExpr (Obj.magic arg) scope) in let __string_part_27863 = "))" in (__string_part_27861 ^ __string_part_27862) ^ __string_part_27863))) else ());
     renderExpr (Obj.magic arg) scope
   )
@@ -68516,7 +68840,8 @@ and primitiveBackedAbstractCallArgExpr = fun arg param valueType scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_27925 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_27925 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
             tempResult := __assign_27925;
             __assign_27925
           ) else let rendered = (valueExprForExpectedType (Obj.magic arg) (valueType : string) scope : string) in let abstractClass = Obj.magic (lookupClassForTypeHint (abstractHint : string) scope (Obj.magic (HxRuntime.hx_null))) in if abstractClass == Obj.magic (HxRuntime.hx_null) || abstractUnderlyingTypeHint (Obj.magic abstractClass) == Obj.magic (HxRuntime.hx_null) then let __assign_27926 = Obj.magic (rendered : string) in (
@@ -68795,7 +69120,8 @@ and optionalStorageExpr = fun expr scope -> let tempResult = ref (HxString.hx_nu
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_28282 -> __enum_param_28282
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_28283 = _g2 in let __string_eq_right_28284 = "__hxhx_expr_meta" in HxString.equals __string_eq_left_28283 __string_eq_right_28284 then let args = Obj.magic _g1 in if HxArray.length args >= 3 then let __assign_28285 = (optionalStorageExpr (Obj.magic (let __array_read_receiver_28286 = args in let __array_read_index_28287 = 2 in HxArray.get (Obj.magic __array_read_receiver_28286) __array_read_index_28287)) scope : string) in (
       tempResult := __assign_28285;
@@ -68893,7 +69219,8 @@ and exprCppType = fun expr scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 43 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 43 then (
     ignore (match expr with
       | HxExpr.EDiscardThen (__enum_param_28295, _) -> __enum_param_28295
       | _ -> failwith "Unexpected enum parameter");
@@ -69275,7 +69602,8 @@ and exprCppType = fun expr scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
             | HxExpr.EField (__enum_param_28582, _) -> __enum_param_28582
             | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
             | HxExpr.EField (_, __enum_param_28583) -> __enum_param_28583
@@ -69946,7 +70274,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then (
                 ignore (match _g4 with
                   | HxExpr.EString __enum_param_28890 -> __enum_param_28890
                   | _ -> failwith "Unexpected enum parameter");
@@ -74827,7 +75156,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32187 -> __enum_param_32187
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32188 = _g6 in let __string_eq_right_32189 = "haxe" in HxString.equals __string_eq_left_32188 __string_eq_right_32189 then let method8 = (_g3 : string) in if (let __string_eq_left_32190 = method8 in let __string_eq_right_32191 = "quoteUnixArg" in HxString.equals __string_eq_left_32190 __string_eq_right_32191) || (let __string_eq_left_32192 = method8 in let __string_eq_right_32193 = "quoteWinArg" in HxString.equals __string_eq_left_32192 __string_eq_right_32193) then let __assign_32194 = ("std::string" : string) in (
                 tempResult := __assign_32194;
@@ -74931,7 +75261,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32223 -> __enum_param_32223
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32224 = _g6 in let __string_eq_right_32225 = "haxe" in HxString.equals __string_eq_left_32224 __string_eq_right_32225 then let method8 = (_g3 : string) in if (let __string_eq_left_32226 = method8 in let __string_eq_right_32227 = "quoteUnixArg" in HxString.equals __string_eq_left_32226 __string_eq_right_32227) || (let __string_eq_left_32228 = method8 in let __string_eq_right_32229 = "quoteWinArg" in HxString.equals __string_eq_left_32228 __string_eq_right_32229) then let __assign_32230 = ("std::string" : string) in (
                 tempResult := __assign_32230;
@@ -75035,7 +75366,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32258 -> __enum_param_32258
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32259 = _g6 in let __string_eq_right_32260 = "haxe" in HxString.equals __string_eq_left_32259 __string_eq_right_32260 then let method8 = (_g3 : string) in if (let __string_eq_left_32261 = method8 in let __string_eq_right_32262 = "quoteUnixArg" in HxString.equals __string_eq_left_32261 __string_eq_right_32262) || (let __string_eq_left_32263 = method8 in let __string_eq_right_32264 = "quoteWinArg" in HxString.equals __string_eq_left_32263 __string_eq_right_32264) then let __assign_32265 = ("std::string" : string) in (
                 tempResult := __assign_32265;
@@ -75139,7 +75471,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32293 -> __enum_param_32293
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32294 = _g6 in let __string_eq_right_32295 = "haxe" in HxString.equals __string_eq_left_32294 __string_eq_right_32295 then let method8 = (_g3 : string) in if (let __string_eq_left_32296 = method8 in let __string_eq_right_32297 = "quoteUnixArg" in HxString.equals __string_eq_left_32296 __string_eq_right_32297) || (let __string_eq_left_32298 = method8 in let __string_eq_right_32299 = "quoteWinArg" in HxString.equals __string_eq_left_32298 __string_eq_right_32299) then let __assign_32300 = ("std::string" : string) in (
                 tempResult := __assign_32300;
@@ -75243,7 +75576,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32328 -> __enum_param_32328
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32329 = _g6 in let __string_eq_right_32330 = "haxe" in HxString.equals __string_eq_left_32329 __string_eq_right_32330 then let method8 = (_g3 : string) in if (let __string_eq_left_32331 = method8 in let __string_eq_right_32332 = "quoteUnixArg" in HxString.equals __string_eq_left_32331 __string_eq_right_32332) || (let __string_eq_left_32333 = method8 in let __string_eq_right_32334 = "quoteWinArg" in HxString.equals __string_eq_left_32333 __string_eq_right_32334) then let __assign_32335 = ("std::string" : string) in (
                 tempResult := __assign_32335;
@@ -75347,7 +75681,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32363 -> __enum_param_32363
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32364 = _g6 in let __string_eq_right_32365 = "haxe" in HxString.equals __string_eq_left_32364 __string_eq_right_32365 then let method8 = (_g3 : string) in if (let __string_eq_left_32366 = method8 in let __string_eq_right_32367 = "quoteUnixArg" in HxString.equals __string_eq_left_32366 __string_eq_right_32367) || (let __string_eq_left_32368 = method8 in let __string_eq_right_32369 = "quoteWinArg" in HxString.equals __string_eq_left_32368 __string_eq_right_32369) then let __assign_32370 = ("std::string" : string) in (
                 tempResult := __assign_32370;
@@ -75451,7 +75786,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32398 -> __enum_param_32398
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32399 = _g6 in let __string_eq_right_32400 = "haxe" in HxString.equals __string_eq_left_32399 __string_eq_right_32400 then let method8 = (_g3 : string) in if (let __string_eq_left_32401 = method8 in let __string_eq_right_32402 = "quoteUnixArg" in HxString.equals __string_eq_left_32401 __string_eq_right_32402) || (let __string_eq_left_32403 = method8 in let __string_eq_right_32404 = "quoteWinArg" in HxString.equals __string_eq_left_32403 __string_eq_right_32404) then let __assign_32405 = ("std::string" : string) in (
                 tempResult := __assign_32405;
@@ -75555,7 +75891,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32433 -> __enum_param_32433
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32434 = _g6 in let __string_eq_right_32435 = "haxe" in HxString.equals __string_eq_left_32434 __string_eq_right_32435 then let method8 = (_g3 : string) in if (let __string_eq_left_32436 = method8 in let __string_eq_right_32437 = "quoteUnixArg" in HxString.equals __string_eq_left_32436 __string_eq_right_32437) || (let __string_eq_left_32438 = method8 in let __string_eq_right_32439 = "quoteWinArg" in HxString.equals __string_eq_left_32438 __string_eq_right_32439) then let __assign_32440 = ("std::string" : string) in (
                 tempResult := __assign_32440;
@@ -75659,7 +75996,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32468 -> __enum_param_32468
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32469 = _g6 in let __string_eq_right_32470 = "haxe" in HxString.equals __string_eq_left_32469 __string_eq_right_32470 then let method8 = (_g3 : string) in if (let __string_eq_left_32471 = method8 in let __string_eq_right_32472 = "quoteUnixArg" in HxString.equals __string_eq_left_32471 __string_eq_right_32472) || (let __string_eq_left_32473 = method8 in let __string_eq_right_32474 = "quoteWinArg" in HxString.equals __string_eq_left_32473 __string_eq_right_32474) then let __assign_32475 = ("std::string" : string) in (
                 tempResult := __assign_32475;
@@ -75763,7 +76101,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32503 -> __enum_param_32503
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32504 = _g6 in let __string_eq_right_32505 = "haxe" in HxString.equals __string_eq_left_32504 __string_eq_right_32505 then let method8 = (_g3 : string) in if (let __string_eq_left_32506 = method8 in let __string_eq_right_32507 = "quoteUnixArg" in HxString.equals __string_eq_left_32506 __string_eq_right_32507) || (let __string_eq_left_32508 = method8 in let __string_eq_right_32509 = "quoteWinArg" in HxString.equals __string_eq_left_32508 __string_eq_right_32509) then let __assign_32510 = ("std::string" : string) in (
                 tempResult := __assign_32510;
@@ -75867,7 +76206,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32538 -> __enum_param_32538
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32539 = _g6 in let __string_eq_right_32540 = "haxe" in HxString.equals __string_eq_left_32539 __string_eq_right_32540 then let method8 = (_g3 : string) in if (let __string_eq_left_32541 = method8 in let __string_eq_right_32542 = "quoteUnixArg" in HxString.equals __string_eq_left_32541 __string_eq_right_32542) || (let __string_eq_left_32543 = method8 in let __string_eq_right_32544 = "quoteWinArg" in HxString.equals __string_eq_left_32543 __string_eq_right_32544) then let __assign_32545 = ("std::string" : string) in (
                 tempResult := __assign_32545;
@@ -75971,7 +76311,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32573 -> __enum_param_32573
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32574 = _g6 in let __string_eq_right_32575 = "haxe" in HxString.equals __string_eq_left_32574 __string_eq_right_32575 then let method8 = (_g3 : string) in if (let __string_eq_left_32576 = method8 in let __string_eq_right_32577 = "quoteUnixArg" in HxString.equals __string_eq_left_32576 __string_eq_right_32577) || (let __string_eq_left_32578 = method8 in let __string_eq_right_32579 = "quoteWinArg" in HxString.equals __string_eq_left_32578 __string_eq_right_32579) then let __assign_32580 = ("std::string" : string) in (
                 tempResult := __assign_32580;
@@ -76075,7 +76416,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32610 -> __enum_param_32610
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32611 = _g6 in let __string_eq_right_32612 = "haxe" in HxString.equals __string_eq_left_32611 __string_eq_right_32612 then let method8 = (_g3 : string) in if (let __string_eq_left_32613 = method8 in let __string_eq_right_32614 = "quoteUnixArg" in HxString.equals __string_eq_left_32613 __string_eq_right_32614) || (let __string_eq_left_32615 = method8 in let __string_eq_right_32616 = "quoteWinArg" in HxString.equals __string_eq_left_32615 __string_eq_right_32616) then let __assign_32617 = ("std::string" : string) in (
                 tempResult := __assign_32617;
@@ -76179,7 +76521,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32645 -> __enum_param_32645
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32646 = _g6 in let __string_eq_right_32647 = "haxe" in HxString.equals __string_eq_left_32646 __string_eq_right_32647 then let method8 = (_g3 : string) in if (let __string_eq_left_32648 = method8 in let __string_eq_right_32649 = "quoteUnixArg" in HxString.equals __string_eq_left_32648 __string_eq_right_32649) || (let __string_eq_left_32650 = method8 in let __string_eq_right_32651 = "quoteWinArg" in HxString.equals __string_eq_left_32650 __string_eq_right_32651) then let __assign_32652 = ("std::string" : string) in (
                 tempResult := __assign_32652;
@@ -76283,7 +76626,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32680 -> __enum_param_32680
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32681 = _g6 in let __string_eq_right_32682 = "haxe" in HxString.equals __string_eq_left_32681 __string_eq_right_32682 then let method8 = (_g3 : string) in if (let __string_eq_left_32683 = method8 in let __string_eq_right_32684 = "quoteUnixArg" in HxString.equals __string_eq_left_32683 __string_eq_right_32684) || (let __string_eq_left_32685 = method8 in let __string_eq_right_32686 = "quoteWinArg" in HxString.equals __string_eq_left_32685 __string_eq_right_32686) then let __assign_32687 = ("std::string" : string) in (
                 tempResult := __assign_32687;
@@ -76384,7 +76728,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32714 -> __enum_param_32714
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32715 = _g6 in let __string_eq_right_32716 = "haxe" in HxString.equals __string_eq_left_32715 __string_eq_right_32716 then let method8 = (_g3 : string) in if (let __string_eq_left_32717 = method8 in let __string_eq_right_32718 = "quoteUnixArg" in HxString.equals __string_eq_left_32717 __string_eq_right_32718) || (let __string_eq_left_32719 = method8 in let __string_eq_right_32720 = "quoteWinArg" in HxString.equals __string_eq_left_32719 __string_eq_right_32720) then let __assign_32721 = ("std::string" : string) in (
                 tempResult := __assign_32721;
@@ -76500,7 +76845,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32755 -> __enum_param_32755
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32756 = _g6 in let __string_eq_right_32757 = "haxe" in HxString.equals __string_eq_left_32756 __string_eq_right_32757 then let method8 = (_g3 : string) in if (let __string_eq_left_32758 = method8 in let __string_eq_right_32759 = "quoteUnixArg" in HxString.equals __string_eq_left_32758 __string_eq_right_32759) || (let __string_eq_left_32760 = method8 in let __string_eq_right_32761 = "quoteWinArg" in HxString.equals __string_eq_left_32760 __string_eq_right_32761) then let __assign_32762 = ("std::string" : string) in (
                 tempResult := __assign_32762;
@@ -76604,7 +76950,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32790 -> __enum_param_32790
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32791 = _g6 in let __string_eq_right_32792 = "haxe" in HxString.equals __string_eq_left_32791 __string_eq_right_32792 then let method8 = (_g3 : string) in if (let __string_eq_left_32793 = method8 in let __string_eq_right_32794 = "quoteUnixArg" in HxString.equals __string_eq_left_32793 __string_eq_right_32794) || (let __string_eq_left_32795 = method8 in let __string_eq_right_32796 = "quoteWinArg" in HxString.equals __string_eq_left_32795 __string_eq_right_32796) then let __assign_32797 = ("std::string" : string) in (
                 tempResult := __assign_32797;
@@ -76708,7 +77055,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32828 -> __enum_param_32828
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32829 = _g6 in let __string_eq_right_32830 = "haxe" in HxString.equals __string_eq_left_32829 __string_eq_right_32830 then let method8 = (_g3 : string) in if (let __string_eq_left_32831 = method8 in let __string_eq_right_32832 = "quoteUnixArg" in HxString.equals __string_eq_left_32831 __string_eq_right_32832) || (let __string_eq_left_32833 = method8 in let __string_eq_right_32834 = "quoteWinArg" in HxString.equals __string_eq_left_32833 __string_eq_right_32834) then let __assign_32835 = ("std::string" : string) in (
                 tempResult := __assign_32835;
@@ -76809,7 +77157,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32862 -> __enum_param_32862
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32863 = _g6 in let __string_eq_right_32864 = "haxe" in HxString.equals __string_eq_left_32863 __string_eq_right_32864 then let method8 = (_g3 : string) in if (let __string_eq_left_32865 = method8 in let __string_eq_right_32866 = "quoteUnixArg" in HxString.equals __string_eq_left_32865 __string_eq_right_32866) || (let __string_eq_left_32867 = method8 in let __string_eq_right_32868 = "quoteWinArg" in HxString.equals __string_eq_left_32867 __string_eq_right_32868) then let __assign_32869 = ("std::string" : string) in (
                 tempResult := __assign_32869;
@@ -76934,7 +77283,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_32150 -> __enum_param_32150
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_32151 = _g6 in let __string_eq_right_32152 = "haxe" in HxString.equals __string_eq_left_32151 __string_eq_right_32152 then let method8 = (_g3 : string) in if (let __string_eq_left_32153 = method8 in let __string_eq_right_32154 = "quoteUnixArg" in HxString.equals __string_eq_left_32153 __string_eq_right_32154) || (let __string_eq_left_32155 = method8 in let __string_eq_right_32156 = "quoteWinArg" in HxString.equals __string_eq_left_32155 __string_eq_right_32156) then let __assign_32157 = ("std::string" : string) in (
                 tempResult := __assign_32157;
@@ -77013,7 +77363,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
                 | HxExpr.EField (__enum_param_32894, _) -> __enum_param_32894
                 | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
                 | HxExpr.EField (_, __enum_param_32895) -> __enum_param_32895
@@ -77064,7 +77415,8 @@ and exprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then (
                 ignore (match _g6 with
                   | HxExpr.EIdent __enum_param_32896 -> __enum_param_32896
                   | _ -> failwith "Unexpected enum parameter");
@@ -81580,7 +81932,7 @@ and primitiveBackedAbstractToStringBodyExpr = fun receiver fn scope -> let self 
   ignore (let _g = Obj.magic (HxFunctionDecl.getBody (Obj.magic fn)) in if HxArray.length _g = 1 then let _g2 = Obj.magic (let __array_read_receiver_35046 = _g in let __array_read_index_35047 = 0 in HxArray.get (Obj.magic __array_read_receiver_35046) __array_read_index_35047) in if (match _g2 with
     | HxStmt.SBlock (_, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
-    | HxStmt.SIf (_, _, _, _) -> 2
+    | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
     | HxStmt.SWhile (_, _, _) -> 5
@@ -81652,7 +82004,8 @@ and primitiveBackedAbstractToStringBodyExpr = fun receiver fn scope -> let self 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
         | HxExpr.EField (__enum_param_35052, _) -> __enum_param_35052
         | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
         | HxExpr.EField (_, __enum_param_35053) -> __enum_param_35053
@@ -81703,7 +82056,8 @@ and primitiveBackedAbstractToStringBodyExpr = fun receiver fn scope -> let self 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g8 = (match _g6 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g8 = (match _g6 with
         | HxExpr.EIdent __enum_param_35054 -> __enum_param_35054
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_35055 = _g8 in let __string_eq_right_35056 = "Std" in HxString.equals __string_eq_left_35055 __string_eq_right_35056 then if let __string_eq_left_35057 = _g7 in let __string_eq_right_35058 = "string" in HxString.equals __string_eq_left_35057 __string_eq_right_35058 then if HxArray.length _g5 = 1 then let _g9 = Obj.magic (let __array_read_receiver_35059 = _g5 in let __array_read_index_35060 = 0 in HxArray.get (Obj.magic __array_read_receiver_35059) __array_read_index_35060) in if (match _g9 with
         | HxExpr.EParenthesized (_, _) -> 0
@@ -81752,7 +82106,8 @@ and primitiveBackedAbstractToStringBodyExpr = fun receiver fn scope -> let self 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_35061 = Obj.magic (("__hxhx_stringify(" ^ HxString.toStdString self) ^ ")" : string) in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_35061 = Obj.magic (("__hxhx_stringify(" ^ HxString.toStdString self) ^ ")" : string) in (
         tempResult := __assign_35061;
         __assign_35061
       ) else let __assign_35062 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -81821,7 +82176,8 @@ and primitiveBackedAbstractToStringBodyExpr = fun receiver fn scope -> let self 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let rhs = Obj.magic _g6 in let __assign_35070 = Obj.magic (let __string_part_35071 = "(__hxhx_stringify(" in let __string_part_35072 = HxString.toStdString self in let __string_part_35073 = ") + " in let __string_part_35074 = HxString.toStdString (stringExpr (Obj.magic rhs) scope) in let __string_part_35075 = ")" in (((__string_part_35071 ^ __string_part_35072) ^ __string_part_35073) ^ __string_part_35074) ^ __string_part_35075 : string) in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let rhs = Obj.magic _g6 in let __assign_35070 = Obj.magic (let __string_part_35071 = "(__hxhx_stringify(" in let __string_part_35072 = HxString.toStdString self in let __string_part_35073 = ") + " in let __string_part_35074 = HxString.toStdString (stringExpr (Obj.magic rhs) scope) in let __string_part_35075 = ")" in (((__string_part_35071 ^ __string_part_35072) ^ __string_part_35073) ^ __string_part_35074) ^ __string_part_35075 : string) in (
         tempResult := __assign_35070;
         __assign_35070
       ) else if (match _g6 with
@@ -81871,7 +82227,8 @@ and primitiveBackedAbstractToStringBodyExpr = fun receiver fn scope -> let self 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let lhs = Obj.magic _g5 in let __assign_35076 = Obj.magic (let __string_part_35077 = "(" in let __string_part_35078 = HxString.toStdString (stringExpr (Obj.magic lhs) scope) in let __string_part_35079 = " + __hxhx_stringify(" in let __string_part_35080 = HxString.toStdString self in let __string_part_35081 = "))" in (((__string_part_35077 ^ __string_part_35078) ^ __string_part_35079) ^ __string_part_35080) ^ __string_part_35081 : string) in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let lhs = Obj.magic _g5 in let __assign_35076 = Obj.magic (let __string_part_35077 = "(" in let __string_part_35078 = HxString.toStdString (stringExpr (Obj.magic lhs) scope) in let __string_part_35079 = " + __hxhx_stringify(" in let __string_part_35080 = HxString.toStdString self in let __string_part_35081 = "))" in (((__string_part_35077 ^ __string_part_35078) ^ __string_part_35079) ^ __string_part_35080) ^ __string_part_35081 : string) in (
         tempResult := __assign_35076;
         __assign_35076
       ) else let __assign_35082 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -81908,7 +82265,7 @@ and primitiveBackedAbstractGetterExpr = fun receiver getter underlying scope -> 
     ignore (let _g = Obj.magic (let __array_read_receiver_35092 = body in let __array_read_index_35093 = 0 in HxArray.get (Obj.magic __array_read_receiver_35092) __array_read_index_35093) in if (match _g with
       | HxStmt.SBlock (_, _) -> 0
       | HxStmt.SVar (_, _, _, _, _) -> 1
-      | HxStmt.SIf (_, _, _, _) -> 2
+      | HxStmt.SIf (_, _, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
       | HxStmt.SWhile (_, _, _) -> 5
@@ -81982,7 +82339,8 @@ and primitiveBackedAbstractGetterExpr = fun receiver getter underlying scope -> 
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_35100 = Obj.magic (((("(" ^ HxString.toStdString nullDefault) ^ " != ") ^ HxString.toStdString self) ^ ")" : string) in (
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_35100 = Obj.magic (((("(" ^ HxString.toStdString nullDefault) ^ " != ") ^ HxString.toStdString self) ^ ")" : string) in (
               tempResult := __assign_35100;
               __assign_35100
             ) else let __assign_35101 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -82036,7 +82394,8 @@ and primitiveBackedAbstractGetterExpr = fun receiver getter underlying scope -> 
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_35102 = Obj.magic (((("(" ^ HxString.toStdString self) ^ " != ") ^ HxString.toStdString nullDefault) ^ ")" : string) in (
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_35102 = Obj.magic (((("(" ^ HxString.toStdString self) ^ " != ") ^ HxString.toStdString nullDefault) ^ ")" : string) in (
               tempResult := __assign_35102;
               __assign_35102
             ) else let __assign_35103 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -82095,7 +82454,8 @@ and primitiveBackedAbstractGetterExpr = fun receiver getter underlying scope -> 
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_35105 = Obj.magic (((("(" ^ HxString.toStdString nullDefault) ^ " == ") ^ HxString.toStdString self) ^ ")" : string) in (
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_35105 = Obj.magic (((("(" ^ HxString.toStdString nullDefault) ^ " == ") ^ HxString.toStdString self) ^ ")" : string) in (
               tempResult := __assign_35105;
               __assign_35105
             ) else let __assign_35106 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -82149,7 +82509,8 @@ and primitiveBackedAbstractGetterExpr = fun receiver getter underlying scope -> 
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_35107 = Obj.magic (((("(" ^ HxString.toStdString self) ^ " == ") ^ HxString.toStdString nullDefault) ^ ")" : string) in (
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_35107 = Obj.magic (((("(" ^ HxString.toStdString self) ^ " == ") ^ HxString.toStdString nullDefault) ^ ")" : string) in (
               tempResult := __assign_35107;
               __assign_35107
             ) else let __assign_35108 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -82598,7 +82959,8 @@ and cppLocalTypeHint = fun typeHint init scope -> (try let tempString = ref (HxS
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47 with
         | 22 -> let _g = (let __enum_param_35848 = init in if __enum_param_35848 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_35848 with
           | HxExpr.ENew (__enum_param_35847, _) -> __enum_param_35847
           | _ -> failwith "Unexpected enum parameter" : string) in (
@@ -82763,7 +83125,8 @@ and dynamicRuntimeClassFactoryLocalCppType = fun explicit init scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47 with
       | 0 -> let _g = Obj.magic (let __enum_param_36020 = init in if __enum_param_36020 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_36020 with
         | HxExpr.EParenthesized (__enum_param_36019, _) -> __enum_param_36019
         | _ -> failwith "Unexpected enum parameter") in (
@@ -82826,7 +83189,8 @@ and dynamicRuntimeClassFactoryLocalCppType = fun explicit init scope -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
         | HxExpr.EField (__enum_param_36028, _) -> __enum_param_36028
         | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
         | HxExpr.EField (_, __enum_param_36029) -> __enum_param_36029
@@ -82938,7 +83302,8 @@ and inferExprCppType = fun expr scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 43 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 43 then (
     ignore (match expr with
       | HxExpr.EDiscardThen (__enum_param_36101, _) -> __enum_param_36101
       | _ -> failwith "Unexpected enum parameter");
@@ -83085,7 +83450,8 @@ and inferExprCppType = fun expr scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
             | HxExpr.EField (__enum_param_36144, _) -> __enum_param_36144
             | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
             | HxExpr.EField (_, __enum_param_36145) -> __enum_param_36145
@@ -83270,7 +83636,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then (
                 ignore (match _g4 with
                   | HxExpr.EString __enum_param_36233 -> __enum_param_36233
                   | _ -> failwith "Unexpected enum parameter");
@@ -84390,7 +84757,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                   | HxExpr.ECall (__enum_param_37391, _) -> __enum_param_37391
                   | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                   | HxExpr.ECall (_, __enum_param_37392) -> __enum_param_37392
@@ -84441,7 +84809,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                   ignore (match _g6 with
                     | HxExpr.EField (__enum_param_37393, _) -> __enum_param_37393
                     | _ -> failwith "Unexpected enum parameter");
@@ -84554,7 +84923,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                   | HxExpr.ECall (__enum_param_37356, _) -> __enum_param_37356
                   | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                   | HxExpr.ECall (_, __enum_param_37357) -> __enum_param_37357
@@ -84605,7 +84975,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                   ignore (match _g6 with
                     | HxExpr.EField (__enum_param_37358, _) -> __enum_param_37358
                     | _ -> failwith "Unexpected enum parameter");
@@ -85843,7 +86214,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38107 -> __enum_param_38107
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38108 = _g6 in let __string_eq_right_38109 = "haxe" in HxString.equals __string_eq_left_38108 __string_eq_right_38109 then let method12 = (_g3 : string) in if (let __string_eq_left_38110 = method12 in let __string_eq_right_38111 = "quoteUnixArg" in HxString.equals __string_eq_left_38110 __string_eq_right_38111) || (let __string_eq_left_38112 = method12 in let __string_eq_right_38113 = "quoteWinArg" in HxString.equals __string_eq_left_38112 __string_eq_right_38113) then let __assign_38114 = ("std::string" : string) in (
                 tempResult := __assign_38114;
@@ -85944,7 +86316,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38142 -> __enum_param_38142
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38143 = _g6 in let __string_eq_right_38144 = "haxe" in HxString.equals __string_eq_left_38143 __string_eq_right_38144 then let method12 = (_g3 : string) in if (let __string_eq_left_38145 = method12 in let __string_eq_right_38146 = "quoteUnixArg" in HxString.equals __string_eq_left_38145 __string_eq_right_38146) || (let __string_eq_left_38147 = method12 in let __string_eq_right_38148 = "quoteWinArg" in HxString.equals __string_eq_left_38147 __string_eq_right_38148) then let __assign_38149 = ("std::string" : string) in (
                 tempResult := __assign_38149;
@@ -86045,7 +86418,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38176 -> __enum_param_38176
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38177 = _g6 in let __string_eq_right_38178 = "haxe" in HxString.equals __string_eq_left_38177 __string_eq_right_38178 then let method12 = (_g3 : string) in if (let __string_eq_left_38179 = method12 in let __string_eq_right_38180 = "quoteUnixArg" in HxString.equals __string_eq_left_38179 __string_eq_right_38180) || (let __string_eq_left_38181 = method12 in let __string_eq_right_38182 = "quoteWinArg" in HxString.equals __string_eq_left_38181 __string_eq_right_38182) then let __assign_38183 = ("std::string" : string) in (
                 tempResult := __assign_38183;
@@ -86146,7 +86520,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38210 -> __enum_param_38210
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38211 = _g6 in let __string_eq_right_38212 = "haxe" in HxString.equals __string_eq_left_38211 __string_eq_right_38212 then let method12 = (_g3 : string) in if (let __string_eq_left_38213 = method12 in let __string_eq_right_38214 = "quoteUnixArg" in HxString.equals __string_eq_left_38213 __string_eq_right_38214) || (let __string_eq_left_38215 = method12 in let __string_eq_right_38216 = "quoteWinArg" in HxString.equals __string_eq_left_38215 __string_eq_right_38216) then let __assign_38217 = ("std::string" : string) in (
                 tempResult := __assign_38217;
@@ -86247,7 +86622,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38244 -> __enum_param_38244
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38245 = _g6 in let __string_eq_right_38246 = "haxe" in HxString.equals __string_eq_left_38245 __string_eq_right_38246 then let method12 = (_g3 : string) in if (let __string_eq_left_38247 = method12 in let __string_eq_right_38248 = "quoteUnixArg" in HxString.equals __string_eq_left_38247 __string_eq_right_38248) || (let __string_eq_left_38249 = method12 in let __string_eq_right_38250 = "quoteWinArg" in HxString.equals __string_eq_left_38249 __string_eq_right_38250) then let __assign_38251 = ("std::string" : string) in (
                 tempResult := __assign_38251;
@@ -86348,7 +86724,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38278 -> __enum_param_38278
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38279 = _g6 in let __string_eq_right_38280 = "haxe" in HxString.equals __string_eq_left_38279 __string_eq_right_38280 then let method12 = (_g3 : string) in if (let __string_eq_left_38281 = method12 in let __string_eq_right_38282 = "quoteUnixArg" in HxString.equals __string_eq_left_38281 __string_eq_right_38282) || (let __string_eq_left_38283 = method12 in let __string_eq_right_38284 = "quoteWinArg" in HxString.equals __string_eq_left_38283 __string_eq_right_38284) then let __assign_38285 = ("std::string" : string) in (
                 tempResult := __assign_38285;
@@ -86449,7 +86826,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38312 -> __enum_param_38312
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38313 = _g6 in let __string_eq_right_38314 = "haxe" in HxString.equals __string_eq_left_38313 __string_eq_right_38314 then let method12 = (_g3 : string) in if (let __string_eq_left_38315 = method12 in let __string_eq_right_38316 = "quoteUnixArg" in HxString.equals __string_eq_left_38315 __string_eq_right_38316) || (let __string_eq_left_38317 = method12 in let __string_eq_right_38318 = "quoteWinArg" in HxString.equals __string_eq_left_38317 __string_eq_right_38318) then let __assign_38319 = ("std::string" : string) in (
                 tempResult := __assign_38319;
@@ -86550,7 +86928,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38346 -> __enum_param_38346
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38347 = _g6 in let __string_eq_right_38348 = "haxe" in HxString.equals __string_eq_left_38347 __string_eq_right_38348 then let method12 = (_g3 : string) in if (let __string_eq_left_38349 = method12 in let __string_eq_right_38350 = "quoteUnixArg" in HxString.equals __string_eq_left_38349 __string_eq_right_38350) || (let __string_eq_left_38351 = method12 in let __string_eq_right_38352 = "quoteWinArg" in HxString.equals __string_eq_left_38351 __string_eq_right_38352) then let __assign_38353 = ("std::string" : string) in (
                 tempResult := __assign_38353;
@@ -86651,7 +87030,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38380 -> __enum_param_38380
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38381 = _g6 in let __string_eq_right_38382 = "haxe" in HxString.equals __string_eq_left_38381 __string_eq_right_38382 then let method12 = (_g3 : string) in if (let __string_eq_left_38383 = method12 in let __string_eq_right_38384 = "quoteUnixArg" in HxString.equals __string_eq_left_38383 __string_eq_right_38384) || (let __string_eq_left_38385 = method12 in let __string_eq_right_38386 = "quoteWinArg" in HxString.equals __string_eq_left_38385 __string_eq_right_38386) then let __assign_38387 = ("std::string" : string) in (
                 tempResult := __assign_38387;
@@ -86749,7 +87129,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38413 -> __enum_param_38413
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38414 = _g6 in let __string_eq_right_38415 = "haxe" in HxString.equals __string_eq_left_38414 __string_eq_right_38415 then let method12 = (_g3 : string) in if (let __string_eq_left_38416 = method12 in let __string_eq_right_38417 = "quoteUnixArg" in HxString.equals __string_eq_left_38416 __string_eq_right_38417) || (let __string_eq_left_38418 = method12 in let __string_eq_right_38419 = "quoteWinArg" in HxString.equals __string_eq_left_38418 __string_eq_right_38419) then let __assign_38420 = ("std::string" : string) in (
                 tempResult := __assign_38420;
@@ -86804,7 +87185,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g8 = Obj.magic (match _g7 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g8 = Obj.magic (match _g7 with
                 | HxExpr.ECall (__enum_param_38424, _) -> __enum_param_38424
                 | _ -> failwith "Unexpected enum parameter") in let _g9 = Obj.magic (match _g7 with
                 | HxExpr.ECall (_, __enum_param_38425) -> __enum_param_38425
@@ -86855,7 +87237,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                 ignore (match _g8 with
                   | HxExpr.EField (__enum_param_38426, _) -> __enum_param_38426
                   | _ -> failwith "Unexpected enum parameter");
@@ -86933,7 +87316,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g8 = Obj.magic (match _g7 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g8 = Obj.magic (match _g7 with
                 | HxExpr.ECall (__enum_param_38444, _) -> __enum_param_38444
                 | _ -> failwith "Unexpected enum parameter") in let _g9 = Obj.magic (match _g7 with
                 | HxExpr.ECall (_, __enum_param_38445) -> __enum_param_38445
@@ -86984,7 +87368,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                 ignore (match _g8 with
                   | HxExpr.EField (__enum_param_38446, _) -> __enum_param_38446
                   | _ -> failwith "Unexpected enum parameter");
@@ -87062,7 +87447,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g7 = Obj.magic (match _g6 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g7 = Obj.magic (match _g6 with
                 | HxExpr.ECall (__enum_param_38464, _) -> __enum_param_38464
                 | _ -> failwith "Unexpected enum parameter") in let _g8 = Obj.magic (match _g6 with
                 | HxExpr.ECall (_, __enum_param_38465) -> __enum_param_38465
@@ -87113,7 +87499,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                 ignore (match _g7 with
                   | HxExpr.EField (__enum_param_38466, _) -> __enum_param_38466
                   | _ -> failwith "Unexpected enum parameter");
@@ -87191,7 +87578,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g7 = Obj.magic (match _g6 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g7 = Obj.magic (match _g6 with
                 | HxExpr.ECall (__enum_param_38484, _) -> __enum_param_38484
                 | _ -> failwith "Unexpected enum parameter") in let _g8 = Obj.magic (match _g6 with
                 | HxExpr.ECall (_, __enum_param_38485) -> __enum_param_38485
@@ -87242,7 +87630,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                 ignore (match _g7 with
                   | HxExpr.EField (__enum_param_38486, _) -> __enum_param_38486
                   | _ -> failwith "Unexpected enum parameter");
@@ -87342,7 +87731,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38519 -> __enum_param_38519
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38520 = _g6 in let __string_eq_right_38521 = "haxe" in HxString.equals __string_eq_left_38520 __string_eq_right_38521 then let method12 = (_g3 : string) in if (let __string_eq_left_38522 = method12 in let __string_eq_right_38523 = "quoteUnixArg" in HxString.equals __string_eq_left_38522 __string_eq_right_38523) || (let __string_eq_left_38524 = method12 in let __string_eq_right_38525 = "quoteWinArg" in HxString.equals __string_eq_left_38524 __string_eq_right_38525) then let __assign_38526 = ("std::string" : string) in (
                 tempResult := __assign_38526;
@@ -87443,7 +87833,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38553 -> __enum_param_38553
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38554 = _g6 in let __string_eq_right_38555 = "haxe" in HxString.equals __string_eq_left_38554 __string_eq_right_38555 then let method12 = (_g3 : string) in if (let __string_eq_left_38556 = method12 in let __string_eq_right_38557 = "quoteUnixArg" in HxString.equals __string_eq_left_38556 __string_eq_right_38557) || (let __string_eq_left_38558 = method12 in let __string_eq_right_38559 = "quoteWinArg" in HxString.equals __string_eq_left_38558 __string_eq_right_38559) then let __assign_38560 = ("std::string" : string) in (
                 tempResult := __assign_38560;
@@ -87544,7 +87935,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38587 -> __enum_param_38587
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38588 = _g6 in let __string_eq_right_38589 = "haxe" in HxString.equals __string_eq_left_38588 __string_eq_right_38589 then let method12 = (_g3 : string) in if (let __string_eq_left_38590 = method12 in let __string_eq_right_38591 = "quoteUnixArg" in HxString.equals __string_eq_left_38590 __string_eq_right_38591) || (let __string_eq_left_38592 = method12 in let __string_eq_right_38593 = "quoteWinArg" in HxString.equals __string_eq_left_38592 __string_eq_right_38593) then let __assign_38594 = ("std::string" : string) in (
                 tempResult := __assign_38594;
@@ -87645,7 +88037,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38621 -> __enum_param_38621
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38622 = _g6 in let __string_eq_right_38623 = "haxe" in HxString.equals __string_eq_left_38622 __string_eq_right_38623 then let method12 = (_g3 : string) in if (let __string_eq_left_38624 = method12 in let __string_eq_right_38625 = "quoteUnixArg" in HxString.equals __string_eq_left_38624 __string_eq_right_38625) || (let __string_eq_left_38626 = method12 in let __string_eq_right_38627 = "quoteWinArg" in HxString.equals __string_eq_left_38626 __string_eq_right_38627) then let __assign_38628 = ("std::string" : string) in (
                 tempResult := __assign_38628;
@@ -87746,7 +88139,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38655 -> __enum_param_38655
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38656 = _g6 in let __string_eq_right_38657 = "haxe" in HxString.equals __string_eq_left_38656 __string_eq_right_38657 then let method12 = (_g3 : string) in if (let __string_eq_left_38658 = method12 in let __string_eq_right_38659 = "quoteUnixArg" in HxString.equals __string_eq_left_38658 __string_eq_right_38659) || (let __string_eq_left_38660 = method12 in let __string_eq_right_38661 = "quoteWinArg" in HxString.equals __string_eq_left_38660 __string_eq_right_38661) then let __assign_38662 = ("std::string" : string) in (
                 tempResult := __assign_38662;
@@ -87847,7 +88241,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38691 -> __enum_param_38691
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38692 = _g6 in let __string_eq_right_38693 = "haxe" in HxString.equals __string_eq_left_38692 __string_eq_right_38693 then let method12 = (_g3 : string) in if (let __string_eq_left_38694 = method12 in let __string_eq_right_38695 = "quoteUnixArg" in HxString.equals __string_eq_left_38694 __string_eq_right_38695) || (let __string_eq_left_38696 = method12 in let __string_eq_right_38697 = "quoteWinArg" in HxString.equals __string_eq_left_38696 __string_eq_right_38697) then let __assign_38698 = ("std::string" : string) in (
                 tempResult := __assign_38698;
@@ -87948,7 +88343,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38725 -> __enum_param_38725
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38726 = _g6 in let __string_eq_right_38727 = "haxe" in HxString.equals __string_eq_left_38726 __string_eq_right_38727 then let method12 = (_g3 : string) in if (let __string_eq_left_38728 = method12 in let __string_eq_right_38729 = "quoteUnixArg" in HxString.equals __string_eq_left_38728 __string_eq_right_38729) || (let __string_eq_left_38730 = method12 in let __string_eq_right_38731 = "quoteWinArg" in HxString.equals __string_eq_left_38730 __string_eq_right_38731) then let __assign_38732 = ("std::string" : string) in (
                 tempResult := __assign_38732;
@@ -88049,7 +88445,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38759 -> __enum_param_38759
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38760 = _g6 in let __string_eq_right_38761 = "haxe" in HxString.equals __string_eq_left_38760 __string_eq_right_38761 then let method12 = (_g3 : string) in if (let __string_eq_left_38762 = method12 in let __string_eq_right_38763 = "quoteUnixArg" in HxString.equals __string_eq_left_38762 __string_eq_right_38763) || (let __string_eq_left_38764 = method12 in let __string_eq_right_38765 = "quoteWinArg" in HxString.equals __string_eq_left_38764 __string_eq_right_38765) then let __assign_38766 = ("std::string" : string) in (
                 tempResult := __assign_38766;
@@ -88150,7 +88547,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38793 -> __enum_param_38793
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38794 = _g6 in let __string_eq_right_38795 = "haxe" in HxString.equals __string_eq_left_38794 __string_eq_right_38795 then let method12 = (_g3 : string) in if (let __string_eq_left_38796 = method12 in let __string_eq_right_38797 = "quoteUnixArg" in HxString.equals __string_eq_left_38796 __string_eq_right_38797) || (let __string_eq_left_38798 = method12 in let __string_eq_right_38799 = "quoteWinArg" in HxString.equals __string_eq_left_38798 __string_eq_right_38799) then let __assign_38800 = ("std::string" : string) in (
                 tempResult := __assign_38800;
@@ -88251,7 +88649,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38829 -> __enum_param_38829
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38830 = _g6 in let __string_eq_right_38831 = "haxe" in HxString.equals __string_eq_left_38830 __string_eq_right_38831 then let method12 = (_g3 : string) in if (let __string_eq_left_38832 = method12 in let __string_eq_right_38833 = "quoteUnixArg" in HxString.equals __string_eq_left_38832 __string_eq_right_38833) || (let __string_eq_left_38834 = method12 in let __string_eq_right_38835 = "quoteWinArg" in HxString.equals __string_eq_left_38834 __string_eq_right_38835) then let __assign_38836 = ("std::string" : string) in (
                 tempResult := __assign_38836;
@@ -88352,7 +88751,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38863 -> __enum_param_38863
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38864 = _g6 in let __string_eq_right_38865 = "haxe" in HxString.equals __string_eq_left_38864 __string_eq_right_38865 then let method12 = (_g3 : string) in if (let __string_eq_left_38866 = method12 in let __string_eq_right_38867 = "quoteUnixArg" in HxString.equals __string_eq_left_38866 __string_eq_right_38867) || (let __string_eq_left_38868 = method12 in let __string_eq_right_38869 = "quoteWinArg" in HxString.equals __string_eq_left_38868 __string_eq_right_38869) then let __assign_38870 = ("std::string" : string) in (
                 tempResult := __assign_38870;
@@ -88450,7 +88850,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g6 = (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g6 = (match _g4 with
                 | HxExpr.EIdent __enum_param_38071 -> __enum_param_38071
                 | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_38072 = _g6 in let __string_eq_right_38073 = "haxe" in HxString.equals __string_eq_left_38072 __string_eq_right_38073 then let method12 = (_g3 : string) in if (let __string_eq_left_38074 = method12 in let __string_eq_right_38075 = "quoteUnixArg" in HxString.equals __string_eq_left_38074 __string_eq_right_38075) || (let __string_eq_left_38076 = method12 in let __string_eq_right_38077 = "quoteWinArg" in HxString.equals __string_eq_left_38076 __string_eq_right_38077) then let __assign_38078 = ("std::string" : string) in (
                 tempResult := __assign_38078;
@@ -88527,7 +88928,8 @@ and inferExprCppType = fun expr scope -> (try (
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
               | HxExpr.EField (__enum_param_38879, _) -> __enum_param_38879
               | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
               | HxExpr.EField (_, __enum_param_38880) -> __enum_param_38880
@@ -88588,7 +88990,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then (
                 ignore (match _g6 with
                   | HxExpr.EIdent __enum_param_39311 -> __enum_param_39311
                   | _ -> failwith "Unexpected enum parameter");
@@ -88973,7 +89376,8 @@ and inferExprCppType = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g10 = Obj.magic (match _g9 with
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g10 = Obj.magic (match _g9 with
                     | HxExpr.ECall (__enum_param_39523, _) -> __enum_param_39523
                     | _ -> failwith "Unexpected enum parameter") in let _g11 = Obj.magic (match _g9 with
                     | HxExpr.ECall (_, __enum_param_39524) -> __enum_param_39524
@@ -89024,7 +89428,8 @@ and inferExprCppType = fun expr scope -> (try (
                     | HxExpr.EDiscardThen (_, _) -> 43
                     | HxExpr.ESourceGroup (_, _) -> 44
                     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                    | HxExpr.EPrivateAccess (_, _) -> 46
+                    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                     ignore (match _g10 with
                       | HxExpr.EField (__enum_param_39525, _) -> __enum_param_39525
                       | _ -> failwith "Unexpected enum parameter");
@@ -89846,7 +90251,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g9 = Obj.magic (match _g8 with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g9 = Obj.magic (match _g8 with
                   | HxExpr.ECall (__enum_param_39973, _) -> __enum_param_39973
                   | _ -> failwith "Unexpected enum parameter") in let _g10 = Obj.magic (match _g8 with
                   | HxExpr.ECall (_, __enum_param_39974) -> __enum_param_39974
@@ -89897,7 +90303,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                   ignore (match _g9 with
                     | HxExpr.EField (__enum_param_39975, _) -> __enum_param_39975
                     | _ -> failwith "Unexpected enum parameter");
@@ -90766,7 +91173,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g9 = Obj.magic (match _g8 with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g9 = Obj.magic (match _g8 with
                   | HxExpr.ECall (__enum_param_40458, _) -> __enum_param_40458
                   | _ -> failwith "Unexpected enum parameter") in let _g10 = Obj.magic (match _g8 with
                   | HxExpr.ECall (_, __enum_param_40459) -> __enum_param_40459
@@ -90817,7 +91225,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                   ignore (match _g9 with
                     | HxExpr.EField (__enum_param_40460, _) -> __enum_param_40460
                     | _ -> failwith "Unexpected enum parameter");
@@ -91765,7 +92174,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g9 = Obj.magic (match _g8 with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g9 = Obj.magic (match _g8 with
                   | HxExpr.ECall (__enum_param_39087, _) -> __enum_param_39087
                   | _ -> failwith "Unexpected enum parameter") in let _g10 = Obj.magic (match _g8 with
                   | HxExpr.ECall (_, __enum_param_39088) -> __enum_param_39088
@@ -91816,7 +92226,8 @@ and inferExprCppType = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                   ignore (match _g9 with
                     | HxExpr.EField (__enum_param_39089, _) -> __enum_param_39089
                     | _ -> failwith "Unexpected enum parameter");
@@ -92576,7 +92987,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g7 = Obj.magic (match _g6 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g7 = Obj.magic (match _g6 with
                 | HxExpr.ECall (__enum_param_40973, _) -> __enum_param_40973
                 | _ -> failwith "Unexpected enum parameter") in let _g8 = Obj.magic (match _g6 with
                 | HxExpr.ECall (_, __enum_param_40974) -> __enum_param_40974
@@ -92627,7 +93039,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                 ignore (match _g7 with
                   | HxExpr.EField (__enum_param_40975, _) -> __enum_param_40975
                   | _ -> failwith "Unexpected enum parameter");
@@ -93388,7 +93801,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g6 = Obj.magic (match _g5 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g6 = Obj.magic (match _g5 with
                 | HxExpr.ECall (__enum_param_41398, _) -> __enum_param_41398
                 | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g5 with
                 | HxExpr.ECall (_, __enum_param_41399) -> __enum_param_41399
@@ -93439,7 +93853,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                 ignore (match _g6 with
                   | HxExpr.EField (__enum_param_41400, _) -> __enum_param_41400
                   | _ -> failwith "Unexpected enum parameter");
@@ -94203,7 +94618,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g5 = Obj.magic (match _g4 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g5 = Obj.magic (match _g4 with
                 | HxExpr.ECall (__enum_param_36589, _) -> __enum_param_36589
                 | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g4 with
                 | HxExpr.ECall (_, __enum_param_36590) -> __enum_param_36590
@@ -94254,7 +94670,8 @@ and inferExprCppType = fun expr scope -> (try (
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
                 ignore (match _g5 with
                   | HxExpr.EField (__enum_param_36591, _) -> __enum_param_36591
                   | _ -> failwith "Unexpected enum parameter");
@@ -94942,7 +95359,8 @@ and isTypedLocalERegMatchedPosFieldExpr = fun expr scope -> let tempResult = ref
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match expr with
     | HxExpr.EField (__enum_param_41768, _) -> __enum_param_41768
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
     | HxExpr.EField (_, __enum_param_41769) -> __enum_param_41769
@@ -94993,7 +95411,8 @@ and isTypedLocalERegMatchedPosFieldExpr = fun expr scope -> let tempResult = ref
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g2 = Obj.magic (match _g with
     | HxExpr.ECall (__enum_param_41770, _) -> __enum_param_41770
     | _ -> failwith "Unexpected enum parameter") in let _g3 = Obj.magic (match _g with
     | HxExpr.ECall (_, __enum_param_41771) -> __enum_param_41771
@@ -95044,7 +95463,8 @@ and isTypedLocalERegMatchedPosFieldExpr = fun expr scope -> let tempResult = ref
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
     | HxExpr.EField (__enum_param_41772, _) -> __enum_param_41772
     | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
     | HxExpr.EField (_, __enum_param_41773) -> __enum_param_41773
@@ -95111,7 +95531,8 @@ and isTypedLocalERegReceiver = fun receiver scope -> let tempResult = ref (false
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then (
     ignore (match receiver with
       | HxExpr.EIdent __enum_param_41778 -> __enum_param_41778
       | _ -> failwith "Unexpected enum parameter");
@@ -95524,7 +95945,8 @@ and enumPayloadExpr = fun expr scope -> let tempResult = ref (HxString.hx_null_s
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 9 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 9 then let _g2 = (match _g with
       | HxExpr.EEnumValue __enum_param_42667 -> __enum_param_42667
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in if args == Obj.magic (HxRuntime.hx_null) || HxArray.length args = 0 then let __assign_42668 = (let __string_part_42670 = "__hxhx_macro_enum(" in let __string_part_42671 = HxString.toStdString (let __call_arg_0_42669 = name in quoteString __call_arg_0_42669) in let __string_part_42672 = ")" in (__string_part_42670 ^ __string_part_42671) ^ __string_part_42672 : string) in (
       tempResult := __assign_42668;
@@ -95793,7 +96215,8 @@ and enumCtorPayloadStringExpr = fun expr scope -> let tempResult = ref (HxString
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_42879 -> __enum_param_42879
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in if importedEnumConstructorExpr (name : string) (Obj.magic args) scope != Obj.magic (HxRuntime.hx_null) then let __assign_42880 = (let __string_part_42881 = "__hxhx_stringify(" in let __string_part_42882 = HxString.toStdString (importedEnumConstructorExpr (name : string) (Obj.magic args) scope) in let __string_part_42883 = ")" in (__string_part_42881 ^ __string_part_42882) ^ __string_part_42883 : string) in (
       tempResult := __assign_42880;
@@ -96062,7 +96485,8 @@ and jsonAnyFieldStringExpr = fun expr scope -> let tempResult = ref (Obj.magic (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match expr with
     | HxExpr.EField (__enum_param_43076, _) -> __enum_param_43076
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
     | HxExpr.EField (_, __enum_param_43077) -> __enum_param_43077
@@ -96269,7 +96693,8 @@ and pointerCtorExprForExpectedType = fun expr expectedType scope -> let tempResu
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_43180, _) -> __enum_param_43180
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_43181) -> __enum_param_43181
@@ -96443,7 +96868,8 @@ and anonStructValueExprForExpectedType = fun expr expectedType scope -> (try let
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match expr with
       | HxExpr.EAnon (__enum_param_43287, _) -> __enum_param_43287
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
       | HxExpr.EAnon (_, __enum_param_43288) -> __enum_param_43288
@@ -96532,7 +96958,8 @@ and posInfosValueExprForExpectedType = fun expr expectedType scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match expr with
       | HxExpr.EAnon (__enum_param_43314, _) -> __enum_param_43314
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
       | HxExpr.EAnon (_, __enum_param_43315) -> __enum_param_43315
@@ -96599,7 +97026,8 @@ and assignmentRhsExpr = fun left right scope -> (try let expectedType = (assignm
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_43333 = ("std::nullopt" : string) in (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_43333 = ("std::nullopt" : string) in (
       tempResult := __assign_43333;
       __assign_43333
     ) else let __assign_43334 = (valueExprForExpectedType (Obj.magic right) (expectedType : string) scope : string) in (
@@ -96657,7 +97085,8 @@ and assignmentRhsExpr = fun left right scope -> (try let expectedType = (assignm
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (cppDefaultValue (expectedType : string) scope))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic right) (expectedType : string) scope))) else ());
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (cppDefaultValue (expectedType : string) scope))) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic right) (expectedType : string) scope))) else ());
   ignore (if let __call_arg_0_43339 = expectedType in isCppReferenceType __call_arg_0_43339 then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic right) (expectedType : string) scope))) else ());
   ignore (if structuralTypedefClassForCppType (expectedType : string) scope != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (valueExprForExpectedType (Obj.magic right) (expectedType : string) scope))) else ());
   renderExpr (Obj.magic right) scope
@@ -96721,7 +97150,8 @@ and propertySetterAssignmentExpr = fun left right scope -> let tempResult = ref 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match left with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match left with
     | HxExpr.EField (__enum_param_43346, _) -> __enum_param_43346
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match left with
     | HxExpr.EField (_, __enum_param_43347) -> __enum_param_43347
@@ -96868,7 +97298,8 @@ and assignmentExpectedFieldCppType = fun left scope -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let name = (_g1 : string) in let __assign_43410 = let __call_arg_0_43411 = name in sanitizeIdentifier __call_arg_0_43411 in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let name = (_g1 : string) in let __assign_43410 = let __call_arg_0_43411 = name in sanitizeIdentifier __call_arg_0_43411 in (
         tempString := __assign_43410;
         __assign_43410
       ) else Stdlib.raise (HxRuntime.Hx_return (Obj.repr (Obj.magic (HxRuntime.hx_null))))
@@ -96953,7 +97384,8 @@ and assignmentDynamicFunctionSlotCppType = fun left scope -> let tempResult = re
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match left with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match left with
     | HxExpr.EField (__enum_param_43429, _) -> __enum_param_43429
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match left with
     | HxExpr.EField (_, __enum_param_43430) -> __enum_param_43430
@@ -97021,7 +97453,8 @@ and dynamicFunctionSlotAccessExpr = fun receiver field scope -> (try let info = 
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_43439 = Obj.magic (let __string_part_43441 = "this->" in let __string_part_43442 = HxString.toStdString (let __call_arg_0_43440 = field in sanitizeIdentifier __call_arg_0_43440) in __string_part_43441 ^ __string_part_43442 : string) in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_43439 = Obj.magic (let __string_part_43441 = "this->" in let __string_part_43442 = HxString.toStdString (let __call_arg_0_43440 = field in sanitizeIdentifier __call_arg_0_43440) in __string_part_43441 ^ __string_part_43442 : string) in (
         tempResult := __assign_43439;
         __assign_43439
       ) else let __assign_43443 = Obj.magic (let __string_part_43445 = HxString.toStdString (renderExpr (Obj.magic receiver) scope) in let __string_part_43446 = HxString.toStdString (fieldAccessOp (Obj.magic receiver) scope) in let __string_part_43447 = HxString.toStdString (let __call_arg_0_43444 = field in sanitizeIdentifier __call_arg_0_43444) in (__string_part_43445 ^ __string_part_43446) ^ __string_part_43447 : string) in (
@@ -97135,7 +97568,8 @@ and posInfosSharedPtrExpr = fun expr scope -> let tempResult = ref (HxString.hx_
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match expr with
     | HxExpr.EAnon (__enum_param_43480, _) -> __enum_param_43480
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.EAnon (_, __enum_param_43481) -> __enum_param_43481
@@ -97217,7 +97651,8 @@ and exceptionConstructionMessageStringExpr = fun expr scope -> let tempResult = 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_43492 -> __enum_param_43492
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_43493 = _g2 in let __string_eq_right_43494 = "__hxhx_expr_meta" in HxString.equals __string_eq_left_43493 __string_eq_right_43494 then let args = Obj.magic _g1 in if HxArray.length args >= 3 then let __assign_43495 = Obj.magic (exceptionConstructionMessageStringExpr (Obj.magic (let __array_read_receiver_43496 = args in let __array_read_index_43497 = 2 in HxArray.get (Obj.magic __array_read_receiver_43496) __array_read_index_43497)) scope : string) in (
       tempResult := __assign_43495;
@@ -97466,7 +97901,8 @@ and stringExpr = fun expr scope -> (try (
                           | HxExpr.EDiscardThen (_, _) -> 43
                           | HxExpr.ESourceGroup (_, _) -> 44
                           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                          | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+                          | HxExpr.EPrivateAccess (_, _) -> 46
+                          | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
                           | HxExpr.EIdent __enum_param_43704 -> __enum_param_43704
                           | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_43705 = _g2 in let __string_eq_right_43706 = "Error" in HxString.equals __string_eq_left_43705 __string_eq_right_43706 then let field = (_g1 : string) in let __assign_43707 = (let __string_part_43709 = "std::string(" in let __string_part_43710 = HxString.toStdString (let __call_arg_0_43708 = field in quoteString __call_arg_0_43708) in let __string_part_43711 = ")" in (__string_part_43709 ^ __string_part_43710) ^ __string_part_43711 : string) in (
                           tempResult := __assign_43707;
@@ -97608,7 +98044,8 @@ and stringExpr = fun expr scope -> (try (
                             | HxExpr.EDiscardThen (_, _) -> 43
                             | HxExpr.ESourceGroup (_, _) -> 44
                             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                            | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g4 = (match _g2 with
+                            | HxExpr.EPrivateAccess (_, _) -> 46
+                            | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g4 = (match _g2 with
                             | HxExpr.EIdent __enum_param_43864 -> __enum_param_43864
                             | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_43865 = _g4 in let __string_eq_right_43866 = "Std" in HxString.equals __string_eq_left_43865 __string_eq_right_43866 then match _g3 with
                             | "indexOf" -> if (let __call_arg_0_43883 = exprCppType (Obj.magic expr) scope in isCppExceptionValueType __call_arg_0_43883) || (let __call_arg_0_43884 = exprCppType (Obj.magic expr) scope in isCppDynamicValueType __call_arg_0_43884) then let __assign_43885 = (let __string_part_43886 = "__hxhx_stringify(" in let __string_part_43887 = HxString.toStdString (renderExpr (Obj.magic expr) scope) in let __string_part_43888 = ")" in (__string_part_43886 ^ __string_part_43887) ^ __string_part_43888 : string) in (
@@ -97953,7 +98390,8 @@ and macroApiCallExprForExpected = fun expr expectedType scope -> let tempResult 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
     | HxExpr.ECall (__enum_param_44191, _) -> __enum_param_44191
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ECall (_, __enum_param_44192) -> __enum_param_44192
@@ -98080,7 +98518,8 @@ and enumMetadataCtorStringExpr = fun expr scope -> (try let tempResult = ref (Ob
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 28 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 28 then let _g = Obj.magic (match expr with
     | HxExpr.EAnon (__enum_param_44288, _) -> __enum_param_44288
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.EAnon (_, __enum_param_44289) -> __enum_param_44289
@@ -98643,7 +99082,8 @@ and isCppInt64Expr = fun expr scope -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
         | HxExpr.EIdent __enum_param_45129 -> __enum_param_45129
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_45130 = _g2 in let __string_eq_right_45131 = "__hxhx_expr_meta" in HxString.equals __string_eq_left_45130 __string_eq_right_45131 then let args = Obj.magic _g1 in if HxArray.length args >= 3 then let __assign_45132 = isCppInt64Expr (Obj.magic (let __array_read_receiver_45133 = args in let __array_read_index_45134 = 2 in HxArray.get (Obj.magic __array_read_receiver_45133) __array_read_index_45134)) scope in (
         tempResult := __assign_45132;
@@ -98698,7 +99138,8 @@ and isCppInt64Expr = fun expr scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g6 = (match _g5 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g6 = (match _g5 with
             | HxExpr.EString __enum_param_45142 -> __enum_param_45142
             | _ -> failwith "Unexpected enum parameter" : string) in let suffix = (_g6 : string) in let __assign_45143 = (let __string_eq_left_45144 = suffix in let __string_eq_right_45145 = "i64" in HxString.equals __string_eq_left_45144 __string_eq_right_45145) || (let __string_eq_left_45146 = suffix in let __string_eq_right_45147 = "u64" in HxString.equals __string_eq_left_45146 __string_eq_right_45147) in (
             tempResult := __assign_45143;
@@ -98771,7 +99212,8 @@ and isCppInt64Expr = fun expr scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g6 = (match _g5 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g6 = (match _g5 with
             | HxExpr.EString __enum_param_45167 -> __enum_param_45167
             | _ -> failwith "Unexpected enum parameter" : string) in let suffix = (_g6 : string) in let __assign_45168 = (let __string_eq_left_45169 = suffix in let __string_eq_right_45170 = "i64" in HxString.equals __string_eq_left_45169 __string_eq_right_45170) || (let __string_eq_left_45171 = suffix in let __string_eq_right_45172 = "u64" in HxString.equals __string_eq_left_45171 __string_eq_right_45172) in (
             tempResult := __assign_45168;
@@ -98844,7 +99286,8 @@ and isCppInt64Expr = fun expr scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g5 = (match _g4 with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g5 = (match _g4 with
             | HxExpr.EString __enum_param_45192 -> __enum_param_45192
             | _ -> failwith "Unexpected enum parameter" : string) in let suffix = (_g5 : string) in let __assign_45193 = (let __string_eq_left_45194 = suffix in let __string_eq_right_45195 = "i64" in HxString.equals __string_eq_left_45194 __string_eq_right_45195) || (let __string_eq_left_45196 = suffix in let __string_eq_right_45197 = "u64" in HxString.equals __string_eq_left_45196 __string_eq_right_45197) in (
             tempResult := __assign_45193;
@@ -99000,7 +99443,8 @@ and isCppDoubleExpr = fun expr scope -> let tempResult = ref (false : bool) in (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 8 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 8 then (
     ignore (match expr with
       | HxExpr.EFloat __enum_param_45315 -> __enum_param_45315
       | _ -> failwith "Unexpected enum parameter");
@@ -99062,7 +99506,8 @@ and isCppIntExpr = fun expr scope -> let tempResult = ref (false : bool) in (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then (
     ignore (match expr with
       | HxExpr.EInt __enum_param_45322 -> __enum_param_45322
       | _ -> failwith "Unexpected enum parameter");
@@ -99139,7 +99584,8 @@ and isCppBoolExpr = fun expr scope -> let tempResult = ref (false : bool) in (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 5 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 5 then (
     ignore (match expr with
       | HxExpr.EBool __enum_param_45340 -> __enum_param_45340
       | _ -> failwith "Unexpected enum parameter");
@@ -99272,7 +99718,8 @@ and forInExpr = fun iterable bodyExpr continuation scope -> let tempResult = ref
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g = Obj.magic (match bodyExpr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g = Obj.magic (match bodyExpr with
     | HxExpr.ELambda (__enum_param_45423, _, _) -> __enum_param_45423
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match bodyExpr with
     | HxExpr.ELambda (_, __enum_param_45424, _) -> __enum_param_45424
@@ -99360,7 +99807,8 @@ and forInExpr = fun iterable bodyExpr continuation scope -> let tempResult = ref
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 32 then ignore (let _g3 = Obj.magic (match iterable with
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 32 then ignore (let _g3 = Obj.magic (match iterable with
             | HxExpr.ERange (__enum_param_45453, _) -> __enum_param_45453
             | _ -> failwith "Unexpected enum parameter") in let _g4 = Obj.magic (match iterable with
             | HxExpr.ERange (_, __enum_param_45454) -> __enum_param_45454
@@ -99520,7 +99968,8 @@ and whileExprContinuationLines = fun continuation resultType indent scope -> (tr
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_45555 = Obj.magic (let __represented_array_45556 = HxArray.create () in let __represented_array_element_0_45557 = let __string_part_45558 = HxString.toStdString indent in let __string_part_45559 = "return " in let __string_part_45560 = HxString.toStdString (cppDefaultValue (typeName : string) scope) in let __string_part_45561 = ";" in ((__string_part_45558 ^ __string_part_45559) ^ __string_part_45560) ^ __string_part_45561 in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_45555 = Obj.magic (let __represented_array_45556 = HxArray.create () in let __represented_array_element_0_45557 = let __string_part_45558 = HxString.toStdString indent in let __string_part_45559 = "return " in let __string_part_45560 = HxString.toStdString (cppDefaultValue (typeName : string) scope) in let __string_part_45561 = ";" in ((__string_part_45558 ^ __string_part_45559) ^ __string_part_45560) ^ __string_part_45561 in (
         ignore (HxArray.push __represented_array_45556 __represented_array_element_0_45557);
         __represented_array_45556
       )) in (
@@ -99659,7 +100108,8 @@ and hxcppAndroidPlatformMinPathExpr = fun expr scope -> let tempResult = ref (Ob
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match expr with
     | HxExpr.EField (__enum_param_45641, _) -> __enum_param_45641
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
     | HxExpr.EField (_, __enum_param_45642) -> __enum_param_45642
@@ -99710,7 +100160,8 @@ and hxcppAndroidPlatformMinPathExpr = fun expr scope -> let tempResult = ref (Ob
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g2 = Obj.magic (match _g with
     | HxExpr.ECall (__enum_param_45643, _) -> __enum_param_45643
     | _ -> failwith "Unexpected enum parameter") in let _g3 = Obj.magic (match _g with
     | HxExpr.ECall (_, __enum_param_45644) -> __enum_param_45644
@@ -99761,7 +100212,8 @@ and hxcppAndroidPlatformMinPathExpr = fun expr scope -> let tempResult = ref (Ob
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g4 = Obj.magic (match _g2 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g4 = Obj.magic (match _g2 with
     | HxExpr.EField (__enum_param_45645, _) -> __enum_param_45645
     | _ -> failwith "Unexpected enum parameter") in let _g5 = (match _g2 with
     | HxExpr.EField (_, __enum_param_45646) -> __enum_param_45646
@@ -99812,7 +100264,8 @@ and hxcppAndroidPlatformMinPathExpr = fun expr scope -> let tempResult = ref (Ob
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g7 = Obj.magic (match _g6 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g7 = Obj.magic (match _g6 with
     | HxExpr.ECall (__enum_param_45651, _) -> __enum_param_45651
     | _ -> failwith "Unexpected enum parameter") in let _g8 = Obj.magic (match _g6 with
     | HxExpr.ECall (_, __enum_param_45652) -> __enum_param_45652
@@ -99863,7 +100316,8 @@ and hxcppAndroidPlatformMinPathExpr = fun expr scope -> let tempResult = ref (Ob
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g9 = Obj.magic (match _g7 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g9 = Obj.magic (match _g7 with
     | HxExpr.EField (__enum_param_45653, _) -> __enum_param_45653
     | _ -> failwith "Unexpected enum parameter") in let _g10 = (match _g7 with
     | HxExpr.EField (_, __enum_param_45654) -> __enum_param_45654
@@ -100006,7 +100460,8 @@ and tryBranchResultType = fun expr scope -> let tempResult = ref (HxString.hx_nu
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_45761 = ("std::nullptr_t" : string) in (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_45761 = ("std::nullptr_t" : string) in (
     tempResult := __assign_45761;
     __assign_45761
   ) else if exprReturnsVoid (Obj.magic expr) scope then let __assign_45762 = ("std::nullptr_t" : string) in (
@@ -100084,7 +100539,8 @@ and tryExprReturnLines = fun expr resultType indent scope -> (try let tempString
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_45778 = Obj.magic (let __represented_array_45779 = HxArray.create () in __represented_array_45779) in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_45778 = Obj.magic (let __represented_array_45779 = HxArray.create () in __represented_array_45779) in (
         tempArray := __assign_45778;
         __assign_45778
       ) else let __assign_45780 = Obj.magic (exprAsStatementLines (Obj.magic expr) (indent : string) scope) in (
@@ -100164,7 +100620,8 @@ and forInExprResultType = fun continuation scope -> let tempResult = ref (HxStri
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_45796 = ("std::nullptr_t" : string) in (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_45796 = ("std::nullptr_t" : string) in (
     tempResult := __assign_45796;
     __assign_45796
   ) else if exprReturnsVoid (Obj.magic continuation) scope then let __assign_45797 = ("std::nullptr_t" : string) in (
@@ -100230,7 +100687,8 @@ and forInContinuationLines = fun continuation indent scope -> let tempResult = r
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then let __assign_45807 = Obj.magic (let __represented_array_45808 = HxArray.create () in let __represented_array_element_0_45809 = HxString.toStdString indent ^ "return nullptr;" in (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then let __assign_45807 = Obj.magic (let __represented_array_45808 = HxArray.create () in let __represented_array_element_0_45809 = HxString.toStdString indent ^ "return nullptr;" in (
     ignore (HxArray.push __represented_array_45808 __represented_array_element_0_45809);
     __represented_array_45808
   )) in (
@@ -100300,7 +100758,8 @@ and exprAsStatementLines = fun expr indent scope -> let tempResult = ref (Obj.ma
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_45828 -> __enum_param_45828
       | _ -> failwith "Unexpected enum parameter" : string) in match _g2 with
       | "__hxhx_for_in" -> if HxArray.length _g1 = 3 then let _g3 = Obj.magic (let __array_read_receiver_45835 = _g1 in let __array_read_index_45836 = 0 in HxArray.get (Obj.magic __array_read_receiver_45835) __array_read_index_45836) in let _g4 = Obj.magic (let __array_read_receiver_45837 = _g1 in let __array_read_index_45838 = 1 in HxArray.get (Obj.magic __array_read_receiver_45837) __array_read_index_45838) in let _g5 = Obj.magic (let __array_read_receiver_45839 = _g1 in let __array_read_index_45840 = 2 in HxArray.get (Obj.magic __array_read_receiver_45839) __array_read_index_45840) in let iterable = Obj.magic _g3 in let bodyExpr = Obj.magic _g4 in let continuation = Obj.magic _g5 in let __assign_45841 = Obj.magic (let __represented_array_45842 = HxArray.create () in let __represented_array_element_0_45843 = let __string_part_45844 = HxString.toStdString indent in let __string_part_45845 = HxString.toStdString (forInExpr (Obj.magic iterable) (Obj.magic bodyExpr) (Obj.magic continuation) scope) in let __string_part_45846 = ";" in (__string_part_45844 ^ __string_part_45845) ^ __string_part_45846 in (
@@ -100462,7 +100921,8 @@ and optionalLambdaExprForExpectedFunction = fun expr expectedType scope -> let t
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
     | HxExpr.ECall (__enum_param_45905, _) -> __enum_param_45905
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ECall (_, __enum_param_45906) -> __enum_param_45906
@@ -100513,7 +100973,8 @@ and optionalLambdaExprForExpectedFunction = fun expr expectedType scope -> let t
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_45907 -> __enum_param_45907
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_45908 = _g2 in let __string_eq_right_45909 = "__hxhx_optional_lambda" in HxString.equals __string_eq_left_45908 __string_eq_right_45909 then if HxArray.length _g1 = 2 then let _g3 = Obj.magic (let __array_read_receiver_45910 = _g1 in let __array_read_index_45911 = 0 in HxArray.get (Obj.magic __array_read_receiver_45910) __array_read_index_45911) in let _g4 = Obj.magic (let __array_read_receiver_45912 = _g1 in let __array_read_index_45913 = 1 in HxArray.get (Obj.magic __array_read_receiver_45912) __array_read_index_45913) in match _g3 with
     | HxExpr.ECall (_p0, _p1) -> let _g5 = Obj.magic _p0 in let _g6 = Obj.magic _p1 in if (match _g5 with
@@ -100563,7 +101024,8 @@ and optionalLambdaExprForExpectedFunction = fun expr expectedType scope -> let t
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g7 = (match _g5 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g7 = (match _g5 with
       | HxExpr.EIdent __enum_param_45915 -> __enum_param_45915
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_45916 = _g7 in let __string_eq_right_45917 = "__hxhx_rest_lambda" in HxString.equals __string_eq_left_45916 __string_eq_right_45917 then if HxArray.length _g6 = 2 then let _g8 = Obj.magic (let __array_read_receiver_45918 = _g6 in let __array_read_index_45919 = 0 in HxArray.get (Obj.magic __array_read_receiver_45918) __array_read_index_45919) in let _g9 = Obj.magic (let __array_read_receiver_45920 = _g6 in let __array_read_index_45921 = 1 in HxArray.get (Obj.magic __array_read_receiver_45920) __array_read_index_45921) in if (match _g8 with
       | HxExpr.EParenthesized (_, _) -> 0
@@ -100612,7 +101074,8 @@ and optionalLambdaExprForExpectedFunction = fun expr expectedType scope -> let t
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g10 = Obj.magic (match _g8 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g10 = Obj.magic (match _g8 with
       | HxExpr.ELambda (__enum_param_45922, _, _) -> __enum_param_45922
       | _ -> failwith "Unexpected enum parameter") in let _g11 = Obj.magic (match _g8 with
       | HxExpr.ELambda (_, __enum_param_45923, _) -> __enum_param_45923
@@ -100667,7 +101130,8 @@ and optionalLambdaExprForExpectedFunction = fun expr expectedType scope -> let t
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 7 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 7 then (
         ignore (match _g9 with
           | HxExpr.EInt __enum_param_45925 -> __enum_param_45925
           | _ -> failwith "Unexpected enum parameter");
@@ -100718,7 +101182,8 @@ and optionalLambdaExprForExpectedFunction = fun expr expectedType scope -> let t
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
           ignore (match _g4 with
             | HxExpr.EArrayDecl __enum_param_45926 -> __enum_param_45926
             | _ -> failwith "Unexpected enum parameter");
@@ -100796,7 +101261,8 @@ and optionalLambdaExprForExpectedFunction = fun expr expectedType scope -> let t
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
         ignore (match _g4 with
           | HxExpr.EArrayDecl __enum_param_45934 -> __enum_param_45934
           | _ -> failwith "Unexpected enum parameter");
@@ -100915,7 +101381,8 @@ and directERegStringCallbackBodyExpr = fun body argNames argTypes returnType sco
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g = (match body with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g = (match body with
         | HxExpr.EBinop (__enum_param_45954, _, _) -> __enum_param_45954
         | _ -> failwith "Unexpected enum parameter" : string) in (
         ignore (match body with
@@ -100992,7 +101459,8 @@ and directIsolatedERegStringCallbackBodyExpr = fun body argNames argTypes return
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g = (match body with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g = (match body with
         | HxExpr.EBinop (__enum_param_45971, _, _) -> __enum_param_45971
         | _ -> failwith "Unexpected enum parameter" : string) in (
         ignore (match body with
@@ -101070,7 +101538,8 @@ and directIsolatedERegStringCallbackReturnExpr = fun expr callbackArg scope -> l
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_45992, _) -> __enum_param_45992
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_45993) -> __enum_param_45993
@@ -101147,7 +101616,8 @@ and directIsolatedERegStringCallbackReturnExpr = fun expr callbackArg scope -> l
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
         | HxExpr.EField (__enum_param_46012, _) -> __enum_param_46012
         | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
         | HxExpr.EField (_, __enum_param_46013) -> __enum_param_46013
@@ -101198,7 +101668,8 @@ and directIsolatedERegStringCallbackReturnExpr = fun expr callbackArg scope -> l
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g8 = (match _g6 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g8 = (match _g6 with
         | HxExpr.EIdent __enum_param_46014 -> __enum_param_46014
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_46015 = _g7 in let __string_eq_right_46016 = "matched" in HxString.equals __string_eq_left_46015 __string_eq_right_46016 then if let __string_eq_left_46017 = _g3 in let __string_eq_right_46018 = "substr" in HxString.equals __string_eq_left_46017 __string_eq_right_46018 then let matchedArgs = Obj.magic _g5 in let receiver = (_g8 : string) in let substrArgs = Obj.magic _g1 in if let __string_eq_left_46019 = receiver in let __string_eq_right_46020 = callbackArg in HxString.equals __string_eq_left_46019 __string_eq_right_46020 then let __assign_46021 = Obj.magic (directERegMatchedSubstrCallbackLeafExpr (receiver : string) (Obj.magic matchedArgs) (Obj.magic substrArgs) scope : string) in (
         tempResult := __assign_46021;
@@ -101280,7 +101751,8 @@ and directIsolatedERegStringConcatExpr = fun expr callbackArg scope -> (try let 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g = (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g = (match expr with
     | HxExpr.EBinop (__enum_param_46028, _, _) -> __enum_param_46028
     | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match expr with
     | HxExpr.EBinop (_, __enum_param_46029, _) -> __enum_param_46029
@@ -101353,7 +101825,8 @@ and directERegStringConcatExpr = fun expr callbackArg scope -> let tempResult = 
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g = (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g = (match expr with
     | HxExpr.EBinop (__enum_param_46038, _, _) -> __enum_param_46038
     | _ -> failwith "Unexpected enum parameter" : string) in let _g1 = Obj.magic (match expr with
     | HxExpr.EBinop (_, __enum_param_46039, _) -> __enum_param_46039
@@ -101430,7 +101903,8 @@ and directERegStringCallbackConcatLeafExpr = fun expr callbackArg scope -> let t
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_46059, _) -> __enum_param_46059
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_46060) -> __enum_param_46060
@@ -101507,7 +101981,8 @@ and directERegStringCallbackConcatLeafExpr = fun expr callbackArg scope -> let t
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g6 = Obj.magic (match _g4 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g6 = Obj.magic (match _g4 with
         | HxExpr.EField (__enum_param_46079, _) -> __enum_param_46079
         | _ -> failwith "Unexpected enum parameter") in let _g7 = (match _g4 with
         | HxExpr.EField (_, __enum_param_46080) -> __enum_param_46080
@@ -101558,7 +102033,8 @@ and directERegStringCallbackConcatLeafExpr = fun expr callbackArg scope -> let t
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g8 = (match _g6 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g8 = (match _g6 with
         | HxExpr.EIdent __enum_param_46081 -> __enum_param_46081
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_46082 = _g7 in let __string_eq_right_46083 = "matched" in HxString.equals __string_eq_left_46082 __string_eq_right_46083 then if let __string_eq_left_46084 = _g3 in let __string_eq_right_46085 = "substr" in HxString.equals __string_eq_left_46084 __string_eq_right_46085 then let matchedArgs = Obj.magic _g5 in let receiver = (_g8 : string) in let substrArgs = Obj.magic _g1 in if let __string_eq_left_46086 = receiver in let __string_eq_right_46087 = callbackArg in HxString.equals __string_eq_left_46086 __string_eq_right_46087 then let __assign_46088 = Obj.magic (directERegMatchedSubstrCallbackLeafExpr (receiver : string) (Obj.magic matchedArgs) (Obj.magic substrArgs) scope : string) in (
         tempResult := __assign_46088;
@@ -101942,7 +102418,8 @@ and instanceMethodValueExpr = fun expr scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match expr with
       | HxExpr.EField (__enum_param_46278, _) -> __enum_param_46278
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expr with
       | HxExpr.EField (_, __enum_param_46279) -> __enum_param_46279
@@ -101994,7 +102471,8 @@ and instanceMethodValueExpr = fun expr scope -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then if Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) then let __assign_46280 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then if Obj.obj (HxAnon.get scope "owner") == Obj.magic (HxRuntime.hx_null) then let __assign_46280 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
         tempMaybeString := __assign_46280;
         __assign_46280
       ) else let __assign_46281 = Obj.magic (let __call_arg_0_46282 = HxClassDecl.getName (Obj.magic (Obj.obj (HxAnon.get scope "owner"))) in sanitizeTypePath __call_arg_0_46282 : string) in (
@@ -102072,7 +102550,8 @@ and instanceMethodValueExpr = fun expr scope -> (try (
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_46300 = "this->" in (
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_46300 = "this->" in (
                   tempString := __assign_46300;
                   __assign_46300
                 ) else let __assign_46301 = let __string_part_46302 = HxString.toStdString (renderExpr (Obj.magic receiver) scope) in let __string_part_46303 = HxString.toStdString (fieldAccessOp (Obj.magic receiver) scope) in __string_part_46302 ^ __string_part_46303 in (
@@ -102172,7 +102651,8 @@ and methodValueExprForExpectedFunction = fun expr expectedType scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_46327 = "this->" in (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_46327 = "this->" in (
             tempString1 := __assign_46327;
             __assign_46327
           ) else let __assign_46328 = let __string_part_46329 = HxString.toStdString (renderExpr (Obj.magic receiver) scope) in let __string_part_46330 = HxString.toStdString (fieldAccessOp (Obj.magic receiver) scope) in __string_part_46329 ^ __string_part_46330 in (
@@ -102242,7 +102722,8 @@ and reflectMakeVarArgsExprForExpectedFunction = fun expr expectedType scope -> l
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
     | HxExpr.ECall (__enum_param_46334, _) -> __enum_param_46334
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ECall (_, __enum_param_46335) -> __enum_param_46335
@@ -102293,7 +102774,8 @@ and reflectMakeVarArgsExprForExpectedFunction = fun expr expectedType scope -> l
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
     | HxExpr.EField (__enum_param_46336, _) -> __enum_param_46336
     | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
     | HxExpr.EField (_, __enum_param_46337) -> __enum_param_46337
@@ -102599,7 +103081,8 @@ and boundFunctionReceiverCppType = fun receiver scope -> (try let directType = (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match receiver with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match receiver with
       | HxExpr.EField (__enum_param_46662, _) -> __enum_param_46662
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match receiver with
       | HxExpr.EField (_, __enum_param_46663) -> __enum_param_46663
@@ -102665,7 +103148,8 @@ and boundFunctionReceiverExpr = fun receiver scope -> let tempResult = ref (HxSt
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g = Obj.magic (match receiver with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g = Obj.magic (match receiver with
     | HxExpr.EField (__enum_param_46668, _) -> __enum_param_46668
     | _ -> failwith "Unexpected enum parameter") in let _g1 = (match receiver with
     | HxExpr.EField (_, __enum_param_46669) -> __enum_param_46669
@@ -102731,7 +103215,8 @@ and boundMethodValueExprWithExpectedType = fun expr expectedType scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expr with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expr with
       | HxExpr.ECall (__enum_param_46679, _) -> __enum_param_46679
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
       | HxExpr.ECall (_, __enum_param_46680) -> __enum_param_46680
@@ -102782,7 +103267,8 @@ and boundMethodValueExprWithExpectedType = fun expr expectedType scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_46681, _) -> __enum_param_46681
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_46682) -> __enum_param_46682
@@ -102883,7 +103369,8 @@ and methodBindingInfo = fun receiver scope -> let tempResult = ref (Obj.magic (H
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_46701 = "this->" in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_46701 = "this->" in (
         tempString1 := __assign_46701;
         __assign_46701
       ) else let __assign_46702 = let __string_part_46703 = HxString.toStdString (renderExpr (Obj.magic target) scope) in let __string_part_46704 = HxString.toStdString (fieldAccessOp (Obj.magic target) scope) in __string_part_46703 ^ __string_part_46704 in (
@@ -103094,7 +103581,8 @@ and arrayComprehensionExpr = fun name iterable guardExpr yieldExpr scope -> let 
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 32 then ignore (let _g = Obj.magic (match iterable with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 32 then ignore (let _g = Obj.magic (match iterable with
       | HxExpr.ERange (__enum_param_47014, _) -> __enum_param_47014
       | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match iterable with
       | HxExpr.ERange (_, __enum_param_47015) -> __enum_param_47015
@@ -103157,7 +103645,8 @@ and addComprehensionYieldLines = fun out indent yieldExpr output scope -> ignore
   | HxExpr.EDiscardThen (_, _) -> 43
   | HxExpr.ESourceGroup (_, _) -> 44
   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-  | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then ignore (let _g = Obj.magic (match yieldExpr with
+  | HxExpr.EPrivateAccess (_, _) -> 46
+  | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then ignore (let _g = Obj.magic (match yieldExpr with
   | HxExpr.ECall (__enum_param_47050, _) -> __enum_param_47050
   | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match yieldExpr with
   | HxExpr.ECall (_, __enum_param_47051) -> __enum_param_47051
@@ -103208,7 +103697,8 @@ and addComprehensionYieldLines = fun out indent yieldExpr output scope -> ignore
   | HxExpr.EDiscardThen (_, _) -> 43
   | HxExpr.ESourceGroup (_, _) -> 44
   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-  | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g2 = (match _g with
+  | HxExpr.EPrivateAccess (_, _) -> 46
+  | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g2 = (match _g with
   | HxExpr.EIdent __enum_param_47052 -> __enum_param_47052
   | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_47053 = _g2 in let __string_eq_right_47054 = "__hxhx_for_in" in HxString.equals __string_eq_left_47053 __string_eq_right_47054 then ignore (if HxArray.length _g1 = 3 then ignore (let _g3 = Obj.magic (let __array_read_receiver_47055 = _g1 in let __array_read_index_47056 = 0 in HxArray.get (Obj.magic __array_read_receiver_47055) __array_read_index_47056) in let _g4 = Obj.magic (let __array_read_receiver_47057 = _g1 in let __array_read_index_47058 = 1 in HxArray.get (Obj.magic __array_read_receiver_47057) __array_read_index_47058) in (
   ignore (let __array_read_receiver_47059 = _g1 in let __array_read_index_47060 = 2 in HxArray.get (Obj.magic __array_read_receiver_47059) __array_read_index_47060);
@@ -103259,7 +103749,8 @@ and addComprehensionYieldLines = fun out indent yieldExpr output scope -> ignore
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then ignore (let _g6 = Obj.magic (match _g4 with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then ignore (let _g6 = Obj.magic (match _g4 with
     | HxExpr.ELambda (__enum_param_47061, _, _) -> __enum_param_47061
     | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g4 with
     | HxExpr.ELambda (_, __enum_param_47062, _) -> __enum_param_47062
@@ -103348,7 +103839,8 @@ and arrayElementType = fun elements scope -> (try (
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 8 then (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 8 then (
             ignore (match element with
               | HxExpr.EFloat __enum_param_47126 -> __enum_param_47126
               | _ -> failwith "Unexpected enum parameter");
@@ -103408,7 +103900,8 @@ and arrayElementType = fun elements scope -> (try (
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 5 then (
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 5 then (
               ignore (match element with
                 | HxExpr.EBool __enum_param_47131 -> __enum_param_47131
                 | _ -> failwith "Unexpected enum parameter");
@@ -103472,7 +103965,8 @@ and iterableElementType = fun iterable scope -> (try let iteratorElement = (iter
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 32 then (
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 32 then (
       ignore (match iterable with
         | HxExpr.ERange (__enum_param_47159, _) -> __enum_param_47159
         | _ -> failwith "Unexpected enum parameter");
@@ -103608,7 +104102,8 @@ and comprehensionElementType = fun expr scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then ignore (let _g = Obj.magic (match expr with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then ignore (let _g = Obj.magic (match expr with
     | HxExpr.ECall (__enum_param_47239, _) -> __enum_param_47239
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expr with
     | HxExpr.ECall (_, __enum_param_47240) -> __enum_param_47240
@@ -103659,7 +104154,8 @@ and comprehensionElementType = fun expr scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then ignore (let _g2 = (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then ignore (let _g2 = (match _g with
     | HxExpr.EIdent __enum_param_47241 -> __enum_param_47241
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_47242 = _g2 in let __string_eq_right_47243 = "__hxhx_for_in" in HxString.equals __string_eq_left_47242 __string_eq_right_47243 then ignore (if HxArray.length _g1 = 3 then ignore (let _g3 = Obj.magic (let __array_read_receiver_47244 = _g1 in let __array_read_index_47245 = 0 in HxArray.get (Obj.magic __array_read_receiver_47244) __array_read_index_47245) in let _g4 = Obj.magic (let __array_read_receiver_47246 = _g1 in let __array_read_index_47247 = 1 in HxArray.get (Obj.magic __array_read_receiver_47246) __array_read_index_47247) in (
     ignore (let __array_read_receiver_47248 = _g1 in let __array_read_index_47249 = 2 in HxArray.get (Obj.magic __array_read_receiver_47248) __array_read_index_47249);
@@ -103710,7 +104206,8 @@ and comprehensionElementType = fun expr scope -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then ignore (let _g6 = Obj.magic (match _g4 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then ignore (let _g6 = Obj.magic (match _g4 with
       | HxExpr.ELambda (__enum_param_47250, _, _) -> __enum_param_47250
       | _ -> failwith "Unexpected enum parameter") in let _g7 = Obj.magic (match _g4 with
       | HxExpr.ELambda (_, __enum_param_47251, _) -> __enum_param_47251
@@ -104251,7 +104748,8 @@ and isRuntimeClassMetaExpr = fun expr scope -> let tempResult = ref (false : boo
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
       | HxExpr.EField (__enum_param_48040, _) -> __enum_param_48040
       | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
       | HxExpr.EField (_, __enum_param_48041) -> __enum_param_48041
@@ -104472,7 +104970,8 @@ and typeEnumConstructorNameArgExpr = fun expr scope -> let tempResult = ref (HxS
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_48214 -> __enum_param_48214
       | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_48215 = _g2 in let __string_eq_right_48216 = "__unprotect__" in HxString.equals __string_eq_left_48215 __string_eq_right_48216 then let args = Obj.magic _g1 in if HxArray.length args = 1 then let __assign_48217 = (typeEnumConstructorNameArgExpr (Obj.magic (let __array_read_receiver_48218 = args in let __array_read_index_48219 = 0 in HxArray.get (Obj.magic __array_read_receiver_48218) __array_read_index_48219)) scope : string) in (
       tempResult := __assign_48217;
@@ -104675,10 +105174,11 @@ and stmtReturnsEnumMetadataCtor = fun stmt -> let tempResult = ref (false : bool
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
         ignore _p3;
+        ignore _p4;
         let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in let __assign_49454 = stmtReturnsEnumMetadataCtor (Obj.magic thenBranch) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtReturnsEnumMetadataCtor (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) in (
           tempResult := __assign_49454;
           __assign_49454
@@ -104828,10 +105328,11 @@ and stmtReturnsErasedDynamicValue = fun stmt scope erasedLocals -> let tempResul
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
         ignore _p3;
+        ignore _p4;
         let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in let __assign_49483 = stmtReturnsErasedDynamicValue (Obj.magic thenBranch) scope (Obj.magic erasedLocals) || elseBranch != Obj.magic (HxRuntime.hx_null) && stmtReturnsErasedDynamicValue (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) scope (Obj.magic erasedLocals) in (
           tempResult := __assign_49483;
           __assign_49483
@@ -105278,10 +105779,11 @@ and inferReturnTypeFromStmt = fun stmt scope -> let tempResult = ref (HxString.h
         )
       )
     )
-    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> (
+    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> (
       ignore _p0;
       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
         ignore _p3;
+        ignore _p4;
         let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in let thenType = (inferReturnTypeFromStmt (Obj.magic thenBranch) scope : string) in let tempString = ref (HxString.hx_null_string : string) in (
           ignore (if elseBranch == Obj.magic (HxRuntime.hx_null) then let __assign_49853 = ("" : string) in (
             tempString := __assign_49853;
@@ -105849,8 +106351,9 @@ and addOneStmtClassDependencies = fun stmt add scope -> ignore (match stmt with
       )
     )
   ))
-  | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+  | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
     ignore _p3;
+    ignore _p4;
     let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
       ignore (addExprClassDependencies (Obj.magic cond) add scope);
       ignore (addOneStmtClassDependencies (Obj.magic thenBranch) add scope);
@@ -106611,7 +107114,8 @@ let xmlParserEscapesInitExpr = fun init scope -> (try let structured = (renderSt
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47 with
       | 19 -> let _g = (let __enum_param_3887 = init in if __enum_param_3887 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_3887 with
         | HxExpr.ETryCatchRaw __enum_param_3886 -> __enum_param_3886
         | _ -> failwith "Unexpected enum parameter" : string) in let raw = (_g : string) in let __assign_3888 = Obj.magic (let __call_arg_0_3889 = raw in renderOpaqueStringMapRaw __call_arg_0_3889 : string) in (
@@ -106928,7 +107432,8 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then ignore (let _g2 = Obj.magic (match _g with
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then ignore (let _g2 = Obj.magic (match _g with
           | HxExpr.EField (__enum_param_498, _) -> __enum_param_498
           | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
           | HxExpr.EField (_, __enum_param_499) -> __enum_param_499
@@ -107121,7 +107626,8 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
                 | HxExpr.EDiscardThen (_, _) -> 43
                 | HxExpr.ESourceGroup (_, _) -> 44
                 | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                | HxExpr.EPrivateAccess (_, _) -> 46 with
+                | HxExpr.EPrivateAccess (_, _) -> 46
+                | HxExpr.ERegexLiteral (_, _) -> 47 with
                 | 15 -> let _g = Obj.magic (let __enum_param_537 = init in if __enum_param_537 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_537 with
                   | HxExpr.ECall (__enum_param_536, _) -> __enum_param_536
                   | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (let __enum_param_539 = init in if __enum_param_539 == HxRuntime.hx_null then failwith "Unexpected enum parameter" else match Obj.obj __enum_param_539 with
@@ -107173,7 +107679,8 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
                   | HxExpr.EDiscardThen (_, _) -> 43
                   | HxExpr.ESourceGroup (_, _) -> 44
                   | HxExpr.ESourceFunction (_, _, _, _) -> 45
-                  | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+                  | HxExpr.EPrivateAccess (_, _) -> 46
+                  | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
                   | HxExpr.EField (__enum_param_540, _) -> __enum_param_540
                   | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
                   | HxExpr.EField (_, __enum_param_541) -> __enum_param_541
@@ -107331,7 +107838,8 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
               | HxExpr.EDiscardThen (_, _) -> 43
               | HxExpr.ESourceGroup (_, _) -> 44
               | HxExpr.ESourceFunction (_, _, _, _) -> 45
-              | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+              | HxExpr.EPrivateAccess (_, _) -> 46
+              | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
               | HxExpr.EField (__enum_param_581, _) -> __enum_param_581
               | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
               | HxExpr.EField (_, __enum_param_582) -> __enum_param_582
@@ -107492,8 +108000,9 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
                 )
               )
             )
-            | HxStmt.SIf (_p0, _p1, _p2, _p3) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+            | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
               ignore _p3;
+              ignore _p4;
               let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in let __assign_620 = (!exprMayContributeAnonStruct) (Obj.magic cond) scope || (!stmtMayContributeAnonStruct) (Obj.magic thenBranch) scope || elseBranch != Obj.magic (HxRuntime.hx_null) && (!stmtMayContributeAnonStruct) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch)) scope in (
                 tempResult2 := __assign_620;
                 __assign_620
@@ -107673,8 +108182,9 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
                 )
               )
             ))
-            | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
+            | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let _g2 = _p2 in (
               ignore _p3;
+              ignore _p4;
               let cond = Obj.magic _g in let thenBranch = Obj.magic _g1 in let elseBranch = _g2 in (
                 ignore ((!addExpr) (Obj.magic cond) scope);
                 ignore ((!addStmt) (Obj.magic thenBranch) scope);
@@ -107831,10 +108341,11 @@ let collectAnonStructs = fun program classLookup classesToScan -> let out = Obj.
                         (!addReturnStmt) (Obj.magic s)
                       )) done
                     ))
-                    | HxStmt.SIf (_p0, _p1, _p2, _p3) -> ignore ((
+                    | HxStmt.SIf (_p0, _p1, _p2, _p3, _p4) -> ignore ((
                       ignore _p0;
                       let _g2 = Obj.magic _p1 in let _g1 = _p2 in (
                         ignore _p3;
+                        ignore _p4;
                         let thenBranch = Obj.magic _g2 in let elseBranch = _g1 in (
                           ignore ((!addReturnStmt) (Obj.magic thenBranch));
                           if elseBranch != Obj.magic (HxRuntime.hx_null) then ignore ((!addReturnStmt) (Obj.obj (HxEnum.unbox_or_obj "HxStmt" elseBranch))) else ()
@@ -108076,7 +108587,7 @@ let constructorFieldInitializer = fun stmt ctor scope -> let tempResult = ref (O
   ignore (if (match stmt with
     | HxStmt.SBlock (_, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
-    | HxStmt.SIf (_, _, _, _) -> 2
+    | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
     | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
     | HxStmt.SWhile (_, _, _) -> 5
@@ -108143,7 +108654,8 @@ let constructorFieldInitializer = fun stmt ctor scope -> let tempResult = ref (O
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 24 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 24 then let _g2 = (match _g with
       | HxExpr.EBinop (__enum_param_6586, _, _) -> __enum_param_6586
       | _ -> failwith "Unexpected enum parameter" : string) in let _g3 = Obj.magic (match _g with
       | HxExpr.EBinop (_, __enum_param_6587, _) -> __enum_param_6587
@@ -108196,7 +108708,8 @@ let constructorFieldInitializer = fun stmt ctor scope -> let tempResult = ref (O
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g5 = Obj.magic (match _g3 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g5 = Obj.magic (match _g3 with
       | HxExpr.EField (__enum_param_6591, _) -> __enum_param_6591
       | _ -> failwith "Unexpected enum parameter") in let _g6 = (match _g3 with
       | HxExpr.EField (_, __enum_param_6592) -> __enum_param_6592
@@ -108247,7 +108760,8 @@ let constructorFieldInitializer = fun stmt ctor scope -> let tempResult = ref (O
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then if (match _g4 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then if (match _g4 with
       | HxExpr.EParenthesized (_, _) -> 0
       | HxExpr.ESourceTry (_, _, _) -> 1
       | HxExpr.ESourceFor (_, _, _, _) -> 2
@@ -108294,7 +108808,8 @@ let constructorFieldInitializer = fun stmt ctor scope -> let tempResult = ref (O
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g7 = (match _g4 with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g7 = (match _g4 with
       | HxExpr.EIdent __enum_param_6593 -> __enum_param_6593
       | _ -> failwith "Unexpected enum parameter" : string) in let argName = (_g7 : string) in let fieldName = (_g6 : string) in if constructorHasField scope (fieldName : string) && constructorHasArg (Obj.magic ctor) (argName : string) then let __assign_6594 = Obj.magic (let __anonymous_value_6595 = HxAnon.create () in (
       let __anonymous_field_value_6596 = let __call_arg_0_6597 = fieldName in sanitizeIdentifier __call_arg_0_6597 in ignore (HxAnon.set __anonymous_value_6595 "field" (Obj.repr __anonymous_field_value_6596));
@@ -108453,7 +108968,8 @@ let cppFunctionArgDefaultSuffix = fun arg typeName -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 4 then if isOptionalType || isReferenceType then if isOptionalType then let __assign_9006 = " = std::nullopt" in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 4 then if isOptionalType || isReferenceType then if isOptionalType then let __assign_9006 = " = std::nullopt" in (
         tempResult := __assign_9006;
         __assign_9006
       ) else let __assign_9007 = " = nullptr" in (
@@ -110128,7 +110644,7 @@ let renderFunctionBody = fun stmts indent scope -> (try let tempString = ref (Hx
     ignore (if (let __string_eq_left_9027 = returnType in let __string_eq_right_9028 = "void" in not (HxString.equals __string_eq_left_9027 __string_eq_right_9028)) && HxArray.length stmts = 1 then ignore (let _g = Obj.magic (let __array_read_receiver_9029 = stmts in let __array_read_index_9030 = 0 in HxArray.get (Obj.magic __array_read_receiver_9029) __array_read_index_9030) in if (match _g with
       | HxStmt.SBlock (_, _) -> 0
       | HxStmt.SVar (_, _, _, _, _) -> 1
-      | HxStmt.SIf (_, _, _, _) -> 2
+      | HxStmt.SIf (_, _, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
       | HxStmt.SWhile (_, _, _) -> 5
@@ -110170,7 +110686,7 @@ let renderHelperFunctionBody = fun stmts indent scope -> (try let tempString = r
     ignore (if (let __string_eq_left_9040 = returnType in let __string_eq_right_9041 = "void" in not (HxString.equals __string_eq_left_9040 __string_eq_right_9041)) && HxArray.length stmts = 1 then ignore (let _g = Obj.magic (let __array_read_receiver_9042 = stmts in let __array_read_index_9043 = 0 in HxArray.get (Obj.magic __array_read_receiver_9042) __array_read_index_9043) in if (match _g with
       | HxStmt.SBlock (_, _) -> 0
       | HxStmt.SVar (_, _, _, _, _) -> 1
-      | HxStmt.SIf (_, _, _, _) -> 2
+      | HxStmt.SIf (_, _, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
       | HxStmt.SWhile (_, _, _) -> 5
@@ -110336,7 +110852,7 @@ let renderTracedHelperFunctionBody = fun ownerName methodName stmts indent scope
     ignore (if (let __string_eq_left_9063 = returnType in let __string_eq_right_9064 = "void" in not (HxString.equals __string_eq_left_9063 __string_eq_right_9064)) && HxArray.length stmts = 1 then ignore (let _g = Obj.magic (let __array_read_receiver_9065 = stmts in let __array_read_index_9066 = 0 in HxArray.get (Obj.magic __array_read_receiver_9065) __array_read_index_9066) in if (match _g with
       | HxStmt.SBlock (_, _) -> 0
       | HxStmt.SVar (_, _, _, _, _) -> 1
-      | HxStmt.SIf (_, _, _, _) -> 2
+      | HxStmt.SIf (_, _, _, _, _) -> 2
       | HxStmt.SForIn (_, _, _, _) -> 3
       | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
       | HxStmt.SWhile (_, _, _) -> 5
@@ -110411,7 +110927,7 @@ let renderTimedHelperFunctionBody = fun ownerName methodName stmts indent scope 
       ignore (if (let __string_eq_left_9088 = returnType in let __string_eq_right_9089 = "void" in not (HxString.equals __string_eq_left_9088 __string_eq_right_9089)) && HxArray.length stmts = 1 then ignore (let _g = Obj.magic (let __array_read_receiver_9090 = stmts in let __array_read_index_9091 = 0 in HxArray.get (Obj.magic __array_read_receiver_9090) __array_read_index_9091) in if (match _g with
         | HxStmt.SBlock (_, _) -> 0
         | HxStmt.SVar (_, _, _, _, _) -> 1
-        | HxStmt.SIf (_, _, _, _) -> 2
+        | HxStmt.SIf (_, _, _, _, _) -> 2
         | HxStmt.SForIn (_, _, _, _) -> 3
         | HxStmt.SForKeyValue (_, _, _, _, _) -> 4
         | HxStmt.SWhile (_, _, _) -> 5
@@ -110548,7 +111064,8 @@ let fieldFunctionInitExpr = fun init typeName scope -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
         | HxExpr.EIdent __enum_param_23574 -> __enum_param_23574
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_23575 = _g2 in let __string_eq_right_23576 = "__hxhx_optional_lambda" in HxString.equals __string_eq_left_23575 __string_eq_right_23576 then if HxArray.length _g1 = 2 then let _g3 = Obj.magic (let __array_read_receiver_23577 = _g1 in let __array_read_index_23578 = 0 in HxArray.get (Obj.magic __array_read_receiver_23577) __array_read_index_23578) in let _g4 = Obj.magic (let __array_read_receiver_23579 = _g1 in let __array_read_index_23580 = 1 in HxArray.get (Obj.magic __array_read_receiver_23579) __array_read_index_23580) in if (match _g3 with
         | HxExpr.EParenthesized (_, _) -> 0
@@ -110597,7 +111114,8 @@ let fieldFunctionInitExpr = fun init typeName scope -> (try (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then let _g5 = Obj.magic (match _g3 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then let _g5 = Obj.magic (match _g3 with
         | HxExpr.ELambda (__enum_param_23581, _, _) -> __enum_param_23581
         | _ -> failwith "Unexpected enum parameter") in let _g6 = Obj.magic (match _g3 with
         | HxExpr.ELambda (_, __enum_param_23582, _) -> __enum_param_23582
@@ -110652,7 +111170,8 @@ let fieldFunctionInitExpr = fun init typeName scope -> (try (
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 30 then (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 30 then (
           ignore (match _g4 with
             | HxExpr.EArrayDecl __enum_param_23584 -> __enum_param_23584
             | _ -> failwith "Unexpected enum parameter");
@@ -110973,7 +111492,8 @@ let rec enumCtorPayloadValueExpr = fun expr scope -> let tempResult = ref (HxStr
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
       | HxExpr.EIdent __enum_param_42956 -> __enum_param_42956
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g2 : string) in let args = Obj.magic _g1 in if importedEnumConstructorExpr (name : string) (Obj.magic args) scope != Obj.magic (HxRuntime.hx_null) then let __assign_42957 = (importedEnumConstructorExpr (name : string) (Obj.magic args) scope : string) in (
       tempResult := __assign_42957;

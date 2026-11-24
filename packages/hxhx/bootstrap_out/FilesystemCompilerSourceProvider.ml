@@ -78,7 +78,7 @@ let readSource = fun self (filePath : string) -> let bytes = Obj.magic (readByte
 
 let parseFilteredSource = fun self (input : Obj.t) -> (
   ignore self;
-  ParserStage.parseFilteredSource input
+  ParserStage.parseFilteredSource input (Obj.magic (HxRuntime.hx_null))
 )
 
 let isFile = fun self (path : string) -> (

@@ -184,22 +184,13 @@ let anonymousFields = fun hx_type -> (try (
           ignore (_g := __new_131);
           __new_131
         ));
-        let key = (Obj.obj (HxAnon.get field "name") : string) in let tempTyType = ref (Obj.magic (HxRuntime.hx_null) : TyType.t) in (
-          ignore (if HxRuntime.unbox_bool_or_obj (HxAnon.get field "isOptional") && not (TyType.isNullable (Obj.magic (Obj.obj (HxAnon.get field "type"))) ()) then let __assign_132 = Obj.magic (TyType.nullable (Obj.magic (Obj.obj (HxAnon.get field "type"))) (Obj.magic (HxRuntime.hx_null))) in (
-            tempTyType := __assign_132;
-            __assign_132
-          ) else let __assign_133 = Obj.magic (Obj.obj (HxAnon.get field "type")) in (
-            tempTyType := __assign_133;
-            __assign_133
-          ));
-          let value = Obj.magic (!tempTyType) in HxMap.set_string (Obj.magic fields) (key : string) value
-        )
+        let key = (Obj.obj (HxAnon.get field "name") : string) in let value = Obj.magic (TyAnonymousField.valueType field) in HxMap.set_string (Obj.magic fields) (key : string) value
       )) done);
       Obj.repr fields
     )
   )
 ) with
-  | HxRuntime.Hx_return __ret_134 -> (Obj.obj __ret_134 : Obj.t) : Obj.t)
+  | HxRuntime.Hx_return __ret_132 -> (Obj.obj __ret_132 : Obj.t) : Obj.t)
 
 let rec visit = fun pattern expected ctx pos -> ignore (try ignore ((
   ignore (if pattern == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return_void) else ());

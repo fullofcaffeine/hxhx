@@ -52,7 +52,8 @@ let renderCall = fun callee arguments -> (try let tempMaybeStruct = ref (Obj.mag
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match callee with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match callee with
     | HxExpr.EIdent __enum_param_1 -> __enum_param_1
     | _ -> failwith "Unexpected enum parameter" : string) in match _g with
     | "$hash" | "__dollar__hash" -> let __assign_3 = Obj.magic (let __anonymous_value_4 = HxAnon.create () in (

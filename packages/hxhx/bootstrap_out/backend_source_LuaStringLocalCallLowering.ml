@@ -131,7 +131,8 @@ let rec dependsOnExactStringValue = fun expression locals fields -> let tempResu
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g2 = (match _g with
         | HxExpr.EIdent __enum_param_41 -> __enum_param_41
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_42 = _g2 in let __string_eq_right_43 = "__hxhx_lua_string_concat" in HxString.equals __string_eq_left_42 __string_eq_right_43 then let __assign_44 = true in (
         tempResult := __assign_44;
@@ -234,7 +235,8 @@ let body = fun projection -> (
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g2 = Obj.magic (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g2 = Obj.magic (match _g with
         | HxExpr.EField (__enum_param_2, _) -> __enum_param_2
         | _ -> failwith "Unexpected enum parameter") in let _g3 = (match _g with
         | HxExpr.EField (_, __enum_param_3) -> __enum_param_3

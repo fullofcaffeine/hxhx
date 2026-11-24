@@ -260,7 +260,8 @@ let requireLoop = fun self (binding__local : HxForBinding.hxforbinding) (iterabl
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then ignore ((
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then ignore ((
           ignore (match _g2 with
             | HxExpr.ELambda (__enum_param_125, _, _) -> __enum_param_125
             | _ -> failwith "Unexpected enum parameter");
@@ -413,7 +414,8 @@ let read = fun self (value__local : HxExpr.hxexpr) -> (try (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 12 then let _g = (match value__local with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 12 then let _g = (match value__local with
       | HxExpr.EIdent __enum_param_163 -> __enum_param_163
       | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g : string) in let __assign_164 = (name : string) in (
       tempString := __assign_164;
@@ -502,7 +504,8 @@ let rec expressionContains = fun expression target -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then (
     ignore (match expression with
       | HxExpr.ELambda (__enum_param_173, _, _) -> __enum_param_173
       | _ -> failwith "Unexpected enum parameter");
@@ -611,7 +614,8 @@ let requireLexicalExpression = fun self (expression : HxExpr.hxexpr) -> ignore (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 18 then ignore ((
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 18 then ignore ((
       ignore (match _g2 with
         | HxExpr.ELambda (__enum_param_96, _, _) -> __enum_param_96
         | _ -> failwith "Unexpected enum parameter");
@@ -854,7 +858,8 @@ let allowsFinalFieldWrite = fun self (field__local : TypedBackendFieldOccurrence
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then let _g1 = Obj.magic (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then let _g1 = Obj.magic (match _g with
         | HxExpr.EField (__enum_param_71, _) -> __enum_param_71
         | _ -> failwith "Unexpected enum parameter") in (
         ignore (match _g with
@@ -907,7 +912,8 @@ let allowsFinalFieldWrite = fun self (field__local : TypedBackendFieldOccurrence
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_73 = true in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_73 = true in (
           tempShortCircuit := __assign_73;
           __assign_73
         ) else let __assign_74 = false in (
@@ -973,7 +979,8 @@ let receiverType = fun self (expression : HxExpr.hxexpr) -> (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then ignore () else HxType.hx_throw_typed_rtti (Obj.repr "managed receiver read requires this") ["Dynamic"]);
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then ignore () else HxType.hx_throw_typed_rtti (Obj.repr "managed receiver read requires this") ["Dynamic"]);
   let facts = Obj.magic ((Obj.magic ((Obj.obj (HxAnon.get ((Obj.magic self : t).plan) "requireFunction") : _ -> _) (Obj.magic ((Obj.magic self : t).owner))) : Backend_cpp_CppManagedStoragePlan.cppmanagedfunctionplan_t).facts) in let hx_type = Obj.magic ((Obj.magic (TypedBackendCaptureCatalog.getPlan (Obj.magic (captureCatalog (Obj.magic self) ())) ()) : TypedCapturePlan.t).receiverType) in (
     ignore (if not ((Obj.magic facts : TypedCaptureFunction.t).directReceiver) || hx_type == Obj.magic (HxRuntime.hx_null) then HxType.hx_throw_typed_rtti (Obj.repr "managed receiver read lacks its exact typed capture facts") ["Dynamic"] else ());
     ignore (Backend_cpp_CppManagedClosureAbi.assertComplete (Obj.magic hx_type));

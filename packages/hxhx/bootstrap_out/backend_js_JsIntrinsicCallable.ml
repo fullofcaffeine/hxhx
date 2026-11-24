@@ -53,7 +53,8 @@ let emitValue = fun expression scope -> (try (
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then ignore ((
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then ignore ((
     ignore (match expression with
       | HxExpr.EField (__enum_param_1, _) -> __enum_param_1
       | _ -> failwith "Unexpected enum parameter");

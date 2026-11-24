@@ -163,7 +163,8 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let op = (_g4 : string) in let right = Obj.magic _g6 in if let __call_arg_0_38 = op in isInlineBinaryOperator __call_arg_0_38 then let __assign_39 = Obj.magic (let __string_part_40 = "(" in let __string_part_41 = HxString.toStdString receiver in let __string_part_42 = " " in let __string_part_43 = HxString.toStdString op in let __string_part_44 = " " in let __string_part_45 = HxString.toStdString (renderExpression (Obj.magic right)) in let __string_part_46 = ")" in (((((__string_part_40 ^ __string_part_41) ^ __string_part_42) ^ __string_part_43) ^ __string_part_44) ^ __string_part_45) ^ __string_part_46 : string) in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let op = (_g4 : string) in let right = Obj.magic _g6 in if let __call_arg_0_38 = op in isInlineBinaryOperator __call_arg_0_38 then let __assign_39 = Obj.magic (let __string_part_40 = "(" in let __string_part_41 = HxString.toStdString receiver in let __string_part_42 = " " in let __string_part_43 = HxString.toStdString op in let __string_part_44 = " " in let __string_part_45 = HxString.toStdString (renderExpression (Obj.magic right)) in let __string_part_46 = ")" in (((((__string_part_40 ^ __string_part_41) ^ __string_part_42) ^ __string_part_43) ^ __string_part_44) ^ __string_part_45) ^ __string_part_46 : string) in (
           tempResult := __assign_39;
           __assign_39
         ) else let __assign_47 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -222,7 +223,8 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_49 = Obj.magic (receiver : string) in (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_49 = Obj.magic (receiver : string) in (
             tempResult := __assign_49;
             __assign_49
           ) else let __assign_50 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -279,7 +281,8 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let __assign_51 = Obj.magic (receiver : string) in (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let __assign_51 = Obj.magic (receiver : string) in (
             tempResult := __assign_51;
             __assign_51
           ) else let __assign_52 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -342,7 +345,8 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
           | HxExpr.EDiscardThen (_, _) -> 43
           | HxExpr.ESourceGroup (_, _) -> 44
           | HxExpr.ESourceFunction (_, _, _, _) -> 45
-          | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if (let __enum_eq_left_54 = op in let __enum_eq_right_55 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_54) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_55)) || (let __enum_eq_left_56 = op in let __enum_eq_right_57 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_56) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_57)) then let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in if let __enum_eq_left_58 = fixity in let __enum_eq_right_59 = HxUnaryFixity.Postfix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_58) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_59) then let __assign_60 = Obj.magic ((("(" ^ HxString.toStdString receiver) ^ HxString.toStdString token) ^ ")" : string) in (
+          | HxExpr.EPrivateAccess (_, _) -> 46
+          | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let fixity = Obj.magic _g5 in let op = Obj.magic _g4 in if (let __enum_eq_left_54 = op in let __enum_eq_right_55 = HxUnaryOperator.Increment in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_54) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_55)) || (let __enum_eq_left_56 = op in let __enum_eq_right_57 = HxUnaryOperator.Decrement in HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_left_56) == HxEnum.unbox_or_obj "HxUnaryOperator" (Obj.repr __enum_eq_right_57)) then let token = (HxUnaryOperatorTools.sourceToken (Obj.magic op) : string) in if let __enum_eq_left_58 = fixity in let __enum_eq_right_59 = HxUnaryFixity.Postfix in HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_left_58) == HxEnum.unbox_or_obj "HxUnaryFixity" (Obj.repr __enum_eq_right_59) then let __assign_60 = Obj.magic ((("(" ^ HxString.toStdString receiver) ^ HxString.toStdString token) ^ ")" : string) in (
           tempResult := __assign_60;
           __assign_60
         ) else let __assign_61 = Obj.magic ((("(" ^ HxString.toStdString token) ^ HxString.toStdString receiver) ^ ")" : string) in (
@@ -403,7 +407,8 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let right = Obj.magic _g6 in let __assign_65 = Obj.magic (let __string_part_66 = HxString.toStdString receiver in let __string_part_67 = " += " in let __string_part_68 = HxString.toStdString (renderExpression (Obj.magic right)) in (__string_part_66 ^ __string_part_67) ^ __string_part_68 : string) in (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let right = Obj.magic _g6 in let __assign_65 = Obj.magic (let __string_part_66 = HxString.toStdString receiver in let __string_part_67 = " += " in let __string_part_68 = HxString.toStdString (renderExpression (Obj.magic right)) in (__string_part_66 ^ __string_part_67) ^ __string_part_68 : string) in (
             tempResult := __assign_65;
             __assign_65
           ) else let __assign_69 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (
@@ -457,7 +462,8 @@ let renderInlineMethodBody = fun receiver fn renderExpression -> let tempResult 
             | HxExpr.EDiscardThen (_, _) -> 43
             | HxExpr.ESourceGroup (_, _) -> 44
             | HxExpr.ESourceFunction (_, _, _, _) -> 45
-            | HxExpr.EPrivateAccess (_, _) -> 46) = 10 then let right = Obj.magic _g6 in let __assign_70 = Obj.magic (let __string_part_71 = HxString.toStdString receiver in let __string_part_72 = " -= " in let __string_part_73 = HxString.toStdString (renderExpression (Obj.magic right)) in (__string_part_71 ^ __string_part_72) ^ __string_part_73 : string) in (
+            | HxExpr.EPrivateAccess (_, _) -> 46
+            | HxExpr.ERegexLiteral (_, _) -> 47) = 10 then let right = Obj.magic _g6 in let __assign_70 = Obj.magic (let __string_part_71 = HxString.toStdString receiver in let __string_part_72 = " -= " in let __string_part_73 = HxString.toStdString (renderExpression (Obj.magic right)) in (__string_part_71 ^ __string_part_72) ^ __string_part_73 : string) in (
             tempResult := __assign_70;
             __assign_70
           ) else let __assign_74 = Obj.magic (Obj.magic (HxRuntime.hx_null)) in (

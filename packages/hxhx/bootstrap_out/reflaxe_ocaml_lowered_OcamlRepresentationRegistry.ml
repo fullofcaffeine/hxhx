@@ -175,7 +175,7 @@ let exactIntReason = fun domain -> let tempResult = ref (HxString.hx_null_string
 
 let exactBoolReason = fun domain -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match domain with
-    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: no exact Bool storage reason exists for " ^ "<unsupported>")) ["Dynamic"]
+    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: no exact Bool storage reason exists for " ^ HxString.toStdString domain)) ["Dynamic"]
     | "captured-local-storage" -> let __assign_777 = "An exact, non-null Haxe Bool uses OCaml bool directly inside the one local cell shared with nested functions." in (
       tempResult := __assign_777;
       __assign_777
@@ -203,7 +203,7 @@ let exactBoolReason = fun domain -> let tempResult = ref (HxString.hx_null_strin
 
 let representedArrayReason = fun descriptor domain -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match domain with
-    | "array-element" | "instance-field" | "static-field" -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_782 = "reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: no represented " in let __string_part_783 = HxString.toStdString (Obj.obj (HxAnon.get descriptor "arraySemanticTypeId")) in let __string_part_784 = " local reason exists for " in let __string_part_785 = "<unsupported>" in ((__string_part_782 ^ __string_part_783) ^ __string_part_784) ^ __string_part_785)) ["Dynamic"]
+    | "array-element" | "instance-field" | "static-field" -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_782 = "reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: no represented " in let __string_part_783 = HxString.toStdString (Obj.obj (HxAnon.get descriptor "arraySemanticTypeId")) in let __string_part_784 = " local reason exists for " in let __string_part_785 = HxString.toStdString domain in ((__string_part_782 ^ __string_part_783) ^ __string_part_784) ^ __string_part_785)) ["Dynamic"]
     | "captured-local-storage" -> let __assign_786 = let __string_part_787 = "An exact " in let __string_part_788 = HxString.toStdString (Obj.obj (HxAnon.get descriptor "arraySemanticTypeId")) in let __string_part_789 = " captured local stores the descriptor-owned " in let __string_part_790 = HxString.toStdString (Obj.obj (HxAnon.get descriptor "arrayCarrierTypeId")) in let __string_part_791 = " container in the ref cell shared with nested functions; the cell owns replacement and each HxArray owns shared element mutation." in (((__string_part_787 ^ __string_part_788) ^ __string_part_789) ^ __string_part_790) ^ __string_part_791 in (
       tempResult := __assign_786;
       __assign_786
@@ -223,7 +223,7 @@ let representedArrayReason = fun descriptor domain -> let tempResult = ref (HxSt
 
 let exactNullIntReason = fun domain -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match domain with
-    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: no exact Null<Int> storage reason exists for " ^ "<unsupported>")) ["Dynamic"]
+    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-null-int-domain]: no exact Null<Int> storage reason exists for " ^ HxString.toStdString domain)) ["Dynamic"]
     | "captured-local-storage" -> let __assign_804 = "An exact Null<Int> captured local stores its Obj.t carrier in the ref cell shared with nested functions; occurrence plans own every carrier crossing." in (
       tempResult := __assign_804;
       __assign_804
@@ -251,7 +251,7 @@ let exactNullIntReason = fun domain -> let tempResult = ref (HxString.hx_null_st
 
 let exactNullBoolReason = fun domain -> let tempResult = ref (HxString.hx_null_string : string) in (
   ignore (match domain with
-    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-null-bool-domain]: no exact Null<Bool> storage reason exists for " ^ "<unsupported>")) ["Dynamic"]
+    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-null-bool-domain]: no exact Null<Bool> storage reason exists for " ^ HxString.toStdString domain)) ["Dynamic"]
     | "captured-local-storage" -> let __assign_809 = "An exact Null<Bool> captured local stores its Obj.t carrier in the ref cell shared with nested functions; occurrence plans preserve all three stored states and own truthiness reads." in (
       tempResult := __assign_809;
       __assign_809
@@ -308,10 +308,10 @@ let exactStringReason = fun domain -> let tempResult = ref (HxString.hx_null_str
   !tempResult
 )
 
-let requireBytesInternalDomain = fun domain semanticTypeId -> ignore (if let __string_eq_left_820 = domain in let __string_eq_right_821 = "internal-value" in not (HxString.equals __string_eq_left_820 __string_eq_right_821) then HxType.hx_throw_typed_rtti (Obj.repr ((("reflaxe.ocaml [ocaml-representation:unsupported-bytes-domain]: exact " ^ HxString.toStdString semanticTypeId) ^ " is admitted only as an internal value, not ") ^ "<unsupported>")) ["Dynamic"] else ())
+let requireBytesInternalDomain = fun domain semanticTypeId -> ignore (if let __string_eq_left_820 = domain in let __string_eq_right_821 = "internal-value" in not (HxString.equals __string_eq_left_820 __string_eq_right_821) then HxType.hx_throw_typed_rtti (Obj.repr ((("reflaxe.ocaml [ocaml-representation:unsupported-bytes-domain]: exact " ^ HxString.toStdString semanticTypeId) ^ " is admitted only as an internal value, not ") ^ HxString.toStdString domain)) ["Dynamic"] else ())
 
 let requireNullablePrimitiveDomain = fun domain semanticTypeId -> ignore (match domain with
-  | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ((("reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact " ^ HxString.toStdString semanticTypeId) ^ " is admitted only for internal, local, instance-field, or static-field storage, not ") ^ "<unsupported>")) ["Dynamic"]
+  | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ((("reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact " ^ HxString.toStdString semanticTypeId) ^ " is admitted only for internal, local, instance-field, or static-field storage, not ") ^ HxString.toStdString domain)) ["Dynamic"]
   | "generic-call-value" -> HxType.hx_throw_typed_rtti (Obj.repr "reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: generic class transport cannot admit nullable primitives") ["Dynamic"]
   | "captured-local-storage" | "instance-field" | "internal-value" | "mutable-local-storage" | "static-field" -> ignore ()
   | _ -> ignore ())
@@ -981,7 +981,7 @@ let selectMonomorphicClassDecision = fun self (layout : Obj.t) (domain : string)
       tempOcamlRepresentationStorageMutationPolicy := __assign_167;
       __assign_167
     )
-    | _ -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_162 = "reflaxe.ocaml [ocaml-representation:unsupported-class-domain]: " in let __string_part_163 = HxString.toStdString (Obj.obj (HxAnon.get layout "semanticTypeId")) in let __string_part_164 = " is admitted only for immutable internal bindings or captured local cells, not " in let __string_part_165 = "<unsupported>" in ((__string_part_162 ^ __string_part_163) ^ __string_part_164) ^ __string_part_165)) ["Dynamic"]);
+    | _ -> HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_162 = "reflaxe.ocaml [ocaml-representation:unsupported-class-domain]: " in let __string_part_163 = HxString.toStdString (Obj.obj (HxAnon.get layout "semanticTypeId")) in let __string_part_164 = " is admitted only for immutable internal bindings or captured local cells, not " in let __string_part_165 = HxString.toStdString domain in ((__string_part_162 ^ __string_part_163) ^ __string_part_164) ^ __string_part_165)) ["Dynamic"]);
   let storageMutationPolicy = (!tempOcamlRepresentationStorageMutationPolicy : string) in let tempString = ref (HxString.hx_null_string : string) in (
     ignore (match domain with
       | "captured-local-storage" -> let __assign_168 = let __string_part_169 = "The exact whole-program-monomorphic class " in let __string_part_170 = HxString.toStdString (Obj.obj (HxAnon.get layout "semanticTypeId")) in let __string_part_171 = " uses nominal record " in let __string_part_172 = HxString.toStdString (Obj.obj (HxAnon.get layout "canonicalCarrierTypeId")) in let __string_part_173 = " inside one captured local cell. The cell owns whole-value replacement while every initializer and assignment is separately proven to produce that same nominal record." in (((__string_part_169 ^ __string_part_170) ^ __string_part_171) ^ __string_part_172) ^ __string_part_173 in (
@@ -1078,7 +1078,7 @@ let selectExactInt = fun self (domain : string) -> let tempOcamlRepresentationSt
 )
 
 let selectExactInt64 = fun self (domain : string) -> (
-  ignore (if let __string_eq_left_204 = domain in let __string_eq_right_205 = "internal-value" in not (HxString.equals __string_eq_left_204 __string_eq_right_205) then HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-int64-domain]: exact haxe.Int64 is admitted only as an internal value, not " ^ "<unsupported>")) ["Dynamic"] else ());
+  ignore (if let __string_eq_left_204 = domain in let __string_eq_right_205 = "internal-value" in not (HxString.equals __string_eq_left_204 __string_eq_right_205) then HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-int64-domain]: exact haxe.Int64 is admitted only as an internal value, not " ^ HxString.toStdString domain)) ["Dynamic"] else ());
   register (Obj.magic self) (let __anon_206 = HxAnon.create () in (
     ignore (HxAnon.set __anon_206 "semanticTypeId" (Obj.repr "haxe.Int64"));
     ignore (HxAnon.set __anon_206 "domain" (Obj.repr domain));
@@ -1111,7 +1111,7 @@ let selectExactInt64 = fun self (domain : string) -> (
 )
 
 let selectExactFloat = fun self (domain : string) -> (
-  ignore (if let __string_eq_left_213 = domain in let __string_eq_right_214 = "internal-value" in not (HxString.equals __string_eq_left_213 __string_eq_right_214) then HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-float-domain]: exact Float is admitted only as an internal value, not " ^ "<unsupported>")) ["Dynamic"] else ());
+  ignore (if let __string_eq_left_213 = domain in let __string_eq_right_214 = "internal-value" in not (HxString.equals __string_eq_left_213 __string_eq_right_214) then HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-float-domain]: exact Float is admitted only as an internal value, not " ^ HxString.toStdString domain)) ["Dynamic"] else ());
   register (Obj.magic self) (let __anon_215 = HxAnon.create () in (
     ignore (HxAnon.set __anon_215 "semanticTypeId" (Obj.repr "Float"));
     ignore (HxAnon.set __anon_215 "domain" (Obj.repr domain));
@@ -1142,7 +1142,7 @@ let selectExactFloat = fun self (domain : string) -> (
 
 let selectExactBool = fun self (domain : string) -> let tempOcamlRepresentationStorageMutationPolicy = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match domain with
-    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: exact Bool is admitted only for internal, local, instance-field, or static-field storage, not " ^ "<unsupported>")) ["Dynamic"]
+    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-bool-domain]: exact Bool is admitted only for internal, local, instance-field, or static-field storage, not " ^ HxString.toStdString domain)) ["Dynamic"]
     | "captured-local-storage" | "mutable-local-storage" -> let __assign_222 = ("shared-local-cell" : string) in (
       tempOcamlRepresentationStorageMutationPolicy := __assign_222;
       __assign_222
@@ -1256,7 +1256,7 @@ let selectExactString = fun self (domain : string) -> let tempOcamlRepresentatio
 
 let selectNormalizedRepresentedArray = fun self (normalized : Obj.t) (domain : string) -> let tempOcamlRepresentationStorageMutationPolicy = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match domain with
-    | "array-element" | "instance-field" | "static-field" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: a represented array is admitted only for internal, mutable-local, or captured-local storage, not " ^ "<unsupported>")) ["Dynamic"]
+    | "array-element" | "instance-field" | "static-field" -> HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-array-domain]: a represented array is admitted only for internal, mutable-local, or captured-local storage, not " ^ HxString.toStdString domain)) ["Dynamic"]
     | "captured-local-storage" | "mutable-local-storage" -> let __assign_233 = ("shared-local-cell" : string) in (
       tempOcamlRepresentationStorageMutationPolicy := __assign_233;
       __assign_233
@@ -1304,7 +1304,7 @@ let selectNormalizedRepresentedArray = fun self (normalized : Obj.t) (domain : s
 )
 
 let selectExactDynamic = fun self (domain : string) -> (
-  ignore (if let __string_eq_left_269 = domain in let __string_eq_right_270 = "internal-value" in not (HxString.equals __string_eq_left_269 __string_eq_right_270) then HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-dynamic-domain]: Dynamic is admitted only as an internal value, not " ^ "<unsupported>")) ["Dynamic"] else ());
+  ignore (if let __string_eq_left_269 = domain in let __string_eq_right_270 = "internal-value" in not (HxString.equals __string_eq_left_269 __string_eq_right_270) then HxType.hx_throw_typed_rtti (Obj.repr ("reflaxe.ocaml [ocaml-representation:unsupported-dynamic-domain]: Dynamic is admitted only as an internal value, not " ^ HxString.toStdString domain)) ["Dynamic"] else ());
   register (Obj.magic self) (let __anon_271 = HxAnon.create () in (
     ignore (HxAnon.set __anon_271 "semanticTypeId" (Obj.repr "Dynamic"));
     ignore (HxAnon.set __anon_271 "domain" (Obj.repr domain));
@@ -1432,7 +1432,7 @@ let selectExactNullBytes = fun self (domain : string) -> (
 
 let selectExactNullablePrimitive = fun self (domain : string) (semanticTypeId : string) (reason : string) (proof : Obj.t) -> let tempOcamlRepresentationStorageMutationPolicy = ref (Obj.magic (HxRuntime.hx_null) : string) in (
   ignore (match domain with
-    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ((("reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact " ^ HxString.toStdString semanticTypeId) ^ " is admitted only for internal, local, instance-field, or static-field storage, not ") ^ "<unsupported>")) ["Dynamic"]
+    | "array-element" -> HxType.hx_throw_typed_rtti (Obj.repr ((("reflaxe.ocaml [ocaml-representation:unsupported-nullable-primitive-domain]: exact " ^ HxString.toStdString semanticTypeId) ^ " is admitted only for internal, local, instance-field, or static-field storage, not ") ^ HxString.toStdString domain)) ["Dynamic"]
     | "captured-local-storage" | "mutable-local-storage" -> let __assign_439 = ("shared-local-cell" : string) in (
       tempOcamlRepresentationStorageMutationPolicy := __assign_439;
       __assign_439
@@ -1530,7 +1530,7 @@ let registerMonomorphicClass = fun self (selection : Obj.t) -> (try let programR
         __old_86
       ) in let field = let __array_read_receiver_88 = fields in let __array_read_index_89 = index in HxArray.get (Obj.magic __array_read_receiver_88) __array_read_index_89 in (
         ignore (if Obj.obj (HxAnon.get field "declarationOrder") <> index || (let __string_receiver_90 = Obj.obj (HxAnon.get field "sourceFieldName") in HxString.length __string_receiver_90) = 0 || (let __string_receiver_91 = Obj.obj (HxAnon.get field "targetFieldName") in HxString.length __string_receiver_91) = 0 || (let __string_receiver_92 = Obj.obj (HxAnon.get field "semanticTypeId") in HxString.length __string_receiver_92) = 0 || (let __string_receiver_93 = Obj.obj (HxAnon.get field "carrierTypeId") in HxString.length __string_receiver_93) = 0 || (let __string_receiver_94 = Obj.obj (HxAnon.get field "representationId") in HxString.length __string_receiver_94) = 0 then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_95 = "reflaxe.ocaml [ocaml-representation:invalid-class-layout]: " in let __string_part_96 = HxString.toStdString (Obj.obj (HxAnon.get selection "semanticTypeId")) in let __string_part_97 = " has an invalid field at declaration order " in let __string_part_98 = string_of_int index in ((__string_part_95 ^ __string_part_96) ^ __string_part_97) ^ __string_part_98)) ["Dynamic"] else ());
-        let representation = require (Obj.magic self) (Obj.obj (HxAnon.get field "representationId") : string) (programRevision : string) in if (let __string_eq_left_99 = Obj.obj (HxAnon.get representation "semanticTypeId") in let __string_eq_right_100 = Obj.obj (HxAnon.get field "semanticTypeId") in not (HxString.equals __string_eq_left_99 __string_eq_right_100)) || (let __string_eq_left_101 = Obj.obj (HxAnon.get representation "carrierTypeId") in let __string_eq_right_102 = Obj.obj (HxAnon.get field "carrierTypeId") in not (HxString.equals __string_eq_left_101 __string_eq_right_102)) || (let __string_eq_left_103 = Obj.obj (HxAnon.get representation "domain") in let __string_eq_right_104 = "instance-field" in not (HxString.equals __string_eq_left_103 __string_eq_right_104)) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_105 = "reflaxe.ocaml [ocaml-representation:class-field-mismatch]: " in let __string_part_106 = HxString.toStdString (Obj.obj (HxAnon.get selection "semanticTypeId")) in let __string_part_107 = "." in let __string_part_108 = HxString.toStdString (Obj.obj (HxAnon.get field "sourceFieldName")) in let __string_part_109 = " expects " in let __string_part_110 = HxString.toStdString (Obj.obj (HxAnon.get field "semanticTypeId")) in let __string_part_111 = " -> " in let __string_part_112 = HxString.toStdString (Obj.obj (HxAnon.get field "carrierTypeId")) in let __string_part_113 = ", but " in let __string_part_114 = HxString.toStdString (Obj.obj (HxAnon.get representation "id")) in let __string_part_115 = " selects " in let __string_part_116 = HxString.toStdString (Obj.obj (HxAnon.get representation "semanticTypeId")) in let __string_part_117 = " -> " in let __string_part_118 = HxString.toStdString (Obj.obj (HxAnon.get representation "carrierTypeId")) in let __string_part_119 = " in " in let __string_part_120 = "<unsupported>" in ((((((((((((((__string_part_105 ^ __string_part_106) ^ __string_part_107) ^ __string_part_108) ^ __string_part_109) ^ __string_part_110) ^ __string_part_111) ^ __string_part_112) ^ __string_part_113) ^ __string_part_114) ^ __string_part_115) ^ __string_part_116) ^ __string_part_117) ^ __string_part_118) ^ __string_part_119) ^ __string_part_120)) ["Dynamic"] else ()
+        let representation = require (Obj.magic self) (Obj.obj (HxAnon.get field "representationId") : string) (programRevision : string) in if (let __string_eq_left_99 = Obj.obj (HxAnon.get representation "semanticTypeId") in let __string_eq_right_100 = Obj.obj (HxAnon.get field "semanticTypeId") in not (HxString.equals __string_eq_left_99 __string_eq_right_100)) || (let __string_eq_left_101 = Obj.obj (HxAnon.get representation "carrierTypeId") in let __string_eq_right_102 = Obj.obj (HxAnon.get field "carrierTypeId") in not (HxString.equals __string_eq_left_101 __string_eq_right_102)) || (let __string_eq_left_103 = Obj.obj (HxAnon.get representation "domain") in let __string_eq_right_104 = "instance-field" in not (HxString.equals __string_eq_left_103 __string_eq_right_104)) then HxType.hx_throw_typed_rtti (Obj.repr (let __string_part_105 = "reflaxe.ocaml [ocaml-representation:class-field-mismatch]: " in let __string_part_106 = HxString.toStdString (Obj.obj (HxAnon.get selection "semanticTypeId")) in let __string_part_107 = "." in let __string_part_108 = HxString.toStdString (Obj.obj (HxAnon.get field "sourceFieldName")) in let __string_part_109 = " expects " in let __string_part_110 = HxString.toStdString (Obj.obj (HxAnon.get field "semanticTypeId")) in let __string_part_111 = " -> " in let __string_part_112 = HxString.toStdString (Obj.obj (HxAnon.get field "carrierTypeId")) in let __string_part_113 = ", but " in let __string_part_114 = HxString.toStdString (Obj.obj (HxAnon.get representation "id")) in let __string_part_115 = " selects " in let __string_part_116 = HxString.toStdString (Obj.obj (HxAnon.get representation "semanticTypeId")) in let __string_part_117 = " -> " in let __string_part_118 = HxString.toStdString (Obj.obj (HxAnon.get representation "carrierTypeId")) in let __string_part_119 = " in " in let __string_part_120 = HxString.toStdString (Obj.obj (HxAnon.get representation "domain")) in ((((((((((((((__string_part_105 ^ __string_part_106) ^ __string_part_107) ^ __string_part_108) ^ __string_part_109) ^ __string_part_110) ^ __string_part_111) ^ __string_part_112) ^ __string_part_113) ^ __string_part_114) ^ __string_part_115) ^ __string_part_116) ^ __string_part_117) ^ __string_part_118) ^ __string_part_119) ^ __string_part_120)) ["Dynamic"] else ()
       )) done);
       let canonicalCarrierTypeId = let __string_part_121 = HxString.toStdString (Obj.obj (HxAnon.get selection "targetModuleName")) in let __string_part_122 = "." in let __string_part_123 = HxString.toStdString (Obj.obj (HxAnon.get selection "targetTypeName")) in (__string_part_121 ^ __string_part_122) ^ __string_part_123 in let layoutFingerprint = (HxArray.join (let __array_receiver_124 = Obj.magic (let __represented_array_125 = HxArray.create () in let __represented_array_element_0_126 = "ocaml-representation-v24" in (
         ignore (HxArray.push __represented_array_125 __represented_array_element_0_126);

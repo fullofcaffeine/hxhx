@@ -89,7 +89,8 @@ let functionValue = fun self (projection : TypedBackendFunctionProjection.t) (ex
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
     ignore (match expression with
       | HxExpr.EField (__enum_param_5, _) -> __enum_param_5
       | _ -> failwith "Unexpected enum parameter");
@@ -168,7 +169,8 @@ let initializerValue = fun self (projection : TypedBackendFieldInitializerProjec
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 13 then (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 13 then (
     ignore (match expression with
       | HxExpr.EField (__enum_param_14, _) -> __enum_param_14
       | _ -> failwith "Unexpected enum parameter");
@@ -1490,7 +1492,8 @@ let assertSuperMethod = fun self (projection : TypedBackendFunctionProjection.t)
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then let __assign_128 = true in (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 11 then let __assign_128 = true in (
         tempBool := __assign_128;
         __assign_128
       ) else let __assign_129 = false in (
@@ -1736,7 +1739,8 @@ let instanceDispatch = fun self (call : TypedBackendInstanceCallOccurrence.t) (c
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 11 then let __assign_44 = true in (
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 11 then let __assign_44 = true in (
     tempShortCircuit := __assign_44;
     __assign_44
   ) else let __assign_45 = false in (

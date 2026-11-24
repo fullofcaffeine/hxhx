@@ -231,7 +231,8 @@ let rewrite = fun self (facts : Obj.t) (original : HxExpr.hxexpr) (rebuilt : HxE
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then (
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then (
         ignore (match rebuilt with
           | HxExpr.ECall (__enum_param_2, _) -> __enum_param_2
           | _ -> failwith "Unexpected enum parameter");
@@ -342,7 +343,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 15 then let _g = Obj.magic (match expression with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 15 then let _g = Obj.magic (match expression with
     | HxExpr.ECall (__enum_param_62, _) -> __enum_param_62
     | _ -> failwith "Unexpected enum parameter") in let _g1 = Obj.magic (match expression with
     | HxExpr.ECall (_, __enum_param_63) -> __enum_param_63
@@ -393,7 +395,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
     | HxExpr.EDiscardThen (_, _) -> 43
     | HxExpr.ESourceGroup (_, _) -> 44
     | HxExpr.ESourceFunction (_, _, _, _) -> 45
-    | HxExpr.EPrivateAccess (_, _) -> 46) = 36 then let _g2 = (match _g with
+    | HxExpr.EPrivateAccess (_, _) -> 46
+    | HxExpr.ERegexLiteral (_, _) -> 47) = 36 then let _g2 = (match _g with
     | HxExpr.EUnsupported __enum_param_64 -> __enum_param_64
     | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_65 = _g2 in let __string_eq_right_66 = "$hxhx:python-runtime-type" in HxString.equals __string_eq_left_65 __string_eq_right_66 then let payload = Obj.magic _g1 in let __assign_67 = Obj.magic payload in (
     tempArray := __assign_67;
@@ -448,7 +451,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g2 = (match _g with
         | HxExpr.EString __enum_param_70 -> __enum_param_70
         | _ -> failwith "Unexpected enum parameter" : string) in let tag = (_g2 : string) in let __assign_71 = Obj.magic (let __anon_72 = HxAnon.create () in (
         ignore (HxAnon.set __anon_72 "check" (HxEnum.box_if_needed "backend.source.PythonRuntimeTypeCheck" (Obj.repr (coreCheck (tag : string)))));
@@ -505,7 +509,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g2 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g2 = (match _g with
         | HxExpr.EString __enum_param_77 -> __enum_param_77
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_78 = _g2 in let __string_eq_right_79 = "class" in HxString.equals __string_eq_left_78 __string_eq_right_79 then if (match _g1 with
         | HxExpr.EParenthesized (_, _) -> 0
@@ -554,7 +559,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g3 = (match _g1 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g3 = (match _g1 with
         | HxExpr.EString __enum_param_80 -> __enum_param_80
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g3 : string) in let __assign_81 = Obj.magic (let __anon_82 = HxAnon.create () in (
         ignore (HxAnon.set __anon_82 "check" (HxEnum.box_if_needed "backend.source.PythonRuntimeTypeCheck" (Obj.repr (let __enum_arg_83 = (name : string) in EmittedClass (Stdlib.Sys.opaque_identity __enum_arg_83)))));
@@ -625,7 +631,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g3 = (match _g with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g3 = (match _g with
         | HxExpr.EString __enum_param_94 -> __enum_param_94
         | _ -> failwith "Unexpected enum parameter" : string) in if let __string_eq_left_95 = _g3 in let __string_eq_right_96 = "class" in HxString.equals __string_eq_left_95 __string_eq_right_96 then if (match _g1 with
         | HxExpr.EParenthesized (_, _) -> 0
@@ -674,7 +681,8 @@ let decode = fun expression -> (try let tempArray = ref (Obj.magic (HxRuntime.hx
         | HxExpr.EDiscardThen (_, _) -> 43
         | HxExpr.ESourceGroup (_, _) -> 44
         | HxExpr.ESourceFunction (_, _, _, _) -> 45
-        | HxExpr.EPrivateAccess (_, _) -> 46) = 6 then let _g4 = (match _g1 with
+        | HxExpr.EPrivateAccess (_, _) -> 46
+        | HxExpr.ERegexLiteral (_, _) -> 47) = 6 then let _g4 = (match _g1 with
         | HxExpr.EString __enum_param_97 -> __enum_param_97
         | _ -> failwith "Unexpected enum parameter" : string) in let name = (_g4 : string) in let value = Obj.magic _g2 in let __assign_98 = Obj.magic (let __anon_99 = HxAnon.create () in (
         ignore (HxAnon.set __anon_99 "check" (HxEnum.box_if_needed "backend.source.PythonRuntimeTypeCheck" (Obj.repr (let __enum_arg_100 = (name : string) in EmittedClass (Stdlib.Sys.opaque_identity __enum_arg_100)))));

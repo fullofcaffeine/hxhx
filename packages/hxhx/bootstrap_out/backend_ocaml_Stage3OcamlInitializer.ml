@@ -29,57 +29,57 @@ let rec statements = fun entries -> let result = Obj.magic (HxArray.create ()) i
             let __array_receiver_44 = Obj.magic result in let __array_arg_0_45 = Obj.magic (let __enum_arg_53 = Obj.magic (let __array_read_receiver_46 = children in let __array_read_index_47 = 0 in HxArray.get (Obj.magic __array_read_receiver_46) __array_read_index_47) in let __enum_arg_54 = Obj.magic (let __enum_arg_51 = Obj.magic (statements (Obj.magic (let __arr_48 = HxArray.create () in (
               ignore (HxArray.push __arr_48 (let __array_read_receiver_49 = children in let __array_read_index_50 = 1 in HxArray.get (Obj.magic __array_read_receiver_49) __array_read_index_50));
               __arr_48
-            )))) in let __enum_arg_52 = Obj.magic position in HxStmt.SBlock (Stdlib.Sys.opaque_identity __enum_arg_51, __enum_arg_52)) in let __enum_arg_55 = Obj.magic (!tempMaybeHxStmt) in let __enum_arg_56 = Obj.magic position in HxStmt.SIf (Stdlib.Sys.opaque_identity __enum_arg_53, __enum_arg_54, __enum_arg_55, __enum_arg_56)) in HxArray.push __array_receiver_44 __array_arg_0_45
+            )))) in let __enum_arg_52 = Obj.magic position in HxStmt.SBlock (Stdlib.Sys.opaque_identity __enum_arg_51, __enum_arg_52)) in let __enum_arg_55 = Obj.magic (!tempMaybeHxStmt) in let __enum_arg_56 = Obj.magic position in let __enum_arg_57 = HxRuntime.hx_null in HxStmt.SIf (Stdlib.Sys.opaque_identity __enum_arg_53, __enum_arg_54, __enum_arg_55, __enum_arg_56, __enum_arg_57)) in HxArray.push __array_receiver_44 __array_arg_0_45
           )
         )) else HxType.hx_throw_typed_rtti (Obj.repr "OCaml initializer requires an executable adapter for this shared control instruction") ["Dynamic"])
-        | HxLoweredControlKind.Switch (_p0, _p1) -> ignore (let _g5 = Obj.magic _p0 in let _g6 = _p1 in if let __string_eq_left_57 = _g1 in let __string_eq_right_58 = "" in HxString.equals __string_eq_left_57 __string_eq_right_58 then ignore (let exhaustive = _g6 in let patterns = Obj.magic _g5 in let children = Obj.magic _g3 in let position = Obj.magic _g4 in (
+        | HxLoweredControlKind.Switch (_p0, _p1) -> ignore (let _g5 = Obj.magic _p0 in let _g6 = _p1 in if let __string_eq_left_58 = _g1 in let __string_eq_right_59 = "" in HxString.equals __string_eq_left_58 __string_eq_right_59 then ignore (let exhaustive = _g6 in let patterns = Obj.magic _g5 in let children = Obj.magic _g3 in let position = Obj.magic _g4 in (
           ignore (if HxArray.length children <> HxInt.add (HxArray.length patterns) 1 then HxType.hx_throw_typed_rtti (Obj.repr "OCaml initializer switch requires aligned cases") ["Dynamic"] else ());
-          let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in let _g7 = Obj.magic (let __arr_59 = HxArray.create () in __arr_59) in let _g8 = ref 0 in let _g9 = Obj.magic (let __array_receiver_60 = Obj.magic children in let __array_arg_0_61 = 1 in HxArray.slice_default __array_receiver_60 __array_arg_0_61) in (
-            ignore (while !_g8 < HxArray.length _g9 do ignore (let child = Obj.magic (let __array_read_receiver_62 = _g9 in let __array_read_index_63 = !_g8 in HxArray.get (Obj.magic __array_read_receiver_62) __array_read_index_63) in (
-              ignore (let __old_64 = !_g8 in let __new_65 = HxInt.add __old_64 1 in (
-                ignore (_g8 := __new_65);
-                __new_65
+          let tempArray = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in let _g7 = Obj.magic (let __arr_60 = HxArray.create () in __arr_60) in let _g8 = ref 0 in let _g9 = Obj.magic (let __array_receiver_61 = Obj.magic children in let __array_arg_0_62 = 1 in HxArray.slice_default __array_receiver_61 __array_arg_0_62) in (
+            ignore (while !_g8 < HxArray.length _g9 do ignore (let child = Obj.magic (let __array_read_receiver_63 = _g9 in let __array_read_index_64 = !_g8 in HxArray.get (Obj.magic __array_read_receiver_63) __array_read_index_64) in (
+              ignore (let __old_65 = !_g8 in let __new_66 = HxInt.add __old_65 1 in (
+                ignore (_g8 := __new_66);
+                __new_66
               ));
-              let __array_receiver_66 = Obj.magic _g7 in let __array_arg_0_67 = Obj.magic (let __enum_arg_69 = Obj.magic (statements (Obj.magic (let __arr_68 = HxArray.create () in (
-                ignore (HxArray.push __arr_68 child);
-                __arr_68
-              )))) in let __enum_arg_70 = Obj.magic position in HxStmt.SBlock (Stdlib.Sys.opaque_identity __enum_arg_69, __enum_arg_70)) in HxArray.push __array_receiver_66 __array_arg_0_67
+              let __array_receiver_67 = Obj.magic _g7 in let __array_arg_0_68 = Obj.magic (let __enum_arg_70 = Obj.magic (statements (Obj.magic (let __arr_69 = HxArray.create () in (
+                ignore (HxArray.push __arr_69 child);
+                __arr_69
+              )))) in let __enum_arg_71 = Obj.magic position in HxStmt.SBlock (Stdlib.Sys.opaque_identity __enum_arg_70, __enum_arg_71)) in HxArray.push __array_receiver_67 __array_arg_0_68
             )) done);
-            ignore (let __assign_71 = Obj.magic _g7 in (
-              tempArray := __assign_71;
-              __assign_71
+            ignore (let __assign_72 = Obj.magic _g7 in (
+              tempArray := __assign_72;
+              __assign_72
             ));
-            let __array_receiver_72 = Obj.magic result in let __array_arg_0_73 = Obj.magic (let __enum_arg_76 = Obj.magic (let __array_read_receiver_74 = children in let __array_read_index_75 = 0 in HxArray.get (Obj.magic __array_read_receiver_74) __array_read_index_75) in let __enum_arg_77 = Obj.magic patterns in let __enum_arg_78 = Obj.magic (!tempArray) in let __enum_arg_79 = Obj.magic position in let __enum_arg_80 = exhaustive in HxStmt.SSwitch (Stdlib.Sys.opaque_identity __enum_arg_76, __enum_arg_77, __enum_arg_78, __enum_arg_79, __enum_arg_80)) in HxArray.push __array_receiver_72 __array_arg_0_73
+            let __array_receiver_73 = Obj.magic result in let __array_arg_0_74 = Obj.magic (let __enum_arg_77 = Obj.magic (let __array_read_receiver_75 = children in let __array_read_index_76 = 0 in HxArray.get (Obj.magic __array_read_receiver_75) __array_read_index_76) in let __enum_arg_78 = Obj.magic patterns in let __enum_arg_79 = Obj.magic (!tempArray) in let __enum_arg_80 = Obj.magic position in let __enum_arg_81 = exhaustive in HxStmt.SSwitch (Stdlib.Sys.opaque_identity __enum_arg_77, __enum_arg_78, __enum_arg_79, __enum_arg_80, __enum_arg_81)) in HxArray.push __array_receiver_73 __array_arg_0_74
           )
         )) else HxType.hx_throw_typed_rtti (Obj.repr "OCaml initializer requires an executable adapter for this shared control instruction") ["Dynamic"])
-        | HxLoweredControlKind.PatternAttempts _p0 -> ignore (let _g5 = Obj.magic _p0 in if let __string_eq_left_81 = _g1 in let __string_eq_right_82 = "" in HxString.equals __string_eq_left_81 __string_eq_right_82 then ignore (let plan__local = Obj.magic _g5 in let children = Obj.magic _g3 in let position = Obj.magic _g4 in (
+        | HxLoweredControlKind.PatternAttempts _p0 -> ignore (let _g5 = Obj.magic _p0 in if let __string_eq_left_82 = _g1 in let __string_eq_right_83 = "" in HxString.equals __string_eq_left_82 __string_eq_right_83 then ignore (let plan__local = Obj.magic _g5 in let children = Obj.magic _g3 in let position = Obj.magic _g4 in (
           ignore (if HxArray.length children <> HxInt.add (HxArray.length (TypedGuardedPatternPlan.getPatterns (Obj.magic plan__local) ())) 2 then HxType.hx_throw_typed_rtti (Obj.repr "OCaml initializer guarded switch requires aligned cases") ["Dynamic"] else ());
-          let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in let _g6 = Obj.magic (let __arr_83 = HxArray.create () in __arr_83) in let _g7 = ref 0 in let _g8 = Obj.magic (let __array_receiver_84 = Obj.magic children in let __array_arg_0_85 = 2 in HxArray.slice_default __array_receiver_84 __array_arg_0_85) in (
-            ignore (while !_g7 < HxArray.length _g8 do ignore (let child = Obj.magic (let __array_read_receiver_86 = _g8 in let __array_read_index_87 = !_g7 in HxArray.get (Obj.magic __array_read_receiver_86) __array_read_index_87) in (
-              ignore (let __old_88 = !_g7 in let __new_89 = HxInt.add __old_88 1 in (
-                ignore (_g7 := __new_89);
-                __new_89
+          let tempArray1 = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt HxArray.t) in let _g6 = Obj.magic (let __arr_84 = HxArray.create () in __arr_84) in let _g7 = ref 0 in let _g8 = Obj.magic (let __array_receiver_85 = Obj.magic children in let __array_arg_0_86 = 2 in HxArray.slice_default __array_receiver_85 __array_arg_0_86) in (
+            ignore (while !_g7 < HxArray.length _g8 do ignore (let child = Obj.magic (let __array_read_receiver_87 = _g8 in let __array_read_index_88 = !_g7 in HxArray.get (Obj.magic __array_read_receiver_87) __array_read_index_88) in (
+              ignore (let __old_89 = !_g7 in let __new_90 = HxInt.add __old_89 1 in (
+                ignore (_g7 := __new_90);
+                __new_90
               ));
-              let __array_receiver_90 = Obj.magic _g6 in let __array_arg_0_91 = Obj.magic (let __enum_arg_93 = Obj.magic (statements (Obj.magic (let __arr_92 = HxArray.create () in (
-                ignore (HxArray.push __arr_92 child);
-                __arr_92
-              )))) in let __enum_arg_94 = Obj.magic position in HxStmt.SBlock (Stdlib.Sys.opaque_identity __enum_arg_93, __enum_arg_94)) in HxArray.push __array_receiver_90 __array_arg_0_91
+              let __array_receiver_91 = Obj.magic _g6 in let __array_arg_0_92 = Obj.magic (let __enum_arg_94 = Obj.magic (statements (Obj.magic (let __arr_93 = HxArray.create () in (
+                ignore (HxArray.push __arr_93 child);
+                __arr_93
+              )))) in let __enum_arg_95 = Obj.magic position in HxStmt.SBlock (Stdlib.Sys.opaque_identity __enum_arg_94, __enum_arg_95)) in HxArray.push __array_receiver_91 __array_arg_0_92
             )) done);
-            ignore (let __assign_95 = Obj.magic _g6 in (
-              tempArray1 := __assign_95;
-              __assign_95
+            ignore (let __assign_96 = Obj.magic _g6 in (
+              tempArray1 := __assign_96;
+              __assign_96
             ));
-            let __array_receiver_96 = Obj.magic result in let __array_arg_0_97 = Obj.magic (let __enum_arg_102 = Obj.magic (let __array_read_receiver_98 = children in let __array_read_index_99 = 0 in HxArray.get (Obj.magic __array_read_receiver_98) __array_read_index_99) in let __enum_arg_103 = Obj.magic (let __array_read_receiver_100 = children in let __array_read_index_101 = 1 in HxArray.get (Obj.magic __array_read_receiver_100) __array_read_index_101) in let __enum_arg_104 = Obj.magic plan__local in let __enum_arg_105 = Obj.magic (!tempArray1) in let __enum_arg_106 = Obj.magic position in HxStmt.SGuardedSwitch (Stdlib.Sys.opaque_identity __enum_arg_102, __enum_arg_103, __enum_arg_104, __enum_arg_105, __enum_arg_106)) in HxArray.push __array_receiver_96 __array_arg_0_97
+            let __array_receiver_97 = Obj.magic result in let __array_arg_0_98 = Obj.magic (let __enum_arg_103 = Obj.magic (let __array_read_receiver_99 = children in let __array_read_index_100 = 0 in HxArray.get (Obj.magic __array_read_receiver_99) __array_read_index_100) in let __enum_arg_104 = Obj.magic (let __array_read_receiver_101 = children in let __array_read_index_102 = 1 in HxArray.get (Obj.magic __array_read_receiver_101) __array_read_index_102) in let __enum_arg_105 = Obj.magic plan__local in let __enum_arg_106 = Obj.magic (!tempArray1) in let __enum_arg_107 = Obj.magic position in HxStmt.SGuardedSwitch (Stdlib.Sys.opaque_identity __enum_arg_103, __enum_arg_104, __enum_arg_105, __enum_arg_106, __enum_arg_107)) in HxArray.push __array_receiver_97 __array_arg_0_98
           )
         )) else HxType.hx_throw_typed_rtti (Obj.repr "OCaml initializer requires an executable adapter for this shared control instruction") ["Dynamic"])
         | _ -> HxType.hx_throw_typed_rtti (Obj.repr "OCaml initializer requires an executable adapter for this shared control instruction") ["Dynamic"])
-      | HxExpr.EVars _p0 -> ignore (let _g2 = Obj.magic _p0 in let declarations = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length declarations do ignore (let declaration = Obj.magic (let __array_read_receiver_107 = declarations in let __array_read_index_108 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_107) __array_read_index_108) in (
-        ignore (let __old_109 = !_g3 in let __new_110 = HxInt.add __old_109 1 in (
-          ignore (_g3 := __new_110);
-          __new_110
+      | HxExpr.EVars _p0 -> ignore (let _g2 = Obj.magic _p0 in let declarations = Obj.magic _g2 in let _g3 = ref 0 in while !_g3 < HxArray.length declarations do ignore (let declaration = Obj.magic (let __array_read_receiver_108 = declarations in let __array_read_index_109 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_108) __array_read_index_109) in (
+        ignore (let __old_110 = !_g3 in let __new_111 = HxInt.add __old_110 1 in (
+          ignore (_g3 := __new_111);
+          __new_111
         ));
         ignore (if HxExprVarDecl.getIsStatic (Obj.magic declaration) then HxType.hx_throw_typed_rtti (Obj.repr "OCaml initializer local requires shared static storage lowering") ["Dynamic"] else ());
-        let __array_receiver_111 = Obj.magic result in let __array_arg_0_112 = Obj.magic (let __enum_arg_114 = (HxExprVarDecl.getName (Obj.magic declaration) : string) in let __enum_arg_115 = (HxExprVarDecl.getTypeHint (Obj.magic declaration) : string) in let __enum_arg_116 = HxExprVarDecl.getInitializer (Obj.magic declaration) in let __enum_arg_117 = Obj.magic (HxExprVarDecl.getPosition (Obj.magic declaration)) in let __enum_arg_118 = Obj.magic (let __represented_array_113 = HxArray.create () in __represented_array_113) in HxStmt.SVar (Stdlib.Sys.opaque_identity __enum_arg_114, __enum_arg_115, __enum_arg_116, __enum_arg_117, __enum_arg_118)) in HxArray.push __array_receiver_111 __array_arg_0_112
+        let __array_receiver_112 = Obj.magic result in let __array_arg_0_113 = Obj.magic (let __enum_arg_115 = (HxExprVarDecl.getName (Obj.magic declaration) : string) in let __enum_arg_116 = (HxExprVarDecl.getTypeHint (Obj.magic declaration) : string) in let __enum_arg_117 = HxExprVarDecl.getInitializer (Obj.magic declaration) in let __enum_arg_118 = Obj.magic (HxExprVarDecl.getPosition (Obj.magic declaration)) in let __enum_arg_119 = Obj.magic (let __represented_array_114 = HxArray.create () in __represented_array_114) in HxStmt.SVar (Stdlib.Sys.opaque_identity __enum_arg_115, __enum_arg_116, __enum_arg_117, __enum_arg_118, __enum_arg_119)) in HxArray.push __array_receiver_112 __array_arg_0_113
       )) done)
       | _ -> ignore (let __array_receiver_25 = Obj.magic result in let __array_arg_0_26 = Obj.magic (let __enum_arg_27 = Obj.magic entry in let __enum_arg_28 = Obj.magic (HxPos.unknown ()) in HxStmt.SExpr (Stdlib.Sys.opaque_identity __enum_arg_27, __enum_arg_28)) in HxArray.push __array_receiver_25 __array_arg_0_26)
   )) done);
@@ -137,7 +137,8 @@ let plan = fun projection expression -> (
       | HxExpr.EDiscardThen (_, _) -> 43
       | HxExpr.ESourceGroup (_, _) -> 44
       | HxExpr.ESourceFunction (_, _, _, _) -> 45
-      | HxExpr.EPrivateAccess (_, _) -> 46) = 3 then let _g = Obj.magic (match expression with
+      | HxExpr.EPrivateAccess (_, _) -> 46
+      | HxExpr.ERegexLiteral (_, _) -> 47) = 3 then let _g = Obj.magic (match expression with
       | HxExpr.ELoweredControl (__enum_param_3, _, _, _) -> __enum_param_3
       | _ -> failwith "Unexpected enum parameter") in let _g1 = (match expression with
       | HxExpr.ELoweredControl (_, __enum_param_4, _, _) -> __enum_param_4
