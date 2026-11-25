@@ -82,6 +82,13 @@ class TyperContext {
 	public function isMacroModule():Bool
 		return loader != null && loader.isMacroModule(modulePath, filePath);
 
+	/**
+		Whether this module's macro functions are typed as declarations only: a target compile
+		(`MacroCompilationContext.typesMacroBodies`). Without a request loader, bodies are typed.
+	**/
+	public function omitsMacroBodies():Bool
+		return loader != null && !loader.typesMacroBodies(modulePath, filePath);
+
 	public function getModulePath():String
 		return modulePath;
 

@@ -1079,9 +1079,10 @@ class TypedBodySource {
 	}
 
 	public static function classProjection(typedClass:TypedClass):TypedBackendClassProjection {
+		// A macro function of a target compile has no body to emit (`TypedFunction.isBodyOmitted`).
 		final functions = [
 			for (typedFunction in typedClass.getFunctions())
-				functionProjection(typedFunction)
+				if (!typedFunction.isBodyOmitted()) functionProjection(typedFunction)
 		];
 		final initializerByField = new Map<String, TypedFieldInitializer>();
 		for (initializer in typedClass.getFieldInitializers())

@@ -174,6 +174,28 @@ fails with `Void should be Dynamic`. The identity-macro workload recorded in
 
 ## Current boundaries and their limits
 
+**Macro bodies in target compiles (`haxe_ocaml-q3mio`, PR A).** Upstream Haxe 4.3.7 types a
+macro function's body only in its macro context; the program sees the function without a body
+(`typeloadFields.ml`, lines 1298-1345). hxhx's macro context is the project-macro plugin build.
+- `MacroCompilationContext.typesMacroBodies` is true only in a compilation with a macro
+  classpath, and only for a macro module. Everywhere else, `TyperStage` types a macro function
+  from a copy of its declaration with an empty body and its arguments. The typed function keeps
+  the declaration as written (`TypedFunction.getAuthoredDeclaration`), which the declaration
+  index and the expression macro pass use.
+- An omitted body proves no result, and the semantic facts accept the flagged function.
+  `TypedBodySource.classProjection` and `HxhxOcamlTargetFunctionAdapter.fromFunction` drop it,
+  so no backend emits it.
+- hxhx's own `CompilerBundledSourcesMacro.files` keeps its body for the bootstrap
+  (`MacroCompilationContext.isBundledSourcesMacro`).
+- Fixture `test/fixtures/target_macro_body`: an unguarded macro body with `$v{[1, 2]}` no longer
+  fails the target compile on the plugin's reification support module.
+- Known gap: a body that names `haxe.macro.Context` (or any other module) still brings that
+  module into the target compile. The resolver's qualified-name scan
+  (`HxImplicitDependencies.qualifiedTypePaths`) reads the whole source, and every resolved
+  module is typed and emitted, where upstream's DCE drops unused types.
+- PR B gives callers upstream's target-view signature (`ExprOf<T>` becomes `T`, other
+  arguments and the result `Dynamic`).
+
 `Stage3Compiler` invokes `ExprMacroExpander` before shared typing. However,
 expansion requires an explicit list of exact expression strings.
 `renderSimpleCall` recognizes only zero arguments or one string literal.

@@ -223,9 +223,10 @@ class TypedBackendClassSemanticFacts {
 		for (typedFunction in typedFunctions) {
 			final declaration = typedFunction.getDeclaration();
 			final environment = typedFunction.getEnvironment();
+			// An omitted macro body was typed from a bodyless copy; the index knows the declaration as written.
 			if (declaration == null
 				|| environment == null
-				|| info.declarationForSource(typedFunction.getSourceDeclaration()) != declaration
+				|| info.declarationForSource(typedFunction.getAuthoredDeclaration()) != declaration
 				|| environment.getOwnerIdentity() != typedFunction.getStableIdentity())
 				throw "typed backend class semantic facts contain foreign function result in " + classIdentity;
 			final key = declaration.getIdentity().getCanonicalKey();
@@ -235,7 +236,8 @@ class TypedBackendClassSemanticFacts {
 			typedFunction.assertParsedBodyCurrent();
 			// Bodyless declarations have no inferred completion. Their written
 			// signature remains authoritative even if bring-up typing made an environment.
-			if (declaration.getHasBody())
+			// An omitted macro body is the same: its empty copy proves no result.
+			if (declaration.getHasBody() && !typedFunction.isBodyOmitted())
 				bodyResults.set(key, environment.getReturnType());
 		}
 

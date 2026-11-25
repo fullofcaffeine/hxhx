@@ -29,6 +29,10 @@ class LazyTypeLoader {
 	public function isMacroModule(_modulePath:String, _filePath:String):Bool
 		return false;
 
+	/** Whether macro functions of this module have typed bodies (`MacroCompilationContext.typesMacroBodies`); true without a request. */
+	public function typesMacroBodies(_modulePath:String, _filePath:String):Bool
+		return true;
+
 	/** Whether a module source exists on the class path; false without a request. */
 	public function hasModuleSource(_modulePath:String):Bool
 		return false;
