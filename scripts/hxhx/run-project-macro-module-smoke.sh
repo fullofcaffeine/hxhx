@@ -9,10 +9,11 @@ set -euo pipefail
 # writes a receipt into its plugin cache, loads the plugin in-process, and runs the macro. The
 # native program must print what upstream Haxe 4.3.7 prints.
 #
-# Later steps compile four more fixtures the same way and compare each program with upstream:
+# Later steps compile five more fixtures the same way and compare each program with upstream:
 # project-macro-reification (quoted syntax), project-macro-constant-args (String, Int, Float, and
 # Bool parameters, an inferred result), expr_macro_pass_driver/suite (the upstream unit-suite
-# TestMain shape), and project-macro-context (haxe.macro.Context services and Context.error).
+# TestMain shape), project-macro-context (haxe.macro.Context services and Context.error), and
+# project-macro-define (Context.defineModule and Context.defineType).
 # Before them, project-macro-runtime-type checks a macro whose module holds a runtime type test.
 #
 # The hxhx binary must contain the current compiler sources. Until the committed bootstrap
@@ -398,6 +399,20 @@ expect_failure context_error "$CONTEXT_DIR/src" ErrorMain "src/ErrorMain.hx:4: c
   --hxhx-macro-cache "$CACHE_DIR"
 diff -u "$CONTEXT_DIR/expected-error.stderr" "$ARTIFACT_DIR/context_error.compile.stderr"
 echo "PROJECT_MACRO_MODULE_CONTEXT:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# Macros that define modules (Context.defineModule, Context.defineType) in the shape of upstream's
+# UnitBuilder: the compile types the defined classes and the program prints what upstream prints.
+DEFINE_DIR="$ROOT/test/fixtures/project-macro-define"
+(
+  cd "$DEFINE_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/define.oracle.stdout" 2>"$ARTIFACT_DIR/define.oracle.stderr"
+diff -u "$DEFINE_DIR/expected.stdout" "$ARTIFACT_DIR/define.oracle.stdout"
+compile_app define "$DEFINE_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line define '^expr_macros_expanded=2$'
+"$WORK_DIR/app-define/out.exe" >"$ARTIFACT_DIR/define.stdout" 2>"$ARTIFACT_DIR/define.stderr"
+diff -u "$DEFINE_DIR/expected.stdout" "$ARTIFACT_DIR/define.stdout"
+echo "PROJECT_MACRO_MODULE_DEFINE:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 {
   echo "candidate_commit=$CANDIDATE_COMMIT"

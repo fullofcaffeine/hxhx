@@ -19,9 +19,12 @@ import hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWireWriter;
 	What
 	- Request: the header line `hxhx-macro-context.v1`, the letter `C`, the message name, and its
 	  arguments. Names in this version: `context.currentPos`, `context.defined` (name),
-	  `context.definedValue` (name), `context.parse` (code, position), and
-	  `context.parseInlineString` (code, position).
-	- Response: `R` and the value (a position, a Bool, an optional String, or an expression), or
+	  `context.definedValue` (name), `context.parse` (code, position),
+	  `context.parseInlineString` (code, position), `context.defineModule` (module path, type
+	  definitions, optional imports, optional usings), and `context.defineType` (type definition,
+	  optional module dependency).
+	- Response: `R` and the value (nothing, a position, a Bool, an optional String, or an
+	  expression), or
 	  `E`, an error kind, a message, and an optional position. The kinds are `error` (a compile
 	  error at that position, as `Context.error`), `unsupported` (the compiler does not provide
 	  this service yet), and `invalid` (a malformed request).
@@ -39,6 +42,8 @@ class MacroContextWire {
 	public static inline final DEFINED_VALUE:String = "context.definedValue";
 	public static inline final PARSE:String = "context.parse";
 	public static inline final PARSE_INLINE_STRING:String = "context.parseInlineString";
+	public static inline final DEFINE_MODULE:String = "context.defineModule";
+	public static inline final DEFINE_TYPE:String = "context.defineType";
 
 	public static inline final ERROR:String = "error";
 	public static inline final UNSUPPORTED:String = "unsupported";
@@ -69,6 +74,23 @@ class MacroContextWire {
 		return writer.toString();
 	}
 
+	public static function requestDefineModule(modulePath:String, types:Array<TypeDefinition>, imports:Null<Array<ImportExpr>>,
+			usings:Null<Array<TypePath>>):String {
+		final writer = request(DEFINE_MODULE);
+		writer.string(modulePath == null ? "" : modulePath);
+		writer.typeDefinitions(types);
+		writer.optionalImportExprs(imports);
+		writer.optionalTypePaths(usings);
+		return writer.toString();
+	}
+
+	public static function requestDefineType(definition:TypeDefinition, moduleDependency:Null<String>):String {
+		final writer = request(DEFINE_TYPE);
+		writer.typeDefinition(definition);
+		writer.optionalString(moduleDependency);
+		return writer.toString();
+	}
+
 	static function request(name:String):MacroSyntaxWireWriter {
 		final writer = new MacroSyntaxWireWriter(VERSION, "C");
 		writer.string(name);
@@ -85,6 +107,10 @@ class MacroContextWire {
 	}
 
 	// Responses (compiler side).
+
+	/** The answer of a service that returns nothing. */
+	public static function respondUnit():String
+		return new MacroSyntaxWireWriter(VERSION, "R").toString();
 
 	public static function respondPosition(position:Position):String {
 		final writer = new MacroSyntaxWireWriter(VERSION, "R");
@@ -122,6 +148,9 @@ class MacroContextWire {
 	}
 
 	// Response decoding (plugin side).
+
+	public static function readUnit(payload:String):Void
+		value(payload).finish();
 
 	public static function readPosition(payload:String):Position {
 		final reader = value(payload);

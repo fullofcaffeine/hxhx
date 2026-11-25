@@ -3839,6 +3839,7 @@ class EmitterStage {
 					renderType: ocamlTypeFromTy,
 					isEnumBox: type -> currentEnums != null && currentEnums.runtimeName(type) != null,
 					referenceCarrier: type -> backend.ocaml.Stage3OcamlReferenceCarrier.select(type, currentClassStorage, ocamlTypeFromTy),
+					iterableType: stage3ExactExprType,
 					renderStatements: (statements,
 						renderReturn) -> stmtListToOcaml(statements, allowed, "HxBlockReturn", arityByIdent, hints, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee, hints, new Map(), null, arguments, renderReturn)
@@ -3867,7 +3868,8 @@ class EmitterStage {
 				value -> exprToOcaml(value, arityByIdent, tyByIdent, staticImportByIdent, currentPackagePath, moduleNameByPkgAndClass, callSigByCallee),
 				currentFunctionLocalOcamlNames,
 				value ->
-					currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(value) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(value));
+					currentTypedInitializer != null ? currentTypedInitializer.findCallArgument(value) : currentTypedFunction == null ? null : currentTypedFunction.findCallArgument(value),
+				type -> currentClassStorage != null && currentClassStorage.usesIdentity(type));
 		}
 		final methodValue = currentTypedInitializer != null ? currentTypedInitializer.findMethodUse(e) : currentTypedFunction == null ? null : currentTypedFunction.findMethodUse(e);
 		if (methodValue != null && methodValue.getUse() == ValueRead) {

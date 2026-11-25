@@ -189,7 +189,40 @@ class MacroState {
 		}
 	}
 
+	/**
+		Modules a macro defined (`Context.defineModule`, `Context.defineType`) and the request's
+		expression macro pass has not taken yet. `Stage3ExprMacroPass` drains them after each pass
+		and adds them to the modules the request types.
+	**/
+	static final definedModules = new Array<ResolvedModule>();
+
+	/** Every module path defined in this request, so a second definition is rejected. */
+	static final definedModulePaths = new Map<String, Bool>();
+
+	/** Queue `module` for the request; throws when the module path was already defined. */
+	public static function defineModule(module:ResolvedModule):Void {
+		final path = ResolvedModule.getModulePath(module);
+		if (definedModulePaths.exists(path))
+			throw "module `" + path + "` is already defined";
+		definedModulePaths.set(path, true);
+		definedModules.push(module);
+	}
+
+	/** The modules defined since the last drain, in definition order. */
+	public static function drainDefinedModules():Array<ResolvedModule> {
+		final out = definedModules.copy();
+		definedModules.resize(0);
+		return out;
+	}
+
+	/** Forget every defined module; a new request starts with none. */
+	public static function clearDefinedModules():Void {
+		definedModules.resize(0);
+		definedModulePaths.clear();
+	}
+
 	public static function reset():Void {
+		clearDefinedModules();
 		defines.clear();
 		ocamlModules.clear();
 		classPaths.resize(0);

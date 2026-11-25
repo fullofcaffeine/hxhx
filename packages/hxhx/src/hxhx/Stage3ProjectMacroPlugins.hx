@@ -151,7 +151,7 @@ class Stage3ProjectMacroPlugins {
 		- the unexecuted record has no `ownerFilePath`, because the request index did not know the
 		  declaration's module.
 	**/
-	public static inline final UNEXECUTED_OPT_OUT:String = "CompilerBundledSourcesMacro.files";
+	public static inline final UNEXECUTED_OPT_OUT:String = MacroCompilationContext.BUNDLED_SOURCES_MACRO;
 
 	static function isUnexecutedOptOut(entry:hxhx.ExprMacroExpander.ExprMacroUnexecutedCall):Bool {
 		if (entry.declaration != UNEXECUTED_OPT_OUT || entry.ownerFilePath.length == 0)

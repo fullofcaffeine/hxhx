@@ -15,6 +15,9 @@ class HxhxOcamlTargetFunctionAdapter {
 	public static function fromFunction(owner:TyNominalInfo, fn:TypedFunction):Null<OcamlTargetFunctionFact> {
 		if (owner == null || fn == null)
 			throw "native OCaml target function adapter requires complete typed facts";
+		// A macro function of a target compile is not emitted (`TypedFunction.isBodyOmitted`).
+		if (fn.isBodyOmitted())
+			return null;
 		final declaration = fn.getDeclaration();
 		if (declaration == null
 			|| !declaration.getOwner().equals(owner.getIdentity())

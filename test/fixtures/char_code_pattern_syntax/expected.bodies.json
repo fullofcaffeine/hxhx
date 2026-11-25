@@ -1,0 +1,4 @@
+{
+	"classify": "{\n\treturn switch (c) {\n\t\tcase \"a\".code:{\n\t\t\t\"a\";\n\t\t};\n\t\tcase \" \".code | \"\\t\".code | \"\\n\".code:{\n\t\t\t\"space\";\n\t\t};\n\t\tcase \"\\\\\".code:{\n\t\t\t\"backslash\";\n\t\t};\n\t\tcase _:{\n\t\t\t\"other\";\n\t\t};\n\t};\n}",
+	"pair": "{\n\treturn switch (codes) {\n\t\tcase [\"2\".code, \"1\".code]:{\n\t\t\ttrue;\n\t\t};\n\t\tcase _:{\n\t\t\tfalse;\n\t\t};\n\t};\n}"
+}

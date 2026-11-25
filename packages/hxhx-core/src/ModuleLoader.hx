@@ -272,6 +272,9 @@ class ModuleLoader extends LazyTypeLoader {
 	override public function isMacroModule(modulePath:String, filePath:String):Bool
 		return macroContext.isMacroModule(modulePath, filePath);
 
+	override public function typesMacroBodies(modulePath:String, filePath:String):Bool
+		return macroContext.typesMacroBodies(modulePath, filePath);
+
 	/**
 		Whether the class path includes the standard library (it can find
 		`StdTypes`). Asked once per loader, because each module query is also

@@ -11,7 +11,14 @@ enum HxSwitchPattern {
 	PWildcard;
 	PBool(value:Bool);
 	PString(value:String);
-	PInt(value:Int);
+
+	/**
+		`charCodeOf` keeps the string of a `case "x".code:` pattern: upstream Haxe 4.3.7 keeps the
+		field access `"x".code` in the syntax tree. Only authored parsing
+		(`ParserStage.parseAuthored`, the parse oracle) sets it; the value is the code either way
+		(haxe_ocaml-ac5i9.3).
+	**/
+	PInt(value:Int, ?charCodeOf:String);
 
 	/**
 		A Float constant such as `1.5`, `-2.5`, `1e3` or `.5`, matched by
@@ -23,7 +30,12 @@ enum HxSwitchPattern {
 	**/
 	PFloat(text:String);
 
-	PEnumValue(name:String);
+	/**
+		`castWritten` marks a `case cast Array:` class-value pattern: upstream Haxe 4.3.7 keeps the
+		`ECast` in the syntax tree. Only authored parsing (`ParserStage.parseAuthored`, the parse
+		oracle) sets it; ordinary parsing reads the pattern as the class value (haxe_ocaml-ac5i9.6).
+	**/
+	PEnumValue(name:String, ?castWritten:Bool);
 
 	/** Only the parser's bare final `_` can cover an unwritten required payload suffix. */
 	PEnumExtract(name:String, args:Array<HxSwitchPattern>, ?bareWildcardSuffix:Bool);

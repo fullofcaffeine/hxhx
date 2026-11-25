@@ -3,6 +3,7 @@ package hxhx;
 import hxhx.ExprMacroExpander.ExprMacroUnexecutedCall;
 import hxhx.ExprMacroLexicalScope.ExprMacroLexicalGap;
 import hxhx.macro.MacroRuntimeSession;
+import hxhx.macro.MacroState;
 
 /** Everything the driver needs after the pre-typing expression macro pass. */
 typedef Stage3ExprMacroPassResult = {
@@ -47,8 +48,9 @@ typedef Stage3ExprMacroPassSetup = {
 	  loader body typing uses, and the loader must already know the resolved
 	  modules; otherwise a lookup re-prepares a root module and the index rejects
 	  the duplicate registration.
-	- Selection can load modules on demand. Those modules may contain macro
-	  calls too, so the walk repeats over drained modules until nothing new appears.
+	- Selection can load modules on demand, and a macro can define modules
+	  (`Context.defineModule`, `MacroState.defineModule`). Those modules may contain macro
+	  calls too, so the walk repeats over drained and defined modules until nothing new appears.
 	- A rewrite replaces parsed source classes. The index binds declarations to
 	  those classes, so after any rewrite the index and loader are rebuilt once
 	  over the final module list; the rebuilt loader keeps the previous loader's
@@ -98,6 +100,9 @@ class Stage3ExprMacroPass {
 				lexicalGaps: lexicalGaps
 			};
 
+		// Modules a macro defines (`Context.defineModule`, `Context.defineType`) belong to this pass.
+		MacroState.clearDefinedModules();
+		var definedCount = 0;
 		var work = modules.copy();
 		var offset = 0;
 		while (work.length > 0) {
@@ -113,9 +118,21 @@ class Stage3ExprMacroPass {
 			work = loader.drainNewModules();
 			for (module in work)
 				modules.push(module);
+			// A defined module is typed like a module the loader found; its own calls are visited too.
+			for (module in MacroState.drainDefinedModules()) {
+				final path = ResolvedModule.getModulePath(module);
+				for (existing in modules)
+					if (ResolvedModule.getModulePath(existing) == path)
+						throw "a macro defined module `" + path + "`, which already exists; adding types to an existing module is not supported yet";
+				if (index.getRegisteredModule(path) != null)
+					throw "a macro defined module `" + path + "`, which already exists; adding types to an existing module is not supported yet";
+				work.push(module);
+				modules.push(module);
+				definedCount++;
+			}
 		}
 
-		if (expandedCount > 0) {
+		if (expandedCount > 0 || definedCount > 0) {
 			index = TyperIndex.buildHeaders(modules);
 			final rebuilt = openLoader(index);
 			rebuilt.inheritTypeNotFoundAttempts(loader);

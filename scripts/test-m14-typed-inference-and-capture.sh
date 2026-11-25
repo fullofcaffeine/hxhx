@@ -35,12 +35,15 @@ haxe test/m14_array_subclass_element_test.hxml
 haxe test/m14_bitwise_parameter_inference_test.hxml
 haxe test/m14_block_ends_expression_test.hxml
 haxe test/m14_bound_input_keeps_type_test.hxml
+haxe test/m14_cast_pattern_syntax_test.hxml
+haxe test/m14_char_code_pattern_syntax_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
 haxe test/m14_compiler_json_value_integration_test.hxml
 haxe test/m14_discarded_control_test.hxml
 haxe test/m14_dynamic_generic_evidence_test.hxml
 haxe test/m14_dynamic_join_transparent_test.hxml
 haxe test/m14_enum_arg_open_literal_test.hxml
+haxe test/m14_expression_metadata_syntax_test.hxml
 haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
 haxe test/m14_extractor_pattern_type_test.hxml
@@ -63,8 +66,11 @@ haxe test/m14_primitive_constructor_effects_test.hxml
 haxe test/m14_project_macro_runtime_type_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_return_if_syntax_test.hxml
+haxe test/m14_stage3_enum_open_record_test.hxml
+haxe test/m14_stage3_local_function_array_for_test.hxml
 haxe test/m14_statement_control_projection_test.hxml
 haxe test/m14_structural_field_over_extension_test.hxml
+haxe test/m14_target_macro_body_skip_test.hxml
 haxe test/m14_try_assignment_value_test.hxml
 haxe test/m14_type_parameter_bounds_test.hxml
 haxe test/m14_typed_backend_capture_catalog_test.hxml
