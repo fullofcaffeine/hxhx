@@ -58,14 +58,16 @@ class M14Stage3FloatPatternTest {
 
 	/** Each constant must parse into its exact pattern, never a wildcard. */
 	static function parsedConstants():Void {
+		// `PInt` cases are printed from the expected value, so its optional char-code source (set only by
+		// authored parsing) prints the same way as in the parsed pattern.
 		final expected = [
 			"switch x { case 1.5: 0; }" => "PFloat(1.5)",
 			"switch x { case -2.5: 0; }" => "PFloat(-2.5)",
 			"switch x { case 1e3: 0; }" => "PFloat(1e3)",
 			"switch x { case .5: 0; }" => "PFloat(0.5)",
 			"switch x { case 1.: 0; }" => "PFloat(1.0)",
-			"switch x { case -1: 0; }" => "PInt(-1)",
-			"switch x { case 7 | 8.5: 0; }" => "POr([PInt(7),PFloat(8.5)])",
+			"switch x { case -1: 0; }" => Std.string(HxSwitchPattern.PInt(-1)),
+			"switch x { case 7 | 8.5: 0; }" => Std.string(HxSwitchPattern.POr([HxSwitchPattern.PInt(7), HxSwitchPattern.PFloat("8.5")])),
 			"switch x { case \"a\": 0; }" => "PString(a)",
 			"switch x { case true: 0; }" => "PBool(true)",
 			"switch x { case null: 0; }" => "PNull",
