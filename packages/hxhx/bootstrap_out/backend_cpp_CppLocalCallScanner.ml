@@ -351,8 +351,9 @@ let rec stmtListCallsLocal = fun stmts local -> (try (
   | HxRuntime.Hx_return __ret_6 -> (Obj.obj __ret_6 : bool) : bool)
 and stmtCallsLocal = fun stmt local -> let tempResult = ref (false : bool) in (
   ignore (match stmt with
-    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
+    | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
       ignore _p1;
+      ignore _p2;
       let stmts = Obj.magic _g in let __assign_7 = stmtListCallsLocal (Obj.magic stmts) (local : string) in (
         tempResult := __assign_7;
         __assign_7

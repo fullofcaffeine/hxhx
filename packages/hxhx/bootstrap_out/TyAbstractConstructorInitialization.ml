@@ -1018,9 +1018,12 @@ let rec statements = fun self (body : HxStmt.hxstmt HxArray.t) (assigned : bool)
 )
 and statement = fun self (s : HxStmt.hxstmt) (assigned : bool) -> let _gthis = Obj.magic self in let tempResult = ref (false : bool) in (
   ignore (match s with
-    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let body = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_14 = let __generic_receiver_15 = self in let __generic_source_argument_16 = fun () -> statements (Obj.magic _gthis) (Obj.magic body) assigned (Obj.magic pos) in let __generic_argument_17 = let __generic_callback_18 = __generic_source_argument_16 in fun () -> let __generic_callback_result_19 = __generic_callback_18 () in HxRuntime.box_bool __generic_callback_result_19 in let __generic_result_20 = scoped __generic_receiver_15 __generic_argument_17 in HxRuntime.unbox_bool_or_obj __generic_result_20 in (
-      tempResult := __assign_14;
-      __assign_14
+    | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
+      ignore _p2;
+      let body = Obj.magic _g in let pos = Obj.magic _g1 in let __assign_14 = let __generic_receiver_15 = self in let __generic_source_argument_16 = fun () -> statements (Obj.magic _gthis) (Obj.magic body) assigned (Obj.magic pos) in let __generic_argument_17 = let __generic_callback_18 = __generic_source_argument_16 in fun () -> let __generic_callback_result_19 = __generic_callback_18 () in HxRuntime.box_bool __generic_callback_result_19 in let __generic_result_20 = scoped __generic_receiver_15 __generic_argument_17 in HxRuntime.unbox_bool_or_obj __generic_result_20 in (
+        tempResult := __assign_14;
+        __assign_14
+      )
     )
     | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> let _g = (_p0 : string) in (
       ignore _p1;

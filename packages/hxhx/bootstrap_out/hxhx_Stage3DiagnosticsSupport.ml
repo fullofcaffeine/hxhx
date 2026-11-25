@@ -857,15 +857,18 @@ let rec collectUnsupportedExprRawInExpr = fun expr out max -> ignore (try ignore
 let rec collectUnsupportedExprRawInStmt = fun stmt out max -> ignore (try ignore ((
   ignore (if HxArray.length out >= max then Stdlib.raise (HxRuntime.Hx_return_void) else ());
   match stmt with
-    | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let stmts = Obj.magic _g in (
-      ignore _g1;
-      let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let child = Obj.magic (let __array_read_receiver_379 = stmts in let __array_read_index_380 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_379) __array_read_index_380) in (
-        ignore (let __old_381 = !_g2 in let __new_382 = HxInt.add __old_381 1 in (
-          ignore (_g2 := __new_382);
-          __new_382
-        ));
-        collectUnsupportedExprRawInStmt (Obj.magic child) (Obj.magic out) max
-      )) done
+    | HxStmt.SBlock (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
+      ignore _p2;
+      let stmts = Obj.magic _g in (
+        ignore _g1;
+        let _g3 = ref 0 in while !_g3 < HxArray.length stmts do ignore (let child = Obj.magic (let __array_read_receiver_379 = stmts in let __array_read_index_380 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_379) __array_read_index_380) in (
+          ignore (let __old_381 = !_g3 in let __new_382 = HxInt.add __old_381 1 in (
+            ignore (_g3 := __new_382);
+            __new_382
+          ));
+          collectUnsupportedExprRawInStmt (Obj.magic child) (Obj.magic out) max
+        )) done
+      )
     ))
     | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = _p2 in let _g3 = Obj.magic _p3 in (
       ignore _p4;
@@ -1015,19 +1018,22 @@ let collectUnsupportedExprRawInModule = fun pm max -> let out = Obj.magic (HxArr
 
 let rec countUnsupportedExprsInStmt = fun stmt -> let tempResult = ref (0 : int) in (
   ignore (match stmt with
-    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let stmts = Obj.magic _g in (
-      ignore _g1;
-      let count = ref 0 in let _g2 = ref 0 in (
-        ignore (while !_g2 < HxArray.length stmts do ignore (let child = Obj.magic (let __array_read_receiver_408 = stmts in let __array_read_index_409 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_408) __array_read_index_409) in (
-          ignore (let __old_410 = !_g2 in let __new_411 = HxInt.add __old_410 1 in (
-            ignore (_g2 := __new_411);
-            __new_411
-          ));
-          count := HxInt.add (!count) (countUnsupportedExprsInStmt (Obj.magic child))
-        )) done);
-        let __assign_412 = !count in (
-          tempResult := __assign_412;
-          __assign_412
+    | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
+      ignore _p2;
+      let stmts = Obj.magic _g in (
+        ignore _g1;
+        let count = ref 0 in let _g3 = ref 0 in (
+          ignore (while !_g3 < HxArray.length stmts do ignore (let child = Obj.magic (let __array_read_receiver_408 = stmts in let __array_read_index_409 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_408) __array_read_index_409) in (
+            ignore (let __old_410 = !_g3 in let __new_411 = HxInt.add __old_410 1 in (
+              ignore (_g3 := __new_411);
+              __new_411
+            ));
+            count := HxInt.add (!count) (countUnsupportedExprsInStmt (Obj.magic child))
+          )) done);
+          let __assign_412 = !count in (
+            tempResult := __assign_412;
+            __assign_412
+          )
         )
       )
     )

@@ -13350,18 +13350,21 @@ let inferReturnType = fun statements scope ctx onEvidence boundResult onBound ->
   )) with
     | HxRuntime.Hx_return_void -> ()) in let typeStmt = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt -> unit) in (
     ignore (let __assign_1028 = Obj.magic (fun s -> ignore (try ignore (match s with
-      | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in let stmts = Obj.magic _g in (
-        ignore _g1;
-        ignore (TyFunctionEnv.enterLexicalScope (Obj.magic scope) ());
-        let _g2 = ref 0 in (
-          ignore (while !_g2 < HxArray.length stmts do ignore (let ss = Obj.magic (let __array_read_receiver_1029 = stmts in let __array_read_index_1030 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_1029) __array_read_index_1030) in (
-            ignore (let __old_1031 = !_g2 in let __new_1032 = HxInt.add __old_1031 1 in (
-              ignore (_g2 := __new_1032);
-              __new_1032
-            ));
-            (!typeStmt) (Obj.magic ss)
-          )) done);
-          TyFunctionEnv.exitLexicalScope (Obj.magic scope) ()
+      | HxStmt.SBlock (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in let _g1 = Obj.magic _p1 in (
+        ignore _p2;
+        let stmts = Obj.magic _g in (
+          ignore _g1;
+          ignore (TyFunctionEnv.enterLexicalScope (Obj.magic scope) ());
+          let _g3 = ref 0 in (
+            ignore (while !_g3 < HxArray.length stmts do ignore (let ss = Obj.magic (let __array_read_receiver_1029 = stmts in let __array_read_index_1030 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_1029) __array_read_index_1030) in (
+              ignore (let __old_1031 = !_g3 in let __new_1032 = HxInt.add __old_1031 1 in (
+                ignore (_g3 := __new_1032);
+                __new_1032
+              ));
+              (!typeStmt) (Obj.magic ss)
+            )) done);
+            TyFunctionEnv.exitLexicalScope (Obj.magic scope) ()
+          )
         )
       ))
       | HxStmt.SVar (_p0, _p1, _p2, _p3, _p4) -> ignore (let _g = (_p0 : string) in let _g1 = (_p1 : string) in let _g2 = _p2 in let _g3 = Obj.magic _p3 in (

@@ -63,6 +63,7 @@ let projectmacrocalldispatch_expandSelected = fun self (request__local : Hxhx_ma
     ));
     let unsupported = (!tempMaybeString : string) in (
       ignore (if unsupported != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_30 = (unsupported : string) in Hxhx_macro_ExprMacroDispatch.Unavailable (Stdlib.Sys.opaque_identity __enum_arg_30)))) else ());
+      ignore (Hxhx_macro_ProjectMacroArguments.bind (key : string) (Obj.magic source) (Obj.magic (Hxhx_macro_ExprMacroDispatch.getArguments (Obj.magic request__local) ())) (Hxhx_macro_ExprMacroDispatch.getFilePath (Obj.magic request__local) () : string));
       ignore (if (Obj.magic self : projectmacrocalldispatch_t).unavailableReason != Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr (let __enum_arg_31 = ((Obj.magic self : projectmacrocalldispatch_t).unavailableReason : string) in Hxhx_macro_ExprMacroDispatch.Unavailable (Stdlib.Sys.opaque_identity __enum_arg_31)))) else ());
       ignore (if (Obj.magic self : projectmacrocalldispatch_t).recording then (
         ignore (if (let __array_receiver_32 = Obj.magic ((Obj.magic self : projectmacrocalldispatch_t).recorded) in let __array_arg_0_33 = (key : string) in HxArray.indexOf_default __array_receiver_32 __array_arg_0_33) < 0 then ignore (let __array_receiver_34 = Obj.magic ((Obj.magic self : projectmacrocalldispatch_t).recorded) in let __array_arg_0_35 = (key : string) in HxArray.push __array_receiver_34 __array_arg_0_35) else ());

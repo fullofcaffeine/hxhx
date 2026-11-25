@@ -8,7 +8,7 @@ let observer = fun context -> fun source statement -> ignore (Backend_vm_NekoCat
 
 let project = fun input context -> let tempResult = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in (
   ignore (if (match input with
-    | HxStmt.SBlock (_, _) -> 0
+    | HxStmt.SBlock (_, _, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3

@@ -336,8 +336,9 @@ let rec statementListNeedsValueSlot = fun statements -> (try (
   | HxRuntime.Hx_return __ret_10 -> (Obj.obj __ret_10 : bool) : bool)
 and statementNeedsValueSlot = fun statement -> let tempResult = ref (false : bool) in (
   ignore (match statement with
-    | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
+    | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
       ignore _p1;
+      ignore _p2;
       let statements = Obj.magic _g in let __assign_11 = statementListNeedsValueSlot (Obj.magic statements) in (
         tempResult := __assign_11;
         __assign_11

@@ -279,7 +279,7 @@ let create = fun program2 selected2 -> let self = ({ __hx_type = HxType.instance
             )) else HxType.hx_throw_typed_rtti (Obj.repr "Neko catch source contains a malformed try expression") ["Dynamic"]
           )) else HxType.hx_throw_typed_rtti (Obj.repr "Neko catch source contains a malformed try expression") ["Dynamic"]) else ()) else ())
           | _ -> ignore ()) in let statement = fun node -> ignore (if (match node with
-          | HxStmt.SBlock (_, _) -> 0
+          | HxStmt.SBlock (_, _, _) -> 0
           | HxStmt.SVar (_, _, _, _, _) -> 1
           | HxStmt.SIf (_, _, _, _, _) -> 2
           | HxStmt.SForIn (_, _, _, _) -> 3
@@ -357,7 +357,7 @@ let forExpression = fun self (node : HxExpr.hxexpr) -> (try let _g = ref 0 in le
 
 let recordAdaptation = fun self (source : HxExpr.hxexpr) (statement : HxStmt.hxstmt) -> ignore (ignore (let original = Obj.magic (forExpression (Obj.magic self) (Obj.magic source)) in let tempArray = ref (Obj.magic (HxRuntime.hx_null) : Obj.t HxArray.t) in (
   ignore (if (match statement with
-    | HxStmt.SBlock (_, _) -> 0
+    | HxStmt.SBlock (_, _, _) -> 0
     | HxStmt.SVar (_, _, _, _, _) -> 1
     | HxStmt.SIf (_, _, _, _, _) -> 2
     | HxStmt.SForIn (_, _, _, _) -> 3
@@ -570,7 +570,7 @@ let create = fun program selected clauses ordinal -> let self = ({ __hx_type = H
 let __empty = fun () -> ({ __hx_type = HxType.instance_marker "backend.vm.NekoCatchPlan"; executableIdentity = HxString.hx_null_string; bodyRevision = HxString.hx_null_string; occurrenceIdentity = HxString.hx_null_string; cases = Obj.magic HxRuntime.hx_null } : t)
 
 let assertStatement = fun self (node : HxStmt.hxstmt) -> ignore (ignore (if (match node with
-  | HxStmt.SBlock (_, _) -> 0
+  | HxStmt.SBlock (_, _, _) -> 0
   | HxStmt.SVar (_, _, _, _, _) -> 1
   | HxStmt.SIf (_, _, _, _, _) -> 2
   | HxStmt.SForIn (_, _, _, _) -> 3

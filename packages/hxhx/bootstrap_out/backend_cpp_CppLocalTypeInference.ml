@@ -357,11 +357,12 @@ let rec collectErasedDynamicArgUsageNamesFromExpr = fun self (expr : HxExpr.hxex
   | _ -> ignore ()))
 
 let rec collectErasedDynamicArgUsageNamesFromStmt = fun self (stmt : HxStmt.hxstmt) (dynamicArgs : bool HxMap.string_map) (used : bool HxMap.string_map) -> ignore (ignore (match stmt with
-  | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+  | HxStmt.SBlock (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
-    let stmts = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_11 = stmts in let __array_read_index_12 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_11) __array_read_index_12) in (
-      ignore (let __old_13 = !_g2 in let __new_14 = HxInt.add __old_13 1 in (
-        ignore (_g2 := __new_14);
+    ignore _p2;
+    let stmts = Obj.magic _g in let _g3 = ref 0 in while !_g3 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_11 = stmts in let __array_read_index_12 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_11) __array_read_index_12) in (
+      ignore (let __old_13 = !_g3 in let __new_14 = HxInt.add __old_13 1 in (
+        ignore (_g3 := __new_14);
         __new_14
       ));
       collectErasedDynamicArgUsageNamesFromStmt (Obj.magic self) (Obj.magic s) (Obj.magic dynamicArgs) (Obj.magic used)
@@ -1638,11 +1639,12 @@ let isUnhintedEmptyArray = fun self (typeHint : string) (init : Obj.t) -> (try l
   | HxRuntime.Hx_return __ret_360 -> (Obj.obj __ret_360 : bool) : bool)
 
 let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hxstmt) (candidates : bool HxMap.string_map) -> ignore (ignore (match stmt with
-  | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+  | HxStmt.SBlock (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
-    let stmts = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_115 = stmts in let __array_read_index_116 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_115) __array_read_index_116) in (
-      ignore (let __old_117 = !_g2 in let __new_118 = HxInt.add __old_117 1 in (
-        ignore (_g2 := __new_118);
+    ignore _p2;
+    let stmts = Obj.magic _g in let _g3 = ref 0 in while !_g3 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_115 = stmts in let __array_read_index_116 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_115) __array_read_index_116) in (
+      ignore (let __old_117 = !_g3 in let __new_118 = HxInt.add __old_117 1 in (
+        ignore (_g3 := __new_118);
         __new_118
       ));
       collectClosureVectorLocalCandidatesFromStmt (Obj.magic self) (Obj.magic s) (Obj.magic candidates)
@@ -1867,11 +1869,12 @@ let rec collectClosureVectorLocalCandidatesFromStmt = fun self (stmt : HxStmt.hx
   )))
 
 let rec collectClosureVectorEvidenceFromStmt = fun self (stmt : HxStmt.hxstmt) (scope : Obj.t) (candidates : bool HxMap.string_map) (pushedValues : HxExpr.hxexpr HxArray.t HxMap.string_map) (callArgTypes : string HxArray.t HxArray.t HxMap.string_map) -> ignore (ignore (let _gthis = Obj.magic self in match stmt with
-  | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+  | HxStmt.SBlock (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
-    let stmts = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_133 = stmts in let __array_read_index_134 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_133) __array_read_index_134) in (
-      ignore (let __old_135 = !_g2 in let __new_136 = HxInt.add __old_135 1 in (
-        ignore (_g2 := __new_136);
+    ignore _p2;
+    let stmts = Obj.magic _g in let _g3 = ref 0 in while !_g3 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_133 = stmts in let __array_read_index_134 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_133) __array_read_index_134) in (
+      ignore (let __old_135 = !_g3 in let __new_136 = HxInt.add __old_135 1 in (
+        ignore (_g3 := __new_136);
         __new_136
       ));
       collectClosureVectorEvidenceFromStmt (Obj.magic self) (Obj.magic s) scope (Obj.magic candidates) (Obj.magic pushedValues) (Obj.magic callArgTypes)
@@ -1992,11 +1995,12 @@ let rec collectClosureVectorEvidenceFromStmt = fun self (stmt : HxStmt.hxstmt) (
   )))
 
 let rec collectClosureVectorPushedTypesFromStmt = fun self (stmt : HxStmt.hxstmt) (scope : Obj.t) (candidates : bool HxMap.string_map) (callArgTypes : string HxArray.t HxArray.t HxMap.string_map) (pushedTypes : string HxArray.t HxMap.string_map) -> ignore (ignore (let _gthis = Obj.magic self in match stmt with
-  | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+  | HxStmt.SBlock (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
-    let stmts = Obj.magic _g in let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_217 = stmts in let __array_read_index_218 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_217) __array_read_index_218) in (
-      ignore (let __old_219 = !_g2 in let __new_220 = HxInt.add __old_219 1 in (
-        ignore (_g2 := __new_220);
+    ignore _p2;
+    let stmts = Obj.magic _g in let _g3 = ref 0 in while !_g3 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_217 = stmts in let __array_read_index_218 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_217) __array_read_index_218) in (
+      ignore (let __old_219 = !_g3 in let __new_220 = HxInt.add __old_219 1 in (
+        ignore (_g3 := __new_220);
         __new_220
       ));
       collectClosureVectorPushedTypesFromStmt (Obj.magic self) (Obj.magic s) scope (Obj.magic candidates) (Obj.magic callArgTypes) (Obj.magic pushedTypes)
@@ -2677,11 +2681,12 @@ let rec collectStringMapLocalTypeOverridesFromExpr = fun self (expr : HxExpr.hxe
   | HxRuntime.Hx_return_void -> ()))
 
 let rec collectStringMapLocalTypeOverridesFromStmt = fun self (stmt : HxStmt.hxstmt) (scope : Obj.t) (candidates : string HxMap.string_map) -> ignore (ignore (let _gthis = Obj.magic self in match stmt with
-  | HxStmt.SBlock (_p0, _p1) -> ignore (let _g = Obj.magic _p0 in (
+  | HxStmt.SBlock (_p0, _p1, _p2) -> ignore (let _g = Obj.magic _p0 in (
     ignore _p1;
-    let stmts = Obj.magic _g in withStringMapInferenceScope (Obj.magic self) scope (Obj.magic candidates) (fun () -> ignore (let _g2 = ref 0 in while !_g2 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_380 = stmts in let __array_read_index_381 = !_g2 in HxArray.get (Obj.magic __array_read_receiver_380) __array_read_index_381) in (
-      ignore (let __old_382 = !_g2 in let __new_383 = HxInt.add __old_382 1 in (
-        ignore (_g2 := __new_383);
+    ignore _p2;
+    let stmts = Obj.magic _g in withStringMapInferenceScope (Obj.magic self) scope (Obj.magic candidates) (fun () -> ignore (let _g3 = ref 0 in while !_g3 < HxArray.length stmts do ignore (let s = Obj.magic (let __array_read_receiver_380 = stmts in let __array_read_index_381 = !_g3 in HxArray.get (Obj.magic __array_read_receiver_380) __array_read_index_381) in (
+      ignore (let __old_382 = !_g3 in let __new_383 = HxInt.add __old_382 1 in (
+        ignore (_g3 := __new_383);
         __new_383
       ));
       collectStringMapLocalTypeOverridesFromStmt (Obj.magic _gthis) (Obj.magic s) scope (Obj.magic candidates)

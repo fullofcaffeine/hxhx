@@ -353,7 +353,7 @@ let stage3ocamlcallablefunction_returned = fun self (statement : HxStmt.hxstmt) 
       ignore (if not (!present) then HxType.hx_throw_typed_rtti (Obj.repr "Native callback return belongs to another statement owner") ["Dynamic"] else ());
       let tempHxExpr = ref (Obj.magic (HxRuntime.hx_null) : HxExpr.hxexpr) in (
         ignore (if (match statement with
-          | HxStmt.SBlock (_, _) -> 0
+          | HxStmt.SBlock (_, _, _) -> 0
           | HxStmt.SVar (_, _, _, _, _) -> 1
           | HxStmt.SIf (_, _, _, _, _) -> 2
           | HxStmt.SForIn (_, _, _, _) -> 3
@@ -399,7 +399,7 @@ let stage3ocamlcallablefunction_returnedExpression = fun self (expression : HxEx
   let found = ref (Obj.magic (HxRuntime.hx_null) : Obj.t) in let visit = ref (Obj.magic (HxRuntime.hx_null) : HxStmt.hxstmt -> unit) in (
     ignore (let __assign_91 = Obj.magic (fun statement -> ignore ((
       ignore (if (match statement with
-        | HxStmt.SBlock (_, _) -> 0
+        | HxStmt.SBlock (_, _, _) -> 0
         | HxStmt.SVar (_, _, _, _, _) -> 1
         | HxStmt.SIf (_, _, _, _, _) -> 2
         | HxStmt.SForIn (_, _, _, _) -> 3

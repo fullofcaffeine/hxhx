@@ -857,6 +857,7 @@ let init () : unit =
   ignore (HxType.class_ "hxhx.macro.MacroResolvedModuleScanner");
   ignore (HxType.class_ "hxhx.macro.MacroRuntimeMode");
   ignore (HxType.class_ "hxhx.macro.MacroState");
+  ignore (HxType.class_ "hxhx.macro.ProjectMacroArguments");
   ignore (HxType.class_ "hxhx.macro.ProjectMacroPluginCache");
   ignore (HxType.class_ "hxhx.macro.ProjectMacroPluginProcess");
   ignore (HxType.class_ "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem");
@@ -1040,6 +1041,7 @@ let init () : unit =
   ignore (HxType.enum_ "backend.cpp.CppManagedTrySource");
   ignore (HxType.enum_ "backend.cpp.CppRuntimeTypeOperationKind");
   ignore (HxType.enum_ "backend.cpp._CppManagedNativeStack.NativeStackOperation");
+  ignore (HxType.enum_ "backend.ocaml.MacroPluginParameter");
   ignore (HxType.enum_ "backend.ocaml.OcamlDynamicArgumentCarrier");
   ignore (HxType.enum_ "backend.ocaml.Stage3OcamlEnumPayload");
   ignore (HxType.enum_ "backend.ocaml.Stage3OcamlLengthReceiver");
@@ -1068,8 +1070,10 @@ let init () : unit =
   ignore (HxType.enum_ "hxhx.ExprMacroCallRewrite");
   ignore (HxType.enum_ "hxhx.ExprMacroScopeVisibility");
   ignore (HxType.enum_ "hxhx.macro.ExprMacroDispatchResult");
+  ignore (HxType.enum_ "hxhx.macro.ProjectMacroArgument");
   ignore (HxType.enum_ "hxhx.macro.ProjectMacroPluginOutcome");
   ignore (HxType.enum_ "hxhx.macro._MacroHostClient.MacroHostReadResult");
+  ignore (HxType.enum_ "hxhx.macro._ProjectMacroArguments.ArgumentConstant");
   ignore (HxType.enum_ "reflaxe.ocaml.ast.OcamlAssignOp");
   ignore (HxType.enum_ "reflaxe.ocaml.ast.OcamlBinop");
   ignore (HxType.enum_ "reflaxe.ocaml.ast.OcamlConst");
@@ -1671,6 +1675,8 @@ let init () : unit =
   HxType.register_enum_ctor_layout "backend.cpp.CppRuntimeTypeOperationKind" "InstanceTest" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "backend.cpp._CppManagedNativeStack.NativeStackOperation" "CallStack" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "backend.cpp._CppManagedNativeStack.NativeStackOperation" "ExceptionStack" 1 (HxType.EnumImmediate 1);
+  HxType.register_enum_ctor_layout "backend.ocaml.MacroPluginParameter" "SyntaxParameter" 0 (HxType.EnumImmediate 0);
+  HxType.register_enum_ctor_layout "backend.ocaml.MacroPluginParameter" "ConstantParameter" 1 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "backend.ocaml.OcamlDynamicArgumentCarrier" "ExactBool" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "backend.ocaml.OcamlDynamicArgumentCarrier" "DynamicValue" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "backend.ocaml.OcamlDynamicArgumentCarrier" "ConcreteValue" 2 (HxType.EnumImmediate 2);
@@ -1797,11 +1803,15 @@ let init () : unit =
   HxType.register_enum_ctor_layout "hxhx.ExprMacroScopeVisibility" "Unavailable" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "hxhx.macro.ExprMacroDispatchResult" "Expanded" 0 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "hxhx.macro.ExprMacroDispatchResult" "Unavailable" 1 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "hxhx.macro.ProjectMacroArgument" "Syntax" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "hxhx.macro.ProjectMacroArgument" "Constant" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "hxhx.macro.ProjectMacroPluginOutcome" "Reused" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "hxhx.macro.ProjectMacroPluginOutcome" "Built" 1 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "hxhx.macro._MacroHostClient.MacroHostReadResult" "ReadLine" 0 (HxType.EnumBlock 0);
   HxType.register_enum_ctor_layout "hxhx.macro._MacroHostClient.MacroHostReadResult" "ReadEof" 1 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "hxhx.macro._MacroHostClient.MacroHostReadResult" "ReadError" 2 (HxType.EnumBlock 1);
+  HxType.register_enum_ctor_layout "hxhx.macro._ProjectMacroArguments.ArgumentConstant" "Value" 0 (HxType.EnumBlock 0);
+  HxType.register_enum_ctor_layout "hxhx.macro._ProjectMacroArguments.ArgumentConstant" "NotSupported" 1 (HxType.EnumBlock 1);
   HxType.register_enum_ctor_layout "reflaxe.ocaml.ast.OcamlAssignOp" "RefSet" 0 (HxType.EnumImmediate 0);
   HxType.register_enum_ctor_layout "reflaxe.ocaml.ast.OcamlAssignOp" "FieldSet" 1 (HxType.EnumImmediate 1);
   HxType.register_enum_ctor_layout "reflaxe.ocaml.ast.OcamlBinop" "Add" 0 (HxType.EnumImmediate 0);
@@ -2645,7 +2655,8 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'stmts' for HxStmt.SBlock" in
     let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'pos' for HxStmt.SBlock" in
-    Obj.repr (HxStmt.SBlock (a0, a1) : HxStmt.hxstmt)
+    let a2 = if len > 2 then (HxArray.get args 2) else HxRuntime.hx_null in
+    Obj.repr (HxStmt.SBlock (a0, a1, a2) : HxStmt.hxstmt)
   );
   HxType.register_enum_ctor "HxStmt" "SVar" (fun (args : Obj.t HxArray.t) ->
     let len = HxArray.length args in
@@ -4317,6 +4328,14 @@ let init () : unit =
   HxType.register_enum_ctor "backend.cpp._CppManagedNativeStack.NativeStackOperation" "ExceptionStack" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_cpp_CppManagedNativeStack.ExceptionStack : Backend_cpp_CppManagedNativeStack.nativestackoperation)
   );
+  HxType.register_enum_ctor "backend.ocaml.MacroPluginParameter" "SyntaxParameter" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Backend_ocaml_Stage3OcamlMacroPluginEntry.SyntaxParameter : Backend_ocaml_Stage3OcamlMacroPluginEntry.macropluginparameter)
+  );
+  HxType.register_enum_ctor "backend.ocaml.MacroPluginParameter" "ConstantParameter" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'type' for backend.ocaml.MacroPluginParameter.ConstantParameter" in
+    Obj.repr (Backend_ocaml_Stage3OcamlMacroPluginEntry.ConstantParameter a0 : Backend_ocaml_Stage3OcamlMacroPluginEntry.macropluginparameter)
+  );
   HxType.register_enum_ctor "backend.ocaml.OcamlDynamicArgumentCarrier" "ExactBool" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Backend_ocaml_OcamlDynamicOperatorLowering.ExactBool : Backend_ocaml_OcamlDynamicOperatorLowering.ocamldynamicargumentcarrier)
   );
@@ -4884,6 +4903,16 @@ let init () : unit =
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'reason' for hxhx.macro.ExprMacroDispatchResult.Unavailable" in
     Obj.repr (Hxhx_macro_ExprMacroDispatch.Unavailable a0 : Hxhx_macro_ExprMacroDispatch.exprmacrodispatchresult)
   );
+  HxType.register_enum_ctor "hxhx.macro.ProjectMacroArgument" "Syntax" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'expression' for hxhx.macro.ProjectMacroArgument.Syntax" in
+    Obj.repr (Hxhx_macro_ProjectMacroArguments.Syntax a0 : Hxhx_macro_ProjectMacroArguments.projectmacroargument)
+  );
+  HxType.register_enum_ctor "hxhx.macro.ProjectMacroArgument" "Constant" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.magic ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'value' for hxhx.macro.ProjectMacroArgument.Constant" in
+    Obj.repr (Hxhx_macro_ProjectMacroArguments.Constant a0 : Hxhx_macro_ProjectMacroArguments.projectmacroargument)
+  );
   HxType.register_enum_ctor "hxhx.macro.ProjectMacroPluginOutcome" "Reused" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_macro_ProjectMacroPluginCache.Reused : Hxhx_macro_ProjectMacroPluginCache.projectmacropluginoutcome)
   );
@@ -4904,6 +4933,17 @@ let init () : unit =
     let len = HxArray.length args in
     let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'message' for hxhx.macro._MacroHostClient.MacroHostReadResult.ReadError" in
     Obj.repr (Hxhx_macro_MacroHostClient.ReadError a0 : Hxhx_macro_MacroHostClient.macrohostreadresult)
+  );
+  HxType.register_enum_ctor "hxhx.macro._ProjectMacroArguments.ArgumentConstant" "Value" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'type' for hxhx.macro._ProjectMacroArguments.ArgumentConstant.Value" in
+    let a1 = if len > 1 then Obj.magic ((HxArray.get args 1)) else failwith "Type.createEnum: missing ctor arg 'value' for hxhx.macro._ProjectMacroArguments.ArgumentConstant.Value" in
+    Obj.repr (Hxhx_macro_ProjectMacroArguments.Value (a0, a1) : Hxhx_macro_ProjectMacroArguments.argumentconstant)
+  );
+  HxType.register_enum_ctor "hxhx.macro._ProjectMacroArguments.ArgumentConstant" "NotSupported" (fun (args : Obj.t HxArray.t) ->
+    let len = HxArray.length args in
+    let a0 = if len > 0 then Obj.obj ((HxArray.get args 0)) else failwith "Type.createEnum: missing ctor arg 'kind' for hxhx.macro._ProjectMacroArguments.ArgumentConstant.NotSupported" in
+    Obj.repr (Hxhx_macro_ProjectMacroArguments.NotSupported a0 : Hxhx_macro_ProjectMacroArguments.argumentconstant)
   );
   HxType.register_enum_ctor "reflaxe.ocaml.ast.OcamlAssignOp" "RefSet" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Reflaxe_ocaml_ast_OcamlAssignOp.RefSet : Reflaxe_ocaml_ast_OcamlAssignOp.ocamlassignop)
@@ -8726,6 +8766,9 @@ let init () : unit =
   HxType.register_class_ctor "hxhx.macro.MacroState" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_macro_MacroState.create ())
   );
+  HxType.register_class_ctor "hxhx.macro.ProjectMacroArguments" (fun (_args : Obj.t HxArray.t) ->
+    Obj.repr (Hxhx_macro_ProjectMacroArguments.create ())
+  );
   HxType.register_class_ctor "hxhx.macro.ProjectMacroPluginCache" (fun (_args : Obj.t HxArray.t) ->
     Obj.repr (Hxhx_macro_ProjectMacroPluginCache.create ())
   );
@@ -9644,6 +9687,7 @@ let init () : unit =
   HxType.register_class_empty_ctor "hxhx.macro.MacroResolvedModuleScanner" (fun () -> Obj.repr (Hxhx_macro_MacroResolvedModuleScanner.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroRuntimeMode" (fun () -> Obj.repr (Hxhx_macro_MacroRuntimeMode.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.MacroState" (fun () -> Obj.repr (Hxhx_macro_MacroState.__empty ()));
+  HxType.register_class_empty_ctor "hxhx.macro.ProjectMacroArguments" (fun () -> Obj.repr (Hxhx_macro_ProjectMacroArguments.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.ProjectMacroPluginCache" (fun () -> Obj.repr (Hxhx_macro_ProjectMacroPluginCache.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro.ProjectMacroPluginProcess" (fun () -> Obj.repr (Hxhx_macro_ProjectMacroPluginProcess.__empty ()));
   HxType.register_class_empty_ctor "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem" (fun () -> Obj.repr (Hxhx_macro_BuildFieldSnapshotPayload.buildfieldpayloaditem___empty ()));
@@ -9878,7 +9922,7 @@ let init () : unit =
   HxType.register_class_static_fields "MacroSyntaxImport" [ "anonymousField"; "binopToken"; "constantOf"; "failure"; "functionKind"; "identifier"; "integerConstant"; "isEnumValueName"; "loopName"; "restElement"; "restElementOf"; "typePathText"; "typeText"; "unop" ];
   HxType.register_class_instance_fields "MacroSyntaxPositions" [ "export"; "exported"; "file"; "first"; "getAnchor"; "getFile"; "resolve" ];
   HxType.register_class_static_fields "MacroSyntaxPositions" [ "isKnown" ];
-  HxType.register_class_instance_fields "ModuleLoader" [ "candidateModulePaths"; "classPaths"; "declarationHeadersAvailable"; "declarationsAreComplete"; "defines"; "depsForParsedModule"; "drainNewModules"; "ensureDeclarationAvailable"; "ensureTypeAvailable"; "expandDependencies"; "hasDefine"; "hasModuleSource"; "hasStandardLibrary"; "index"; "inheritTypeNotFoundAttempts"; "initializationMacros"; "invokeOnMissingType"; "isMacroModule"; "loadModuleByPath"; "loadModuleHeadersByPath"; "macroContext"; "markResolvedAlready"; "moduleDefines"; "noteInitializationMacros"; "onMissingType"; "pending"; "prepareModule"; "prepareResolvedModule"; "prepareSignatureDependencies"; "resolveModuleFile"; "signatureStates"; "sourceProvider"; "standardLibrary"; "typeNotFoundTried"; "visited"; "visitedSourceFiles" ];
+  HxType.register_class_instance_fields "ModuleLoader" [ "candidateModulePaths"; "classPaths"; "declarationHeadersAvailable"; "declarationsAreComplete"; "defines"; "depsForParsedModule"; "drainNewModules"; "ensureDeclarationAvailable"; "ensureTypeAvailable"; "expandDependencies"; "hasDefine"; "hasModuleSource"; "hasStandardLibrary"; "index"; "inheritTypeNotFoundAttempts"; "initializationMacros"; "invokeOnMissingType"; "isMacroModule"; "loadModuleByPath"; "loadModuleHeadersByPath"; "macroContext"; "markResolvedAlready"; "moduleDefines"; "noteInitializationMacros"; "onMissingType"; "parseFailures"; "pending"; "prepareModule"; "prepareResolvedModule"; "prepareSignatureDependencies"; "resolveModuleFile"; "signatureStates"; "sourceProvider"; "standardLibrary"; "typeNotFoundTried"; "visited"; "visitedSourceFiles" ];
   HxType.register_class_static_fields "ModuleLoader" [ "implicitQualifiedTypeDeps" ];
   HxType.register_class_instance_fields "ParsedModule" [ "decl"; "filePath"; "getDecl"; "getFilePath"; "getSource"; "source" ];
   HxType.register_class_static_fields "ParsedModule" [];
@@ -10409,7 +10453,7 @@ let init () : unit =
   HxType.register_class_instance_fields "_TySourceTryResult.TySourceTryResult_Fields_" [];
   HxType.register_class_static_fields "_TySourceTryResult.TySourceTryResult_Fields_" [ "convertBranch"; "select" ];
   HxType.register_class_instance_fields "_TyStructuralArgument.TyStructuralArgument_Fields_" [];
-  HxType.register_class_static_fields "_TyStructuralArgument.TyStructuralArgument_Fields_" [ "compatibility"; "literalFits" ];
+  HxType.register_class_static_fields "_TyStructuralArgument.TyStructuralArgument_Fields_" [ "compatibility"; "hasOpenComponent"; "literalFits"; "openComponents" ];
   HxType.register_class_instance_fields "_TyStructuralConstraint.TyStructuralConstraint_Fields_" [];
   HxType.register_class_static_fields "_TyStructuralConstraint.TyStructuralConstraint_Fields_" [ "access"; "argumentMember"; "assignArguments"; "assignsNominalArguments"; "constrain"; "constrainExact"; "constrainNominalAssignment"; "constrainTerms"; "hasStructuralArgument"; "inferredMember"; "member"; "memberDirection"; "memberRules"; "term"; "value" ];
   HxType.register_class_instance_fields "_TyStructuralFieldRead.TyStructuralFieldRead_Fields_" [];
@@ -10959,7 +11003,7 @@ let init () : unit =
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlLocalNames" [ "byProjectedName"; "findTargetName"; "findType"; "internalName"; "localCatalog"; "requireOwner"; "targetName" ];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlLocalNames" [];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlMacroPluginEntry" [];
-  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlMacroPluginEntry" [ "checkedArity"; "declarations"; "duneStanza"; "isExprType"; "isTypePath"; "libraryName"; "ownerTypePaths"; "render"; "unsupportedDeclarationShape" ];
+  HxType.register_class_static_fields "backend.ocaml.Stage3OcamlMacroPluginEntry" [ "checkedParameters"; "constantDecoder"; "constantType"; "declarations"; "duneStanza"; "isExprType"; "isTypePath"; "libraryName"; "ownerTypePaths"; "parameters"; "render"; "unsupportedDeclarationShape" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlNativeCallPolicy" [];
   HxType.register_class_static_fields "backend.ocaml.Stage3OcamlNativeCallPolicy" [ "forBackend"; "retain"; "supportsMapMethod" ];
   HxType.register_class_instance_fields "backend.ocaml.Stage3OcamlRuntimeTypes" [ "checkedTarget"; "checkedValue"; "classes"; "downcast"; "functions"; "initializers"; "membership"; "occurrence"; "occurrences"; "predicate"; "predicateArguments"; "reference"; "render"; "renderCall"; "selectCall"; "testedValue" ];
@@ -11422,6 +11466,8 @@ let init () : unit =
   HxType.register_class_static_fields "hxhx.macro.MacroRuntimeMode" [ "emitMarker"; "externalHostCannotLoadProjectMacroPlugin"; "normalize"; "openSession"; "resolve" ];
   HxType.register_class_instance_fields "hxhx.macro.MacroState" [];
   HxType.register_class_static_fields "hxhx.macro.MacroState" [ "addClassPath"; "addMessage"; "addResource"; "afterGenerateHookIds"; "afterTypingHookIds"; "buildFieldsByModule"; "buildFieldsPayload"; "classPaths"; "clearBuildFields"; "clearCurrentPos"; "clearLocalContext"; "clearMainExprText"; "compilerArgs"; "compilerTargetName"; "compilerVersion"; "copyUniqueTrimmedStrings"; "customMetadataEntries"; "debugEnabled"; "defined"; "definedValue"; "defines"; "emitBuildFields"; "emitHxModule"; "emitOcamlModule"; "explicitCurrentPos"; "explicitLocalContext"; "explicitMainExprText"; "generatedHxDir"; "generatedHxModules"; "getBuildFieldsPayload"; "getCompilerConfigurationSnapshot"; "getCurrentPos"; "getExpectedTypeText"; "getGeneratedHxDir"; "getGeneratedHxModuleSource"; "getLocalMethod"; "getLocalModule"; "getLocalTypeText"; "getMainExprText"; "getOcamlModuleSource"; "getResource"; "globalMetadataRules"; "hasArg"; "hasGeneratedHxModules"; "includeModule"; "includedModules"; "isBuildMetadata"; "listAfterGenerateHookIds"; "listAfterTypingHookIds"; "listAppliedTypeMetadata"; "listBuildFields"; "listCallArgumentExprTexts"; "listClassPaths"; "listCustomMetadataEntries"; "listDefineNames"; "listDefinesPairsSorted"; "listGeneratedHxModuleNames"; "listGlobalMetadataRules"; "listIncludedModules"; "listLocalTVars"; "listMessages"; "listModuleDependencies"; "listOcamlModuleNames"; "listOnGenerateHookIds"; "listOnTypeNotFoundHookIds"; "listResourceNames"; "listResourcesPairsSorted"; "matchesMetadataPathFilter"; "messages"; "moduleDependencies"; "nextSyntheticLocalTVarId"; "normalizeExprTexts"; "normalizeLocalTVars"; "normalizeOptionalText"; "ocamlModules"; "onGenerateHookIds"; "onTypeNotFoundHookIds"; "optimizeEnabled"; "parseCompilerVersionFromDefines"; "registerCustomMetadata"; "registerGlobalMetadata"; "registerHook"; "registerModuleDependency"; "replaceMessages"; "reset"; "resources"; "seedCompilerConfiguration"; "seedFromCliDefines"; "setBuildFieldsPayload"; "setCurrentPos"; "setDefine"; "setGeneratedHxDir"; "setLocalContext"; "setMainExprText"; "sortStringsInPlace"; "stdPaths"; "supportsUnicode"; "verboseEnabled" ];
+  HxType.register_class_instance_fields "hxhx.macro.ProjectMacroArguments" [];
+  HxType.register_class_static_fields "hxhx.macro.ProjectMacroArguments" [ "bind"; "constantOf" ];
   HxType.register_class_instance_fields "hxhx.macro.ProjectMacroPluginCache" [];
   HxType.register_class_static_fields "hxhx.macro.ProjectMacroPluginCache" [ "acquireLock"; "ageSeconds"; "build"; "cacheKey"; "checkToolchain"; "compareStrings"; "defaultRoot"; "deleteTree"; "ensure"; "firstLine"; "isStaleLock"; "receiptBuildName"; "releaseLock"; "reused"; "runtimeDigest"; "sortedCopy"; "uniqueSuffix" ];
   HxType.register_class_instance_fields "hxhx.macro.ProjectMacroPluginProcess" [];
@@ -12498,6 +12544,7 @@ let init () : unit =
   HxType.register_class_tags "hxhx.macro.MacroResolvedModuleScanner" [ "hxhx.macro.MacroResolvedModuleScanner" ];
   HxType.register_class_tags "hxhx.macro.MacroRuntimeMode" [ "hxhx.macro.MacroRuntimeMode" ];
   HxType.register_class_tags "hxhx.macro.MacroState" [ "hxhx.macro.MacroState" ];
+  HxType.register_class_tags "hxhx.macro.ProjectMacroArguments" [ "hxhx.macro.ProjectMacroArguments" ];
   HxType.register_class_tags "hxhx.macro.ProjectMacroPluginCache" [ "hxhx.macro.ProjectMacroPluginCache" ];
   HxType.register_class_tags "hxhx.macro.ProjectMacroPluginProcess" [ "hxhx.macro.ProjectMacroPluginProcess" ];
   HxType.register_class_tags "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem" [ "hxhx.macro._BuildFieldSnapshotPayload.BuildFieldPayloadItem" ];

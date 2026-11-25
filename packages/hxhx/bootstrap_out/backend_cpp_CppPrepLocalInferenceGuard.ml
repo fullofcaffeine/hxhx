@@ -31,8 +31,9 @@ and stmtHasLocalDeclEvidence = fun stmt evidence -> (try (
   ignore (if stmt == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let tempResult = ref (false : bool) in (
     ignore (match stmt with
-      | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
         ignore _p1;
+        ignore _p2;
         let stmts = Obj.magic _g in let __assign_10 = stmtListHasLocalDeclEvidence (Obj.magic stmts) evidence in (
           tempResult := __assign_10;
           __assign_10
@@ -1281,8 +1282,9 @@ and stmtHasBindCallableEvidence = fun stmt -> (try (
   ignore (if stmt == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let tempResult = ref (false : bool) in (
     ignore (match stmt with
-      | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
         ignore _p1;
+        ignore _p2;
         let stmts = Obj.magic _g in let __assign_151 = stmtListHasBindCallableEvidence (Obj.magic stmts) in (
           tempResult := __assign_151;
           __assign_151
@@ -1838,8 +1840,9 @@ and stmtHasHelperTypedAsEvidence = fun stmt -> (try (
   ignore (if stmt == Obj.magic (HxRuntime.hx_null) then Stdlib.raise (HxRuntime.Hx_return (Obj.repr false)) else ());
   let tempResult = ref (false : bool) in (
     ignore (match stmt with
-      | HxStmt.SBlock (_p0, _p1) -> let _g = Obj.magic _p0 in (
+      | HxStmt.SBlock (_p0, _p1, _p2) -> let _g = Obj.magic _p0 in (
         ignore _p1;
+        ignore _p2;
         let stmts = Obj.magic _g in let __assign_298 = stmtListHasHelperTypedAsEvidence (Obj.magic stmts) in (
           tempResult := __assign_298;
           __assign_298
