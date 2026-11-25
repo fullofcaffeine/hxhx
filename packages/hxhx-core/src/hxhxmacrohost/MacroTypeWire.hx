@@ -31,8 +31,9 @@ import hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWireWriter;
 	- `typeof`, `follow`, and each `Ref.get` send one request through `call` (in a plugin,
 	  `HxHxMacroModuleHost.call_host`). A compile error comes back as `haxe.macro.Expr.Error`,
 	  which macro code may catch, as with upstream's typing errors.
-	- Each `Ref` this decoder builds is remembered with its handle, so `follow` can send a type
-	  the compiler gave back. A `Ref` the macro built itself has no handle and is `invalid` there.
+	- Each `Ref` this decoder builds is remembered with its handle (`MacroTypeRefHandles`, one
+	  typed store per kind, compared by identity), so `follow` can send a type the compiler gave
+	  back. A `Ref` the macro built itself has no handle and is `invalid` there.
 	- Every closure has an expression body that calls a method: the Stage3 emitter's block-bodied
 	  closures cannot return a nullable value or a structure, and cannot loop over an array
 	  (haxe_ocaml-kmm68).
@@ -44,10 +45,13 @@ import hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWireWriter;
 class MacroTypeWire {
 	final call:String->String;
 
-	/** Every `Ref` built here, with its handle at the same index. Compared by identity. */
-	final refs:Array<Dynamic> = [];
-
-	final handles:Array<Int> = [];
+	// The handles of the refs built here, one store for each kind of `Ref` a type can hold.
+	final classRefs:MacroTypeRefHandles<ClassType> = new MacroTypeRefHandles<ClassType>();
+	final enumRefs:MacroTypeRefHandles<EnumType> = new MacroTypeRefHandles<EnumType>();
+	final defRefs:MacroTypeRefHandles<DefType> = new MacroTypeRefHandles<DefType>();
+	final abstractRefs:MacroTypeRefHandles<AbstractType> = new MacroTypeRefHandles<AbstractType>();
+	final anonRefs:MacroTypeRefHandles<AnonType> = new MacroTypeRefHandles<AnonType>();
+	final monoRefs:MacroTypeRefHandles<Null<Type>> = new MacroTypeRefHandles<Null<Type>>();
 
 	public function new(call:String->String) {
 		this.call = call;
@@ -92,18 +96,6 @@ class MacroTypeWire {
 		if (found != kind)
 			throw "macro context: invalid: type handle " + handle + " is a `" + found + "`, not a `" + kind + "`";
 		return reader;
-	}
-
-	function remember(ref:Dynamic, handle:Int):Void {
-		refs.push(ref);
-		handles.push(handle);
-	}
-
-	function handleOf(ref:Dynamic):Int {
-		for (index in 0...refs.length)
-			if (refs[index] == ref)
-				return handles[index];
-		throw "macro context: invalid: this Ref was not given by the compiler, so it cannot be sent back";
 	}
 
 	// Types from the compiler.
@@ -167,7 +159,7 @@ class MacroTypeWire {
 		final handle = reader.int();
 		final label = reader.string();
 		final ref:Ref<ClassType> = {get: () -> classType(record(handle, "class")), toString: () -> label};
-		remember(ref, handle);
+		classRefs.remember(ref, handle);
 		return ref;
 	}
 
@@ -175,7 +167,7 @@ class MacroTypeWire {
 		final handle = reader.int();
 		final label = reader.string();
 		final ref:Ref<EnumType> = {get: () -> enumType(record(handle, "enum")), toString: () -> label};
-		remember(ref, handle);
+		enumRefs.remember(ref, handle);
 		return ref;
 	}
 
@@ -183,7 +175,7 @@ class MacroTypeWire {
 		final handle = reader.int();
 		final label = reader.string();
 		final ref:Ref<DefType> = {get: () -> defType(record(handle, "typedef")), toString: () -> label};
-		remember(ref, handle);
+		defRefs.remember(ref, handle);
 		return ref;
 	}
 
@@ -191,7 +183,7 @@ class MacroTypeWire {
 		final handle = reader.int();
 		final label = reader.string();
 		final ref:Ref<AbstractType> = {get: () -> abstractType(record(handle, "abstract")), toString: () -> label};
-		remember(ref, handle);
+		abstractRefs.remember(ref, handle);
 		return ref;
 	}
 
@@ -199,7 +191,7 @@ class MacroTypeWire {
 		final handle = reader.int();
 		final label = reader.string();
 		final ref:Ref<AnonType> = {get: () -> anonType(record(handle, "anonymous")), toString: () -> label};
-		remember(ref, handle);
+		anonRefs.remember(ref, handle);
 		return ref;
 	}
 
@@ -209,7 +201,7 @@ class MacroTypeWire {
 		// A bound method, not a closure: the emitter's closures cannot return a nullable value.
 		final binding = new MacroTypeMonoRef(monoBinding, handle);
 		final ref:Ref<Null<Type>> = {get: binding.get, toString: () -> label};
-		remember(ref, handle);
+		monoRefs.remember(ref, handle);
 		return ref;
 	}
 
@@ -217,7 +209,6 @@ class MacroTypeWire {
 		final handle = reader.int();
 		final label = reader.string();
 		final ref:Ref<Array<ClassField>> = {get: () -> fieldList(handle), toString: () -> label};
-		remember(ref, handle);
 		return ref;
 	}
 
@@ -594,18 +585,18 @@ class MacroTypeWire {
 		switch t {
 			case TMono(ref):
 				writer.string("TMono");
-				writer.int(handleOf(ref));
+				writer.int(monoRefs.handleOf(ref));
 			case TEnum(ref, params):
 				writer.string("TEnum");
-				writer.int(handleOf(ref));
+				writer.int(enumRefs.handleOf(ref));
 				types(writer, params);
 			case TInst(ref, params):
 				writer.string("TInst");
-				writer.int(handleOf(ref));
+				writer.int(classRefs.handleOf(ref));
 				types(writer, params);
 			case TType(ref, params):
 				writer.string("TType");
-				writer.int(handleOf(ref));
+				writer.int(defRefs.handleOf(ref));
 				types(writer, params);
 			case TFun(args, ret):
 				writer.string("TFun");
@@ -618,7 +609,7 @@ class MacroTypeWire {
 				type(writer, ret);
 			case TAnonymous(ref):
 				writer.string("TAnonymous");
-				writer.int(handleOf(ref));
+				writer.int(anonRefs.handleOf(ref));
 			case TDynamic(inner):
 				writer.string("TDynamic");
 				if (inner == null)
@@ -627,7 +618,7 @@ class MacroTypeWire {
 					type(writer, inner);
 			case TAbstract(ref, params):
 				writer.string("TAbstract");
-				writer.int(handleOf(ref));
+				writer.int(abstractRefs.handleOf(ref));
 				types(writer, params);
 			case TLazy(_):
 				throw "macro context: invalid: a TLazy type cannot be sent to the compiler";
