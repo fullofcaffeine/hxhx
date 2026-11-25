@@ -229,12 +229,32 @@ require_line edited_twice '^project_macro_plugin_reason=.*macro source changed s
 run_app edited_twice
 echo "PROJECT_MACRO_MODULE_REBUILD_ON_EDIT:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# Fill directory $1 with links to only the tools the missing-toolchain step runs, so a PATH of that
+# directory hides dune and ocamlopt even where the OCaml toolchain is installed in /usr/bin (apt on
+# Linux). The step's shell needs bash, mkdir, dirname, basename, grep, and cat. hxhx starts each
+# tool through /bin/sh with a watcher that calls sleep, and setsid where it exists
+# (hxhx.macro.ProjectMacroPluginProcess). A missing optional tool is skipped.
+make_toolless_bin() {
+  local dir="$1"
+  local tool
+  local tool_path
+  mkdir -p "$dir"
+  for tool in sh bash mkdir dirname basename grep cat sleep setsid; do
+    tool_path="$(command -v "$tool" 2>/dev/null || true)"
+    case "$tool_path" in
+      /*) ln -sf "$tool_path" "$dir/$tool" ;;
+    esac
+  done
+}
+
 # Without dune and ocamlopt on PATH the plugin cannot be built; the call fails with one clear reason.
+TOOLLESS_BIN="$WORK_DIR/toolless-bin"
+make_toolless_bin "$TOOLLESS_BIN"
 (
-  PATH="/usr/bin:/bin"
+  PATH="$TOOLLESS_BIN"
   export PATH
   if command -v dune >/dev/null 2>&1 || command -v ocamlopt >/dev/null 2>&1; then
-    echo "The missing-toolchain check needs a PATH without dune and ocamlopt; /usr/bin or /bin provides one." >&2
+    echo "The missing-toolchain check still finds dune or ocamlopt on PATH=$PATH." >&2
     exit 1
   fi
   expect_failure missing_toolchain "$FIXTURE_DIR/src" Main \
@@ -250,21 +270,31 @@ expect_failure external_host "$FIXTURE_DIR/src" Main \
 require_line external_host '^hxhx_macro_runtime_mode=external-host$'
 echo "PROJECT_MACRO_MODULE_EXTERNAL_HOST_REJECTED:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# The receipt check validates only the artifact this hxhx loads. hxhx picks it by its own executable
+# (hxhx.macro.InProcMacroRuntime.pluginArtifactKind): a bytecode compiler (`.bc`, `.byte`) loads the
+# `.cma` (`artifacts.bytecode`), a native one the `.cmxs` (`artifacts.native`). The digest mutation
+# below changes that artifact's digest and requires hxhx to report its mismatch, so a wrong choice
+# here fails the step instead of passing it.
+case "$(printf '%s' "$HXHX_BIN_RESOLVED" | tr '[:upper:]' '[:lower:]')" in
+  *.bc | *.byte) LOADED_ARTIFACT_KIND=bytecode ;;
+  *) LOADED_ARTIFACT_KIND=native ;;
+esac
+
 # A changed receipt is rejected; hxhx rebuilds instead of loading the plugin it names.
 mutate_receipt() {
   node -e '
 const fs = require("fs")
-const [path, kind] = process.argv.slice(1)
+const [path, kind, artifactKind] = process.argv.slice(1)
 const receipt = JSON.parse(fs.readFileSync(path, "utf8"))
 if (kind === "compiler") receipt.compilerIdentity = "another-compiler"
 else if (kind === "abi") receipt.abiVersion = 1
 else if (kind === "declaration") receipt.declarations = ["Identity.missing"]
-else if (kind === "digest") receipt.artifacts.native.sha256 = "0".repeat(64)
+else if (kind === "digest") receipt.artifacts[artifactKind].sha256 = "0".repeat(64)
 else throw new Error("unknown mutation " + kind)
 fs.writeFileSync(path, JSON.stringify(receipt, null, 2) + "\n")
-' "$RECEIPT" "$1"
+' "$RECEIPT" "$1" "$LOADED_ARTIFACT_KIND"
 }
-for mutation in compiler:compilerIdentity abi:abiVersion declaration:registered digest:SHA-256; do
+for mutation in "compiler:compilerIdentity" "abi:abiVersion" "declaration:registered" "digest:artifact SHA-256 mismatch"; do
   kind="${mutation%%:*}"
   expected="${mutation#*:}"
   mutate_receipt "$kind"
@@ -334,6 +364,7 @@ echo "PROJECT_MACRO_MODULE_CONSTANT_ARGUMENTS:PASS" | tee -a "$ARTIFACT_DIR/mark
   echo "hxhx_md5=$(node -e 'process.stdout.write(require("crypto").createHash("md5").update(require("fs").readFileSync(process.argv[1])).digest("hex"))' "$HXHX_BIN_RESOLVED")"
   echo "macro_host=$MACRO_HOST_RESOLVED"
   echo "declarations=$DECLARATION"
+  echo "loaded_artifact_kind=$LOADED_ARTIFACT_KIND"
   echo "receipt=$RECEIPT"
   echo "cold_compile_ms=$cold_ms"
   echo "warm_compile_ms=$warm_ms"
