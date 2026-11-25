@@ -331,7 +331,7 @@ class TyMethodGenericBinding {
 				return previous.getSemanticKey() == actual.getSemanticKey();
 			final unified = TyType.unify(previous, actual);
 			if (unified == null)
-				return false;
+				return assignsToBinding(index, previous, actual);
 			bindings.set(parameterKey, unified);
 			return true;
 		}
@@ -384,6 +384,33 @@ class TyMethodGenericBinding {
 				activeAliases))
 				return false;
 		return true;
+	}
+
+	/**
+		Haxe 4.3.7 binds a method type parameter to the first argument that gives it a type, then
+		unifies each later argument with that type (`unify` in `tUnification.ml`). That accepts an
+		abstract's declared casts, `Any`, a subclass and a Dynamic type argument, so `same(1, kind)`
+		with `enum abstract Kind(Int) to Int` binds T to Int; the earlier binding stays. The reverse,
+		`same(kind, 1)`, still fails: Int does not cast to Kind.
+	**/
+	static function assignsToBinding(index:TyperIndex, previous:TyType, actual:TyType):Bool {
+		if (TyAssignmentCompatibility.classify(previous, actual, Unchecked) == Compatible)
+			return true;
+		final target = previous.unwrapNull();
+		final value = actual.unwrapNull();
+		if (isAny(target) || isAny(value))
+			return true;
+		if (TyImplicitConversionPlan.select(index, target, value) != null)
+			return true;
+		final identity = target.getNominalIdentity();
+		final ancestor = identity == null || index == null ? null : TyNominalAncestor.view(index, value, identity);
+		return ancestor != null && TyAssignmentCompatibility.classify(target, ancestor, Unchecked) == Compatible;
+	}
+
+	/** `Any` casts to and from every type through its `@:to` and `@:from` functions. */
+	static function isAny(type:TyType):Bool {
+		final identity = type.getNominalIdentity();
+		return identity != null && identity.getCanonicalName() == "Any";
 	}
 
 	static function bindings(sig:TyFunSig, argTypes:Array<TyType>, suppliedArity:Int, methodTypeParameters:Array<TyTypeParameterId>,
