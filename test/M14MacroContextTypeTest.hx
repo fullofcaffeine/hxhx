@@ -116,7 +116,9 @@ class M14MacroContextTypeTest {
 		final parsed = ParserStage.parse(source, file);
 		final resolved = new ResolvedModule("Main", file, parsed);
 		final index = TyperIndex.buildHeaders([resolved]);
-		final std = Sys.getEnv("HAXE_STD_PATH") != null ? Sys.getEnv("HAXE_STD_PATH") : sys.FileSystem.absolutePath("vendor/haxe/std");
+		// The pinned standard library, found as the other std-reading tests find it. Core Tests has
+		// no `vendor/haxe`, and `HAXE_STD_PATH` may be a list, so neither is used as is.
+		final std = sys.FileSystem.absolutePath(M14Stage0StdPath.locate());
 		final loader = new ModuleLoader([haxe.io.Path.directory(file), std], new haxe.ds.StringMap<String>(), index, _ -> false);
 		loader.markResolvedAlready([resolved]);
 		final declaration = parsed.getDecl();
