@@ -2,7 +2,7 @@
 	Names that authored parsing (`ParserStage.parseAuthored`, the parse oracle) uses to keep
 	upstream syntax that ordinary parsing lowers.
 
-	Kept outside `HxParser`: reflaxe.ocaml cannot emit a static with an initializer inside
+	Kept outside `HxParser`: the OCaml backend cannot emit a static with an initializer inside
 	HxParser's module cycle (`ocaml-module-cycle:unsupported-initialization`).
 **/
 class HxAuthoredSyntax {
