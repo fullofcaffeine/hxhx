@@ -140,7 +140,10 @@ class MacroSyntaxExport {
 				EConst(CInt(raw, suffix));
 			case ECall(EIdent("__hxhx_float_literal"), [EString(raw), EString(suffix)]):
 				EConst(CFloat(raw, suffix));
-			case ECall(EIdent(marker), [EString(name), EString(argumentText), inner]) if (marker == HxAuthoredSyntax.META):
+			// Ordinary parsing drops a written colon from expression metadata (`__hxhx_expr_meta`), so
+			// there only a name with its colon is exact: the parser writes one for a markup literal.
+			case ECall(EIdent(marker), [EString(name), EString(argumentText), inner])
+				if (marker == HxAuthoredSyntax.META || (marker == "__hxhx_expr_meta" && StringTools.startsWith(name, ":"))):
 				EMeta({name: name, params: [for (argument in metadataArguments(argumentText)) child(argument, position)], pos: position},
 					child(inner, position));
 			case ECall(EIdent(marker), _) if (StringTools.startsWith(marker, "__hxhx_")):
