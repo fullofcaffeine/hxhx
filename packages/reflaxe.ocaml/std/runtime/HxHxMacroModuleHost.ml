@@ -8,8 +8,8 @@
    reads the payloads or decides what a macro means. *)
 
 let snapshot_version : string = "v3"
-let abi_version : int = 2
-let macro_api_version : int = 1
+let abi_version : int = 3
+let macro_api_version : int = 2
 
 type declaration_registration = {
   plugin_id : string;
@@ -67,6 +67,19 @@ let snapshot () : string =
       Buffer.add_char lines '\n')
     (Stdlib.List.rev !registrations);
   Buffer.contents lines
+
+(* The compiler's macro Context service for the running macro call. A plugin's
+   [haxe.macro.Context] sends one encoded request ([hxhxmacrohost.MacroContextWire])
+   through [call_host] and receives one encoded response. The compiler installs
+   the service before it runs a declaration and replaces it afterwards. Like the
+   registration table, this code passes the strings through unread. With no
+   service installed, the answer is the empty string, which the Haxe reader
+   reports as a missing service. *)
+let host_service : (string -> string) ref = ref (fun (_ : string) -> "")
+
+let set_host_service (service : string -> string) : unit = host_service := service
+
+let call_host (request : string) : string = !host_service request
 
 (* Returns "ok\n" ^ payload, or "err\n" ^ message when the declaration is not
    registered or its callback raised an OCaml exception. The Haxe caller turns

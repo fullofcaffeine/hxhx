@@ -18,7 +18,7 @@ import haxe.macro.Expr;
 
 	What the payload is
 	- A header line `hxhx-macro-syntax.v1`, then one envelope letter: `A` (call arguments), `R`
-	  (returned expression), or `E` (the macro failed; a message follows).
+	  (returned expression), or `E` (the macro failed; a message and an optional position follow).
 	- The body is a prefix-encoded tree. Every enum value is its constructor name followed by its
 	  arguments; every structure lists its fields in a fixed order; absent optional values are
 	  written as `_`. Strings are length-prefixed (`S<length>:<text>`), so no escaping is needed.
@@ -58,10 +58,14 @@ class MacroSyntaxWire {
 		return writer.toString();
 	}
 
-	/** Encode a macro failure so it can be reported at the call site. */
-	public static function encodeFailure(message:String):String {
+	/**
+		Encode a macro failure. With a `position` (from `Context.error`), the compiler reports the
+		message there, as upstream does; without one, it reports it at the macro call.
+	**/
+	public static function encodeFailure(message:String, ?position:Position):String {
 		final writer = new MacroSyntaxWireWriter(VERSION, "E");
 		writer.string(message == null ? "macro failed without a message" : message);
+		writer.optionalPosition(position);
 		return writer.toString();
 	}
 
@@ -70,11 +74,16 @@ class MacroSyntaxWire {
 		return payload != null && StringTools.startsWith(payload, VERSION + "\nE");
 
 	/** The message of a failure envelope. */
-	public static function decodeFailure(payload:String):String {
+	public static function decodeFailure(payload:String):String
+		return decodeFailureDetails(payload).message;
+
+	/** The message of a failure envelope and the position the macro reported it at, if any. */
+	public static function decodeFailureDetails(payload:String):{message:String, position:Null<Position>} {
 		final reader = new MacroSyntaxWireReader(VERSION, payload, "E");
 		final message = reader.string();
+		final position = reader.optionalPosition();
 		reader.finish();
-		return message;
+		return {message: message, position: position};
 	}
 
 	/** Decode the returned expression inside the compiler. */
@@ -106,6 +115,12 @@ typedef MacroSyntaxWirePosition = {
 /** Writes one payload. Every method appends exactly one encoded value. */
 class MacroSyntaxWireWriter {
 	final out:StringBuf;
+
+	/**
+		When set, every position this writer writes is this one. `Context.parse` uses it: upstream
+		gives every node of the parsed syntax the position the macro passed.
+	**/
+	var everyPosition:Null<Position> = null;
 
 	/** `version` is `MacroSyntaxWire.VERSION`; passing it keeps this class free of a module cycle. */
 	public function new(version:String, envelope:String) {
@@ -168,10 +183,14 @@ class MacroSyntaxWireWriter {
 			string(value);
 	}
 
+	/** Write `position` in place of every position that follows (see `everyPosition`). */
+	public function useEveryPosition(position:Position):Void
+		everyPosition = position;
+
 	public function position(value:Position):Void {
 		if (value == null)
 			throw "macro syntax wire: a required position is missing";
-		final facts:MacroSyntaxWirePosition = cast value;
+		final facts:MacroSyntaxWirePosition = cast(everyPosition != null ? everyPosition : value);
 		string(facts.file);
 		int(facts.min);
 		int(facts.max);
@@ -799,7 +818,7 @@ class MacroSyntaxWireReader {
 	}
 
 	/** Consume `_` and return true when the next value is absent. */
-	function absent():Bool {
+	public function absent():Bool {
 		if (peek() != "_")
 			return false;
 		cursor++;
@@ -830,10 +849,10 @@ class MacroSyntaxWireReader {
 		return take(length);
 	}
 
-	function optionalString():Null<String>
+	public function optionalString():Null<String>
 		return absent() ? null : string();
 
-	function int():Int {
+	public function int():Int {
 		expect("I");
 		return number(";");
 	}
@@ -846,7 +865,7 @@ class MacroSyntaxWireReader {
 		return value;
 	}
 
-	function bool():Bool {
+	public function bool():Bool {
 		final found = take(1);
 		return switch found {
 			case "T": true;
@@ -866,7 +885,7 @@ class MacroSyntaxWireReader {
 		return out;
 	}
 
-	function position():Position {
+	public function position():Position {
 		final file = string();
 		final min = int();
 		final max = int();
@@ -874,7 +893,7 @@ class MacroSyntaxWireReader {
 		return cast facts;
 	}
 
-	function optionalPosition():Null<Position>
+	public function optionalPosition():Null<Position>
 		return absent() ? null : position();
 
 	public function expr():Expr {

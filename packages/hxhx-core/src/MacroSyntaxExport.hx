@@ -64,6 +64,30 @@ class MacroSyntaxExport {
 		return {expr: definition(expression, position), pos: position};
 	}
 
+	/** Expression metadata arguments as written (`Off`, `a, f(b, c)`), split at top-level commas. */
+	static function metadataArguments(text:String):Array<HxExpr> {
+		final parts = new Array<String>();
+		var depth = 0;
+		var start = 0;
+		for (index in 0...text.length) {
+			switch text.charAt(index) {
+				case "(" | "[" | "{":
+					depth++;
+				case ")" | "]" | "}":
+					depth--;
+				case "," if (depth == 0):
+					parts.push(text.substring(start, index));
+					start = index + 1;
+				case _:
+			}
+		}
+		parts.push(text.substr(start));
+		return [
+			for (part in parts)
+				if (StringTools.trim(part).length > 0) HxParser.parseCompleteExprText(StringTools.trim(part))
+		];
+	}
+
 	function child(expression:HxExpr, position:Position):Expr
 		return convert(expression, position);
 
@@ -116,6 +140,9 @@ class MacroSyntaxExport {
 				EConst(CInt(raw, suffix));
 			case ECall(EIdent("__hxhx_float_literal"), [EString(raw), EString(suffix)]):
 				EConst(CFloat(raw, suffix));
+			case ECall(EIdent(marker), [EString(name), EString(argumentText), inner]) if (marker == HxAuthoredSyntax.META):
+				EMeta({name: name, params: [for (argument in metadataArguments(argumentText)) child(argument, position)], pos: position},
+					child(inner, position));
 			case ECall(EIdent(marker), _) if (StringTools.startsWith(marker, "__hxhx_")):
 				throw failure("the parser marker `" + marker + "` has no public macro form");
 			case ECall(callee, arguments):

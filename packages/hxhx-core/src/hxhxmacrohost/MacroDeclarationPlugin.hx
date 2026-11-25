@@ -23,7 +23,9 @@ import haxe.macro.Expr;
 	`HxHxMacroModuleHost.register_macro_declaration`. When the compiler calls the registration, the
 	adapter runs through `invoke`: decode the arguments, check their count, run the macro, and
 	encode its result. Any exception thrown by the macro becomes a failure payload, which the
-	compiler reports at the macro call instead of crashing the compiler process.
+	compiler reports at the macro call instead of crashing the compiler process. A
+	`MacroContextAbort` (`haxe.macro.Context.error`) also carries its position, and the compiler
+	reports the message there.
 **/
 class MacroDeclarationPlugin {
 	/** The plugin's load-time entry; registration happens in the generated entry module. */
@@ -39,6 +41,9 @@ class MacroDeclarationPlugin {
 			if (result == null)
 				return MacroSyntaxWire.encodeFailure("the macro returned null instead of an expression");
 			return MacroSyntaxWire.encodeResult(result);
+		} catch (abort:MacroContextAbort) {
+			// `Context.error` (or a Context request the compiler rejected): report at its position.
+			return MacroSyntaxWire.encodeFailure(abort.message, abort.position);
 		} catch (error:String) {
 			return MacroSyntaxWire.encodeFailure(error);
 		} catch (error:haxe.Exception) {

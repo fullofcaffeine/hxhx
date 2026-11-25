@@ -37,6 +37,12 @@ typedef ProjectMacroPluginRequest = {
 	/** The classpath with `hxhxmacrohost.MacroDeclarationPlugin` and `MacroSyntaxWire`. */
 	final supportClassPath:String;
 
+	/**
+		The plugin-only classpath with hxhx's `haxe.macro.Context` (`packages/hxhx-core/macro_plugin_std`).
+		The plugin compilation lists it before the standard library, so project macros use it.
+	**/
+	final contextClassPath:String;
+
 	/** Directories whose OCaml sources the emitter copies into every plugin (runtime and shims). */
 	final runtimeSourceDirectories:Array<String>;
 
@@ -188,6 +194,7 @@ class ProjectMacroPluginCache {
 			list(sortedCopy(request.defines)),
 			request.cwd,
 			request.supportClassPath,
+			request.contextClassPath,
 			Sys.getEnv("OCAMLPARAM"),
 			runtimeSourceDigest
 		]));
@@ -280,6 +287,8 @@ class ProjectMacroPluginCache {
 			args.push("--hxhx-macro-classpath");
 			args.push(classPath);
 		}
+		args.push("-cp");
+		args.push(request.contextClassPath);
 		args.push("-cp");
 		args.push(request.supportClassPath);
 		for (define in request.defines) {

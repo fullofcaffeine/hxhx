@@ -1,3 +1,4 @@
+import hxhxmacrohost.NativeMacroModuleAbi;
 import hxhxmacrohost.NativeMacroModuleReceipt;
 import hxhxmacrohost.NativeMacroModuleReceipt.NativeMacroModuleExpectation;
 import sys.FileSystem;
@@ -86,12 +87,24 @@ class M14NativeMacroModuleReceiptIntegrationTest {
 			File.saveContent(receiptPath, StringTools.replace(validReceipt, token, '"' + field + '": ' + replacement));
 			expectFailure(field + " -> " + replacement, () -> load(), error);
 		}
+		// The valid receipt carries the current plugin ABI (`NativeMacroModuleAbi.ABI_VERSION`).
+		final abi = Std.string(NativeMacroModuleAbi.ABI_VERSION);
 		for (token in ["1.5", '"1suffix"', "true", "[]", "{}"])
-			invalid("abiVersion", "2", token, "abiVersion must be an integer");
-		invalid("abiVersion", "2", "null", "abiVersion is required");
-		// A receipt for the removed version 1 plugin ABI (exact-expression `unit -> string` handlers) is rejected.
-		invalid("abiVersion", "2", "1", "abiVersion mismatch: expected 2, got 1");
-		invalid("abiVersion", "2", "3", "abiVersion mismatch: expected 2, got 3");
+			invalid("abiVersion", abi, token, "abiVersion must be an integer");
+		invalid("abiVersion", abi, "null", "abiVersion is required");
+		// A receipt for the removed version 1 plugin ABI (exact-expression `unit -> string` handlers) is rejected,
+		// and so is the version before the current one and the version after it.
+		invalid("abiVersion", abi, "1", "abiVersion mismatch: expected " + abi + ", got 1");
+		invalid("abiVersion", abi, Std.string(NativeMacroModuleAbi.ABI_VERSION - 1),
+			"abiVersion mismatch: expected "
+			+ abi
+			+ ", got "
+			+ (NativeMacroModuleAbi.ABI_VERSION - 1));
+		invalid("abiVersion", abi, Std.string(NativeMacroModuleAbi.ABI_VERSION + 1),
+			"abiVersion mismatch: expected "
+			+ abi
+			+ ", got "
+			+ (NativeMacroModuleAbi.ABI_VERSION + 1));
 		invalid("schema", '"hxhx.native-macro-module.v3"', '"hxhx.native-macro-module.v2"', "unsupported schema");
 		invalid("pluginId", '"hxhx.project-macro.fixture"', "true", "pluginId must be a string");
 		invalid("cacheKey", '"' + digestA + '"', '"' + StringTools.lpad("", "b", 64) + '"', "cacheKey mismatch");
@@ -105,7 +118,7 @@ class M14NativeMacroModuleReceiptIntegrationTest {
 		invalid("path", '"build/native.cmxs"', '"build/missing.cmxs"', "artifact file not found");
 
 		// JSON fraction and exponent syntax remains valid when its value is an exact integer.
-		File.saveContent(receiptPath, StringTools.replace(validReceipt, '"abiVersion": 2', '"abiVersion": 2e0'));
+		File.saveContent(receiptPath, StringTools.replace(validReceipt, '"abiVersion": ' + abi, '"abiVersion": ' + abi + 'e0'));
 		assertEq("integral exponent receipt", load().pluginId, "hxhx.project-macro.fixture");
 
 		File.saveContent(receiptPath, "{");

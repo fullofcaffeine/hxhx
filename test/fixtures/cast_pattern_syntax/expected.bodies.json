@@ -1,0 +1,3 @@
+{
+	"kind": "{\n\treturn switch (Type.getClass(value)) {\n\t\tcase cast Array:{\n\t\t\t\"array\";\n\t\t};\n\t\tcase cast String:{\n\t\t\t\"string\";\n\t\t};\n\t\tcase _:{\n\t\t\t\"other\";\n\t\t};\n\t};\n}"
+}
