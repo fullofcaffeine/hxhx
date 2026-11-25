@@ -1,0 +1,6 @@
+{
+	"code": "{\n\treturn \"a\".code + \"b\".code;\n}",
+	"escapes": "{\n\tvar plain = \"no interpolation here\";\n\tvar dollar = 'cost: $$${price}';\n\treturn plain + \"|\" + dollar + '\\t$price';\n}",
+	"greet": "{\n\treturn 'hello $name, you have ${count + 1} messages';\n}",
+	"nested": "{\n\treturn 'first=${items[0]} size=${items.length} sum=${items[0] + items[1]}';\n}"
+}

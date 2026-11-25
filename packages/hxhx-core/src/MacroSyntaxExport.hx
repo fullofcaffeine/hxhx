@@ -90,7 +90,9 @@ class MacroSyntaxExport {
 				EConst(CIdent("null"));
 			case EBool(value):
 				EConst(CIdent(value ? "true" : "false"));
-			case EString(value):
+			case EString(value, true):
+				EConst(CString(value, SingleQuotes));
+			case EString(value, _):
 				EConst(CString(value, DoubleQuotes));
 			case ERegexLiteral(pattern, flags):
 				EConst(CRegexp(pattern, flags));

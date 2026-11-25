@@ -32,7 +32,15 @@ enum HxExpr {
 
 	ENull;
 	EBool(value:Bool);
-	EString(value:String);
+
+	/**
+		`singleQuoted` marks a single-quoted string that contains `$`: upstream Haxe 4.3.7 keeps it
+		as `CString(value, SingleQuotes)` and expands the interpolation during typing. Only
+		authored parsing (`ParserStage.parseAuthored`, the parse oracle) sets it; ordinary
+		parsing still expands `'a ${x}'` into concatenation while parsing (haxe_ocaml-ac5i9.1).
+	**/
+	EString(value:String, ?singleQuoted:Bool);
+
 	EInt(value:Int);
 	EFloat(value:Float);
 
