@@ -17,11 +17,12 @@ import hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWirePosition;
 	  not compile `haxe.macro.Type`. Those services come with type handles
 	  (`docs/00-project/EXPRESSION_MACRO_ARGUMENT_PLAN.md`, "Macro Context services").
 
-	What (Context PR 1)
+	What (Context PRs 1 and 2)
 	- Local: `makePosition` and `getPosInfos` build and read the `{file, min, max}` record that
 	  plugins use as a position; `error` stops the macro with `MacroContextAbort`.
 	- Compiler services (`MacroContextWire` requests through `HxHxMacroModuleHost.call_host`):
-	  `currentPos`, `defined`, `definedValue`, `parse`, and `parseInlineString`.
+	  `currentPos`, `defined`, `definedValue`, `parse`, `parseInlineString`, `defineModule`, and
+	  `defineType`.
 	- The signatures are upstream's, so project macros compile unchanged. A macro that calls a
 	  service this class does not declare fails its plugin build with a missing-field error.
 **/
@@ -62,6 +63,14 @@ class Context {
 	/** Parse `expr` as one expression reported within `pos`. */
 	public static function parseInlineString(expr:String, pos:Position):Expr
 		return MacroContextWire.readExpr(ContextHost.call(MacroContextWire.requestParse(expr, pos, true)));
+
+	/** Define module `modulePath` with these types, imports, and usings; the compilation types it. */
+	public static function defineModule(modulePath:String, types:Array<TypeDefinition>, ?imports:Array<ImportExpr>, ?usings:Array<TypePath>):Void
+		MacroContextWire.readUnit(ContextHost.call(MacroContextWire.requestDefineModule(modulePath, types, imports, usings)));
+
+	/** Define one type in its own module (`pack.name`). */
+	public static function defineType(t:TypeDefinition, ?moduleDependency:String):Void
+		MacroContextWire.readUnit(ContextHost.call(MacroContextWire.requestDefineType(t, moduleDependency)));
 }
 
 /** The native host call; `HxHxMacroModuleHost.call_host` passes the strings through unread. */

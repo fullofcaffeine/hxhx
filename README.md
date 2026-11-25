@@ -19,7 +19,7 @@ The project treats practical edit-compile-test latency as a product goal. A fast
 
 ## Status
 
-Last update: 2026-11-23. Neither product is ready for production.
+Last update: 2026-11-25. Neither product is ready for production.
 
 | Product | Status today | Use it for |
 | --- | --- | --- |
@@ -39,8 +39,8 @@ Also change the "Last update" date.
 
 | Measure | Product | On `main` |
 | --- | --- | --- |
-| Parse oracle: field bodies that `hxhx` parses the same as upstream | `hxhx` | 1729 of 1850 (93.5%) |
-| Parse oracle: files where each body matches | `hxhx` | 83 of 138 |
+| Parse oracle: field bodies that `hxhx` parses the same as upstream | `hxhx` | 1842 of 1850 (99.6%) |
+| Parse oracle: files where each body matches | `hxhx` | 132 of 138 |
 | Typed oracle: method signatures that `hxhx` types the same as upstream | `hxhx` | 1663 of 1671 (99.5%) |
 | Representation matrix: cells with the same output as upstream | `reflaxe.ocaml` | 220 of 239 (92.1%) |
 | Upstream unit suite (milestone F2) | `hxhx` | There is no pass count yet. The run stops at a macro call. |

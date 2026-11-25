@@ -132,6 +132,99 @@ class M14MacroContextWireTest {
 			+ upstream
 			+ "`");
 
+		// defineModule (Context PR 2): the definitions cross the wire and become parser declarations,
+		// queued for the request's macro pass. Upstream output for this shape is
+		// test/fixtures/project-macro-define/expected.stdout.
+		MacroState.clearDefinedModules();
+		final p = position("src/SpecBuilder.hx", 0, 0);
+		final func:Function = {
+			args: [],
+			ret: null,
+			params: [],
+			expr: macro Sys.println("spec")
+		};
+		final test:Field = {
+			name: "test",
+			kind: FFun(func),
+			pos: p,
+			access: [APublic, AOverride]
+		};
+		final count:Field = {
+			name: "count",
+			kind: FVar(TPath({pack: [], name: "Int"}), macro 2),
+			pos: p,
+			access: [APublic, AStatic]
+		};
+		final alpha:TypeDefinition = {
+			pack: ["spec"],
+			name: "TestAlpha",
+			pos: p,
+			kind: TDClass({pack: [], name: "SpecBase"}),
+			fields: [test, count]
+		};
+		final imports:Array<ImportExpr> = [
+			{path: [{pos: p, name: "tools"}, {pos: p, name: "SpecTools"}], mode: INormal},
+			{path: [{pos: p, name: "tools"}, {pos: p, name: "SpecTools"}], mode: IAll}
+		];
+		MacroContextWire.readUnit(answer(MacroContextWire.requestDefineModule("spec.TestAlpha", [alpha], imports, null)));
+		final defined = MacroState.drainDefinedModules();
+		require(defined.length == 1
+			&& ResolvedModule.getModulePath(defined[0]) == "spec.TestAlpha", "defineModule did not queue spec.TestAlpha");
+		final declaration = ResolvedModule.getParsed(defined[0]).getDecl();
+		final main = HxModuleDecl.getMainClass(declaration);
+		require(HxModuleDecl.getPackagePath(declaration) == "spec"
+			&& HxClassDecl.getName(main) == "TestAlpha"
+			&& HxClassDecl.getExtendsPath(main) == "SpecBase",
+			"defined class header");
+		final methods = HxClassDecl.getFunctions(main);
+		require(methods.length == 1
+			&& HxFunctionDecl.getName(methods[0]) == "test"
+			&& HxFunctionDecl.getVisibility(methods[0]) == HxVisibility.Public
+			&& !HxFunctionDecl.getIsStatic(methods[0])
+			&& HxFunctionDecl.getBody(methods[0]).length == 1,
+			"defined method");
+		final fields = HxClassDecl.getFields(main);
+		require(fields.length == 1
+			&& HxFieldDecl.getName(fields[0]) == "count"
+			&& HxFieldDecl.getIsStatic(fields[0])
+			&& HxFieldDecl.getTypeHint(fields[0]) == "Int",
+			"defined field");
+		final directives = [
+			for (directive in HxModuleDecl.getDirectives(declaration))
+				HxModuleDirective.canonicalIdentity(directive)
+		];
+		require(directives.length == 2, "defined imports: " + directives);
+
+		// defineType defines module `pack.name`; a second definition of one module is rejected.
+		final registry:TypeDefinition = {
+			pack: ["spec"],
+			name: "Registry",
+			pos: p,
+			kind: TDClass(),
+			fields: [count]
+		};
+		MacroContextWire.readUnit(answer(MacroContextWire.requestDefineType(registry, null)));
+		require(ResolvedModule.getModulePath(MacroState.drainDefinedModules()[0]) == "spec.Registry", "defineType module path");
+		final again = failureOf(() -> MacroContextWire.readUnit(answer(MacroContextWire.requestDefineType(registry, null))));
+		require(again != null
+			&& again.indexOf("macro context: invalid: module `spec.Registry` is already defined") == 0, "duplicate: " + again);
+
+		// Kinds hxhx does not build yet, and a package that differs from the module path.
+		final enumType:TypeDefinition = {
+			pack: ["spec"],
+			name: "Color",
+			pos: p,
+			kind: TDEnum,
+			fields: []
+		};
+		final unsupportedKind = failureOf(() -> MacroContextWire.readUnit(answer(MacroContextWire.requestDefineType(enumType, null))));
+		require(unsupportedKind != null && unsupportedKind.indexOf("macro context: unsupported: defined type `Color` of kind TDEnum") == 0,
+			"unsupported kind: " + unsupportedKind);
+		final misplaced = failureOf(() -> MacroContextWire.readUnit(answer(MacroContextWire.requestDefineModule("other.TestAlpha", [alpha], null, null))));
+		require(misplaced != null
+			&& misplaced.indexOf("macro context: invalid: type `TestAlpha` has package `spec`") == 0, "package: " + misplaced);
+		MacroState.clearDefinedModules();
+
 		Sys.println("M14_MACRO_CONTEXT_WIRE:PASS");
 	}
 }

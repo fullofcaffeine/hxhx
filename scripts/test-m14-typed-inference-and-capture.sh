@@ -66,9 +66,11 @@ haxe test/m14_parse_oracle_abstract_constructor_test.hxml
 haxe test/m14_primitive_constructor_effects_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_return_if_syntax_test.hxml
+haxe test/m14_stage3_enum_open_record_test.hxml
 haxe test/m14_stage3_local_function_array_for_test.hxml
 haxe test/m14_statement_control_projection_test.hxml
 haxe test/m14_structural_field_over_extension_test.hxml
+haxe test/m14_target_macro_body_skip_test.hxml
 haxe test/m14_try_assignment_value_test.hxml
 haxe test/m14_type_parameter_bounds_test.hxml
 haxe test/m14_typed_backend_capture_catalog_test.hxml

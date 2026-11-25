@@ -1,0 +1,4 @@
+fun args=0 ret=none body=a
+fun args=0 ret=none body=b
+path Base
+fun args=0 ret=none body=c

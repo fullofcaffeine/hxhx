@@ -1207,20 +1207,29 @@ class TyperStage {
 					TypedFieldInitialization.adapt(context.getIndex(), fieldInfo, typedInitializer, context.getFilePath())));
 				fieldReplay.assertReplayComplete();
 			}
-			final sourceFunctions = HxClassDecl.getFunctions(classDeclaration);
+			final authoredFunctions = HxClassDecl.getFunctions(classDeclaration);
+			// A macro function of a target compile is typed from a copy without its body
+			// (`omitsMacroBody`); the arrays below stay aligned with the authored functions.
+			final sourceFunctions = new Array<HxFunctionDecl>();
+			final omittedBodies = new Array<Bool>();
 			final semanticDeclarations = new Array<Null<TyDeclarationInfo>>();
 			final functionIdentities = new Array<String>();
-			for (functionIndex in 0...sourceFunctions.length) {
-				final sourceFunction = sourceFunctions[functionIndex];
-				final semanticDeclaration = semanticInfo == null ? null : semanticInfo.declarationForSource(sourceFunction);
+			for (functionIndex in 0...authoredFunctions.length) {
+				final authoredFunction = authoredFunctions[functionIndex];
+				final semanticDeclaration = semanticInfo == null ? null : semanticInfo.declarationForSource(authoredFunction);
+				final omitted = omitsMacroBody(authoredFunction, semanticDeclaration, className, context);
+				final sourceFunction = omitted ? withoutBody(authoredFunction) : authoredFunction;
 				final functionIdentity = TypedFunction.stableIdentityFor(className, functionIndex, sourceFunction, semanticDeclaration);
 				final functionEnvironment = typeFunction(sourceFunction, context, functionIdentity, semanticDeclaration);
+				sourceFunctions.push(sourceFunction);
+				omittedBodies.push(omitted);
 				semanticDeclarations.push(semanticDeclaration);
 				functionIdentities.push(functionIdentity);
 				functionEnvironments.push(functionEnvironment);
 				// A function with no value-returning statement still has its finalized
 				// Void result; expression-only evidence would leave callers unresolved.
-				if (semanticDeclaration != null && semanticDeclaration.getSignature().getReturnType().isUnknown())
+				// An omitted macro body proves no result.
+				if (!omitted && semanticDeclaration != null && semanticDeclaration.getSignature().getReturnType().isUnknown())
 					context.recordInferredReturnType(semanticDeclaration, functionEnvironment.getReturnType());
 			}
 
@@ -1230,7 +1239,8 @@ class TyperStage {
 			// order from changing inference without retyping already settled functions.
 			var pendingReturnInference = [
 				for (functionIndex in 0...sourceFunctions.length)
-					if (semanticDeclarations[functionIndex] != null
+					if (!omittedBodies[functionIndex]
+						&& semanticDeclarations[functionIndex] != null
 						&& semanticDeclarations[functionIndex].getSignature().getReturnType().isUnknown()
 						&& (functionEnvironments[functionIndex].getReturnExprType().isUnknown()
 							|| functionEnvironments[functionIndex].getReturnExprType().isDynamic())) functionIndex
@@ -1259,8 +1269,9 @@ class TyperStage {
 			if (index != null && inputRevision != index.getMethodInputs().getRevision())
 				return {classes: [], mainFunctions: [], resolvedDirectives: resolvedDirectives};
 			for (functionIndex in 0...sourceFunctions.length) {
-				typedFunctions.push(TypedBodyBuilder.buildFunction(className, functionIndex, sourceFunctions[functionIndex],
-					semanticDeclarations[functionIndex], functionEnvironments[functionIndex], typeResolver, callResolver, memberResolver));
+				final built = TypedBodyBuilder.buildFunction(className, functionIndex, sourceFunctions[functionIndex], semanticDeclarations[functionIndex],
+					functionEnvironments[functionIndex], typeResolver, callResolver, memberResolver);
+				typedFunctions.push(omittedBodies[functionIndex] ? built.withOmittedBody(authoredFunctions[functionIndex]) : built);
 			}
 			if (classDeclaration == mainClass)
 				mainFunctions = functionEnvironments;
@@ -1280,6 +1291,26 @@ class TyperStage {
 		final loweredClasses = index == null
 			|| deferProgramLowering ? collections : TypedAbstractOperatorLowering.lowerClasses(collections, index, parsed.getFilePath());
 		return {classes: loweredClasses, mainFunctions: mainFunctions, resolvedDirectives: resolvedDirectives};
+	}
+
+	/**
+		Whether `fn` is a macro function whose body this compile does not type: a target compile
+		(`TyperContext.omitsMacroBodies`). Upstream types a macro body only in its macro context,
+		which for hxhx is the project-macro plugin build. hxhx's own bundled-sources macro keeps its
+		body (`MacroCompilationContext.isBundledSourcesMacro`).
+	**/
+	static function omitsMacroBody(fn:HxFunctionDecl, declaration:Null<TyDeclarationInfo>, className:String, context:TyperContext):Bool {
+		final isMacro = declaration != null ? TyMacroCallSignature.isMacro(declaration) : HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0;
+		if (!isMacro || !HxFunctionDecl.getHasBody(fn) || !context.omitsMacroBodies())
+			return false;
+		return !MacroCompilationContext.isBundledSourcesMacro(className + "." + HxFunctionDecl.getName(fn), context.getFilePath());
+	}
+
+	/** `fn` with an empty body and everything else as written, so its signature and defaults are still typed. */
+	static function withoutBody(fn:HxFunctionDecl):HxFunctionDecl {
+		return new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), HxFunctionDecl.getIsStatic(fn), HxFunctionDecl.getArgs(fn),
+			HxFunctionDecl.getReturnTypeHint(fn), [], "", HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), "", true,
+			HxFunctionDecl.getIsModuleLevel(fn), true);
 	}
 
 	/**

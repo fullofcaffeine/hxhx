@@ -91,6 +91,38 @@ class MacroCompilationContext {
 		return best != null && best.isMacro;
 	}
 
+	/**
+		Whether macro functions in this module have their bodies typed and emitted.
+
+		Upstream types a macro function's body only in its macro context; the program's (target)
+		context sees the function without a body (`typeloadFields.ml`, lines 1298-1345 in Haxe 4.3.7).
+		hxhx's macro context is the project-macro plugin build, a compilation with a macro classpath
+		(`forMacroClassPaths`). So this is true only there, and only for a macro module. In every other
+		compile, `TyperStage` types a macro function as its declaration only
+		(`TypedFunction.isBodyOmitted`), except hxhx's own `isBundledSourcesMacro`.
+	**/
+	public function typesMacroBodies(modulePath:Null<String>, filePath:Null<String>):Bool {
+		var macroCompilation = false;
+		for (root in roots)
+			if (root.isMacro)
+				macroCompilation = true;
+		return macroCompilation && isMacroModule(modulePath, filePath);
+	}
+
+	/**
+		hxhx's own `CompilerBundledSourcesMacro.files()`, which embeds standard-library sources when
+		hxhx compiles itself. It cannot run through a plugin yet, so it stays typed and emitted as an
+		ordinary function (`hxhx.Stage3ProjectMacroPlugins.UNEXECUTED_OPT_OUT`).
+	**/
+	public static inline final BUNDLED_SOURCES_MACRO:String = "CompilerBundledSourcesMacro.files";
+
+	/** Whether `declaration` (`Owner.method`) in `filePath` is `BUNDLED_SOURCES_MACRO` in hxhx's own sources. */
+	public static function isBundledSourcesMacro(declaration:String, filePath:Null<String>):Bool {
+		return declaration == BUNDLED_SOURCES_MACRO
+			&& filePath != null
+			&& StringTools.endsWith(slashes(Path.normalize(filePath)), "/packages/hxhx-core/src/CompilerBundledSourcesMacro.hx");
+	}
+
 	/** The defines the module's source is filtered with before parsing. */
 	public function definesFor(modulePath:Null<String>, filePath:Null<String>, base:haxe.ds.StringMap<String>):haxe.ds.StringMap<String> {
 		if (!isMacroModule(modulePath, filePath))

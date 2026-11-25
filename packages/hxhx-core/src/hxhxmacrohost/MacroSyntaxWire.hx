@@ -773,6 +773,122 @@ class MacroSyntaxWireWriter {
 				optionalExpr(e);
 		}
 	}
+
+	/** Type definitions, as `Context.defineModule` and `Context.defineType` pass them. */
+	public function typeDefinitions(values:Array<TypeDefinition>):Void {
+		if (values == null)
+			throw "macro syntax wire: the type definitions are missing";
+		count(values.length);
+		for (value in values)
+			typeDefinition(value);
+	}
+
+	public function typeDefinition(value:TypeDefinition):Void {
+		if (value == null)
+			throw "macro syntax wire: a type definition is missing";
+		strings(value.pack);
+		string(value.name);
+		optionalString(value.doc);
+		position(value.pos);
+		optionalMetadata(value.meta);
+		optionalTypeParamDecls(value.params);
+		optionalBool(value.isExtern);
+		typeDefKind(value.kind);
+		typeFields(value.fields);
+	}
+
+	function typeDefKind(value:TypeDefKind):Void {
+		switch value {
+			case TDEnum:
+				tag("TDEnum");
+			case TDStructure:
+				tag("TDStructure");
+			case TDClass(superClass, interfaces, isInterface, isFinal, isAbstract):
+				tag("TDClass");
+				optionalTypePath(superClass);
+				optionalTypePaths(interfaces);
+				optionalBool(isInterface);
+				optionalBool(isFinal);
+				optionalBool(isAbstract);
+			case TDAlias(t):
+				tag("TDAlias");
+				complexType(t);
+			case TDAbstract(tthis, flags, from, to):
+				tag("TDAbstract");
+				optionalComplexType(tthis);
+				if (flags == null) {
+					absent();
+				} else {
+					count(flags.length);
+					for (flag in flags)
+						abstractFlag(flag);
+				}
+				optionalComplexTypes(from);
+				optionalComplexTypes(to);
+			case TDField(kind, access):
+				tag("TDField");
+				fieldType(kind);
+				if (access == null) {
+					absent();
+				} else {
+					count(access.length);
+					for (entry in access)
+						accessModifier(entry);
+				}
+		}
+	}
+
+	function abstractFlag(value:AbstractFlag):Void {
+		switch value {
+			case AbEnum:
+				tag("AbEnum");
+			case AbFrom(t):
+				tag("AbFrom");
+				complexType(t);
+			case AbTo(t):
+				tag("AbTo");
+				complexType(t);
+		}
+	}
+
+	/** Module imports (`Context.defineModule`), or none. */
+	public function optionalImportExprs(values:Null<Array<ImportExpr>>):Void {
+		if (values == null) {
+			absent();
+			return;
+		}
+		count(values.length);
+		for (value in values) {
+			count(value.path.length);
+			for (part in value.path) {
+				string(part.name);
+				position(part.pos);
+			}
+			switch value.mode {
+				case INormal:
+					tag("INormal");
+				case IAsName(alias):
+					tag("IAsName");
+					string(alias);
+				case IAll:
+					tag("IAll");
+			}
+		}
+	}
+
+	function optionalTypePath(value:Null<TypePath>):Void {
+		if (value == null)
+			absent()
+		else
+			typePath(value);
+	}
+
+	public function optionalTypePaths(values:Null<Array<TypePath>>):Void {
+		if (values == null)
+			absent()
+		else
+			typePaths(values);
+	}
 }
 
 /** Reads one payload produced by `MacroSyntaxWireWriter`, in the same field order. */
@@ -1372,6 +1488,123 @@ class MacroSyntaxWireReader {
 		}
 		return out;
 	}
+
+	public function typeDefinitions():Array<TypeDefinition> {
+		final total = count();
+		final out = new Array<TypeDefinition>();
+		for (slot in 0...total)
+			out.push(typeDefinition());
+		return out;
+	}
+
+	public function typeDefinition():TypeDefinition {
+		final pack = strings();
+		final name = string();
+		final doc = optionalString();
+		final pos = position();
+		final meta = optionalMetadata();
+		final params = optionalTypeParamDecls();
+		final isExtern = optionalBool();
+		final kind = typeDefKind();
+		final fields = typeFields();
+		return {
+			pack: pack,
+			name: name,
+			doc: doc,
+			pos: pos,
+			meta: meta,
+			params: params,
+			isExtern: isExtern,
+			kind: kind,
+			fields: fields
+		};
+	}
+
+	function typeDefKind():TypeDefKind {
+		final name = string();
+		return switch name {
+			case "TDEnum":
+				TDEnum;
+			case "TDStructure":
+				TDStructure;
+			case "TDClass":
+				final superClass = optionalTypePath();
+				final interfaces = optionalTypePaths();
+				final isInterface = optionalBool();
+				final isFinal = optionalBool();
+				final isAbstract = optionalBool();
+				TDClass(superClass, interfaces, isInterface, isFinal, isAbstract);
+			case "TDAlias":
+				TDAlias(complexType());
+			case "TDAbstract":
+				final tthis = optionalComplexType();
+				var flags:Null<Array<AbstractFlag>> = null;
+				if (!absent()) {
+					final total = count();
+					final values = new Array<AbstractFlag>();
+					for (slot in 0...total)
+						values.push(abstractFlag());
+					flags = values;
+				}
+				final from = optionalComplexTypes();
+				final to = optionalComplexTypes();
+				TDAbstract(tthis, flags, from, to);
+			case "TDField":
+				final kind = fieldType();
+				var access:Null<Array<Access>> = null;
+				if (!absent()) {
+					final total = count();
+					final values = new Array<Access>();
+					for (slot in 0...total)
+						values.push(accessModifier());
+					access = values;
+				}
+				TDField(kind, access);
+			case _:
+				throw failure("unknown type definition kind `" + name + "`");
+		};
+	}
+
+	function abstractFlag():AbstractFlag {
+		final name = string();
+		return switch name {
+			case "AbEnum": AbEnum;
+			case "AbFrom": AbFrom(complexType());
+			case "AbTo": AbTo(complexType());
+			case _: throw failure("unknown abstract flag `" + name + "`");
+		};
+	}
+
+	public function optionalImportExprs():Null<Array<ImportExpr>> {
+		if (absent())
+			return null;
+		final total = count();
+		final out = new Array<ImportExpr>();
+		for (slot in 0...total) {
+			final parts = count();
+			final path = new Array<{pos:Position, name:String}>();
+			for (part in 0...parts) {
+				final name = string();
+				final pos = position();
+				path.push({pos: pos, name: name});
+			}
+			final modeName = string();
+			final mode = switch modeName {
+				case "INormal": INormal;
+				case "IAsName": IAsName(string());
+				case "IAll": IAll;
+				case _: throw failure("unknown import mode `" + modeName + "`");
+			};
+			out.push({path: path, mode: mode});
+		}
+		return out;
+	}
+
+	function optionalTypePath():Null<TypePath>
+		return absent() ? null : typePath();
+
+	public function optionalTypePaths():Null<Array<TypePath>>
+		return absent() ? null : typePaths();
 
 	function accessModifier():Access {
 		final name = string();
