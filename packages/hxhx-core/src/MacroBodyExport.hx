@@ -155,9 +155,11 @@ class MacroBodyExport {
 			case PWildcard: EConst(CIdent("_"));
 			case PBool(value): EConst(CIdent(value ? "true" : "false"));
 			case PString(value): EConst(CString(value, DoubleQuotes));
-			case PInt(value): EConst(CInt(Std.string(value), null));
+			case PInt(_, text) if (text != null): EField({expr: EConst(CString(text, DoubleQuotes)), pos: position}, "code");
+			case PInt(value, _): EConst(CInt(Std.string(value), null));
 			case PFloat(text): EConst(CFloat(text, null));
-			case PEnumValue(name): path(name, position).expr;
+			case PEnumValue(name, true): ECast(path(name, position), null);
+			case PEnumValue(name, _): path(name, position).expr;
 			case PEnumExtract(name, arguments, _):
 				ECall(path(name, position), [for (argument in arguments) patternExpr(argument, position)]);
 			case PObject(names, fields):
