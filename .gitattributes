@@ -1,3 +1,5 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+# Upstream position probes: offsets depend on every byte, including CRLF and CR line ends.
+test/fixtures/macro_source_positions/*.hx -text

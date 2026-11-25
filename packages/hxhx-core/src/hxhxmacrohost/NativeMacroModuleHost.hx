@@ -24,6 +24,8 @@ private extern class NativeMacroModuleHostRuntime {
 
 	@:native("run_declaration")
 	public static function runDeclaration(declaration:String, payload:String):String;
+	@:native("set_host_service")
+	public static function setHostService(service:String->String):Void;
 }
 #end
 
@@ -61,6 +63,19 @@ class NativeMacroModuleHost {
 		if (StringTools.startsWith(response, "err\n"))
 			throw response.substr(4);
 		throw "native macro module host returned a malformed response";
+		#end
+	}
+
+	/**
+		Install the compiler's macro Context service for the next declaration calls. A plugin's
+		`haxe.macro.Context` sends each `hxhx-macro-context.v1` request to it (`call_host`) and
+		reads the response. Native code stores the function and passes strings through unread.
+	**/
+	public static function setHostService(service:String->String):Void {
+		#if !ocaml
+		throw "native macro module execution requires an OCaml-native hxhx artifact";
+		#else
+		NativeMacroModuleHostRuntime.setHostService(service);
 		#end
 	}
 }

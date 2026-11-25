@@ -77,6 +77,7 @@ class M14ProjectMacroPluginCacheTest {
 				defines: [],
 				cwd: repo,
 				supportClassPath: repo + "/packages/hxhx-core/src",
+				contextClassPath: repo + "/packages/hxhx-core/macro_plugin_std",
 				runtimeSourceDirectories: [repo + "/packages/reflaxe.ocaml/std/runtime", repo + "/packages/hxhx-core/shims"],
 				cacheRoot: cacheRoot,
 				compilerIdentity: "m14-project-macro-plugin-cache",

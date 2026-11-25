@@ -1,0 +1,6 @@
+-cp src
+-main Main
+-D probe_flag
+-D probe_dashed
+-D probe_value=forty-two
+--interp

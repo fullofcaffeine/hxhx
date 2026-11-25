@@ -1,0 +1,11 @@
+current true
+made made/file.hx 3-9
+odd '' 7-2
+flag true
+dashed true
+missing false
+value forty-two
+flagValue 1
+missingValue null true
+43
+parse
