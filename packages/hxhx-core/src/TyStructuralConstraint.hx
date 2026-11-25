@@ -133,7 +133,7 @@ function argumentMember(index:TyperIndex, receiver:TyType, wanted:TyAnonymousFie
 				supplied = field;
 	} else if (index != null)
 		supplied = member(index, source, wanted.name, []);
-	return supplied != null && memberRules(wanted, supplied) ? supplied.type : null;
+	return supplied != null && memberRules(wanted, supplied, false) ? supplied.type : null;
 }
 
 /** Project declared member types through the receiver's existing variables, including inherited owner substitutions. */
@@ -239,9 +239,22 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 					bindings.set(parameters[i].getCanonicalKey(), arguments[i]);
 				for (wanted in wantedFields) {
 					final supplied = member(index, symbolic, wanted.name, []);
-					if (supplied == null
-						|| !memberRules(wanted, supplied)
-						|| !value(index, solver, term(supplied.type, bindings), wanted.type, memberDirection(wanted), proof))
+					if (supplied == null || !memberRules(wanted, supplied, true))
+						return false;
+					// Haxe 4.3.7 gives the class method's own type parameters fresh monomorphs and keeps
+					// the structure method's parameters rigid (tUnification.ml, lines 737-745), so
+					// `[1]` satisfies `{function map<T>(s:Int->T):Array<T>;}`.
+					var memberBindings = bindings;
+					switch supplied.kind {
+						case Method(parameters) if (parameters.length > 0):
+							memberBindings = new StringMap<TyInferenceTerm>();
+							for (key => bound in bindings)
+								memberBindings.set(key, bound);
+							for (parameter in parameters)
+								memberBindings.set(parameter.getCanonicalKey(), solver.freshMethodParameter(parameter));
+						case _:
+					}
+					if (!value(index, solver, term(supplied.type, memberBindings), wanted.type, memberDirection(wanted), proof))
 						return false;
 				}
 				true;
@@ -257,7 +270,7 @@ private function value(index:TyperIndex, solver:TyInferenceSolver, actual:TyInfe
 							continue;
 						return false;
 					}
-					if (!memberRules(wanted, supplied[found])
+					if (!memberRules(wanted, supplied[found], false)
 						|| !value(index, solver, fields[found], wanted.type, memberDirection(wanted), proof))
 						return false;
 				}
@@ -315,12 +328,16 @@ private function memberDirection(field:TyAnonymousField):StructuralDirection {
 private function access(mode:String):String
 	return mode.length == 0 ? "default" : mode;
 
-/** A writable function field is not a method, and nominal optional fields still require a real member. */
-private function memberRules(wanted:TyAnonymousField, supplied:TyAnonymousField):Bool {
+/**
+	A writable function field is not a method, and nominal optional fields still require a real member.
+	`instantiatesSupplied`: the caller gives a supplied class method's own type parameters fresh
+	variables, so generic methods compare by type there; a structure's generic methods do not match yet.
+**/
+private function memberRules(wanted:TyAnonymousField, supplied:TyAnonymousField, instantiatesSupplied:Bool):Bool {
 	if (supplied.visibility != Public)
 		return false;
 	return switch [wanted.kind, supplied.kind] {
-		case [Method(first), Method(second)]: first.length == 0 && second.length == 0;
+		case [Method(first), Method(second)]: instantiatesSupplied || first.length == 0 && second.length == 0;
 		// A public writable function value can supply a method contract. The
 		// reverse direction cannot grant write access to an ordinary method.
 		case [Method(parameters), Variable(false, getter, setter)]: parameters.length == 0 && supplied.type.isFunction() && access(getter) == "default" && access(setter) == "default";
