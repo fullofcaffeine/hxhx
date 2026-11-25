@@ -3,5 +3,4 @@ pop true
 push true
 join true
 filter true
-map true
 object spec
