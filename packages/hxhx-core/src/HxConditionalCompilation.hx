@@ -330,16 +330,9 @@ class HxConditionalCompilation {
 	}
 
 	/**
-		Select the first inline conditional that begins on the first physical line.
-
-		The selected payload and all source outside the conditional keep their original
-		offsets. Directive text and inactive payloads become spaces, with line endings
-		preserved. Nested directives are used to find the matching `#end`; a selected
-		nested directive remains for a later filtering pass. When `selectBranch` is false,
-		the complete conditional is blanked without evaluating its definitions; this keeps
-		conditionals inside an inactive outer block inert.
+		Whether `prefix` holds only opening brackets (`{`, `(`, `[`) and whitespace (line breaks included),
+		with at least one bracket. Callers pass everything before a directive, so any other text fails.
 	**/
-	/** Whether `prefix` is one or more opening brackets (`{`, `(`, `[`), with only spaces around them. */
 	private static function followsOpeningBrackets(prefix:String):Bool {
 		var brackets = 0;
 		for (index in 0...prefix.length) {
@@ -352,6 +345,16 @@ class HxConditionalCompilation {
 		return brackets > 0;
 	}
 
+	/**
+		Select the first inline conditional that begins on the first physical line.
+
+		The selected payload and all source outside the conditional keep their original
+		offsets. Directive text and inactive payloads become spaces, with line endings
+		preserved. Nested directives are used to find the matching `#end`; a selected
+		nested directive remains for a later filtering pass. When `selectBranch` is false,
+		the complete conditional is blanked without evaluating its definitions; this keeps
+		conditionals inside an inactive outer block inert.
+	**/
 	private static function filterInlineConditionals(source:String, evaluate:String->Bool, selectBranch:Bool = true):Null<String> {
 		if (source == null || source.length == 0 || source.indexOf("#if") == -1 || source.indexOf("#end") == -1)
 			return null;
@@ -375,11 +378,12 @@ class HxConditionalCompilation {
 				continue;
 			final linePayload = stripLineCommentOutsideStrings(source.substr(condEnd, firstLineEnd - condEnd));
 			final hasSameLineDirective = i + 1 < tokens.length && tokens[i + 1].start < firstLineEnd;
-			// A block opener right after an opening bracket (`{#if target.unicode`, as upstream's test
-			// builder parses `"{" + file`) is not a line-start directive, so the block pass never sees
-			// it; select it here, across lines, as upstream's token-based lexer does. Only brackets may
-			// precede it: this scan starts at the line, so it cannot tell that a line lies inside a
-			// block comment (a doc comment that mentions `#if !macro` mid-line must stay text).
+			// A block opener preceded only by opening brackets from the start of the text
+			// (`{#if target.unicode`, as upstream's test builder parses `"{" + file`) is not a line-start
+			// directive, so the block pass never sees it; select it here, across lines, as upstream's
+			// token-based lexer does. The rule is deliberately this narrow: this line-based scan cannot
+			// tell that text lies inside a block comment (a doc comment that mentions `#if !macro`
+			// mid-line must stay text), and a mid-file `{ #if` keeps its existing handling.
 			final followsBracket = followsOpeningBrackets(source.substr(0, token.start));
 			if (StringTools.trim(linePayload).length == 0 && !hasSameLineDirective && !followsBracket)
 				continue;
