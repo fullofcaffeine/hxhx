@@ -321,9 +321,9 @@ class HxParser {
 		  module parsing.
 		- This is best-effort and only supports the current Stage 3 statement subset.
 	**/
-	public static function parseFunctionBodyText(bodySource:String):Array<HxStmt> {
+	public static function parseFunctionBodyText(bodySource:String, authoredSyntax:Bool = false):Array<HxStmt> {
 		final src = "{\n" + normalizeInlineJsConditionalMarkers(bodySource == null ? "" : bodySource) + "\n}";
-		final p = new HxParser(src);
+		final p = new HxParser(src, authoredSyntax);
 		if (!p.cur.kind.match(TLBrace))
 			return [];
 		p.bump(); // consume '{'
@@ -349,8 +349,8 @@ class HxParser {
 		- `parseFunctionBodyText` prepends `"{\n"` before parsing. Rebasing subtracts that
 		  synthetic line/index before adding the original slice start.
 	**/
-	public static function parseFunctionBodyTextAt(bodySource:String, originalSource:String, bodyStartIndex:Int):Array<HxStmt> {
-		final stmts = parseFunctionBodyText(bodySource);
+	public static function parseFunctionBodyTextAt(bodySource:String, originalSource:String, bodyStartIndex:Int, authoredSyntax:Bool = false):Array<HxStmt> {
+		final stmts = parseFunctionBodyText(bodySource, authoredSyntax);
 		if (originalSource == null || bodyStartIndex < 0 || bodyStartIndex > originalSource.length)
 			return stmts;
 		final base = sourcePosAt(originalSource, bodyStartIndex);
@@ -366,13 +366,13 @@ class HxParser {
 		braces inside a switch scrutinee. Keep the following declaration outside the
 		body and rebase source positions exactly as for a braced body slice.
 	 */
-	public static function parseUnbracedFunctionBodyAt(originalSource:String, start:Int):{
+	public static function parseUnbracedFunctionBodyAt(originalSource:String, start:Int, authoredSyntax:Bool = false):{
 		body:Array<HxStmt>,
 		bodyText:String,
 		nextPos:Int,
 		hasBody:Bool
 	} {
-		final parser = new HxParser("{\n" + originalSource.substr(start));
+		final parser = new HxParser("{\n" + originalSource.substr(start), authoredSyntax);
 		parser.bump();
 		final statement = parser.parseStmt(() -> parser.cur.kind.match(TEof));
 		if (parser.cur.kind.match(TSemicolon))
@@ -3680,13 +3680,14 @@ class HxParser {
 		}
 
 		// Stage 3 expansion: lower `return if (cond) { expr } else { expr }` into a statement-level
-		// `if` with explicit returns in each branch.
+		// `if` with explicit returns in each branch. Authored parsing keeps upstream's
+		// `EReturn(EIf)` instead: the `if` is parsed as an expression below (haxe_ocaml-ac5i9.5).
 		//
 		// Why
 		// - Upstream-ish code (e.g. utest) uses `return if (...) ... else ...` heavily.
 		// - Our expression parser doesn't model `if`-expressions yet, but we can preserve
 		//   semantics at the statement layer for bring-up typing.
-		if (cur.kind.match(TKeyword(KIf))) {
+		if (!authoredSyntax && cur.kind.match(TKeyword(KIf))) {
 			bump(); // 'if'
 			expect(TLParen, "'('");
 			final cond = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
