@@ -90,6 +90,12 @@ class M14MacroContextWireTest {
 			require(parsedInt(answer(MacroContextWire.requestParse("#if probe_missing\n1\n#elseif (probe_value == \"forty-two\")\n3\n#end", at,
 				inlined))) == "3",
 				"#elseif with a value test");
+			// Upstream's test builder parses `"{" + file + "\n}"`: an opener right after `{`.
+			switch MacroContextWire.readExpr(answer(MacroContextWire.requestParse("{#if probe_flag\n1;\n#else\n2;\n#end\n}", at, inlined))).expr {
+				case EBlock([{expr: EConst(CInt("1", _))}]):
+				case other:
+					throw "a block opener after `{` selected the wrong branch: " + other;
+			}
 		}
 
 		// Invalid code is a Context error at the given position; the plugin stops the macro there.

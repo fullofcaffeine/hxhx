@@ -4,3 +4,4 @@ unicode yes
 block 2
 macro target
 value valued
+spec unit

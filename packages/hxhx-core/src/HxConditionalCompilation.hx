@@ -339,6 +339,19 @@ class HxConditionalCompilation {
 		the complete conditional is blanked without evaluating its definitions; this keeps
 		conditionals inside an inactive outer block inert.
 	**/
+	/** Whether `prefix` is one or more opening brackets (`{`, `(`, `[`), with only spaces around them. */
+	private static function followsOpeningBrackets(prefix:String):Bool {
+		var brackets = 0;
+		for (index in 0...prefix.length) {
+			final c = prefix.charCodeAt(index);
+			if (c == "{".code || c == "(".code || c == "[".code)
+				brackets++;
+			else if (!isLineWs(c))
+				return false;
+		}
+		return brackets > 0;
+	}
+
 	private static function filterInlineConditionals(source:String, evaluate:String->Bool, selectBranch:Bool = true):Null<String> {
 		if (source == null || source.length == 0 || source.indexOf("#if") == -1 || source.indexOf("#end") == -1)
 			return null;
@@ -362,7 +375,13 @@ class HxConditionalCompilation {
 				continue;
 			final linePayload = stripLineCommentOutsideStrings(source.substr(condEnd, firstLineEnd - condEnd));
 			final hasSameLineDirective = i + 1 < tokens.length && tokens[i + 1].start < firstLineEnd;
-			if (StringTools.trim(linePayload).length == 0 && !hasSameLineDirective)
+			// A block opener right after an opening bracket (`{#if target.unicode`, as upstream's test
+			// builder parses `"{" + file`) is not a line-start directive, so the block pass never sees
+			// it; select it here, across lines, as upstream's token-based lexer does. Only brackets may
+			// precede it: this scan starts at the line, so it cannot tell that a line lies inside a
+			// block comment (a doc comment that mentions `#if !macro` mid-line must stay text).
+			final followsBracket = followsOpeningBrackets(source.substr(0, token.start));
+			if (StringTools.trim(linePayload).length == 0 && !hasSameLineDirective && !followsBracket)
 				continue;
 			openerIndex = i;
 			openerCondStart = condStart;

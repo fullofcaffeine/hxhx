@@ -325,7 +325,7 @@ PARSE_CONDITIONALS_DIR="$ROOT/test/fixtures/project-macro-parse-conditionals"
 ) >"$ARTIFACT_DIR/parse_conditionals.oracle.stdout" 2>"$ARTIFACT_DIR/parse_conditionals.oracle.stderr"
 diff -u "$PARSE_CONDITIONALS_DIR/expected.stdout" "$ARTIFACT_DIR/parse_conditionals.oracle.stdout"
 compile_app parse_conditionals "$PARSE_CONDITIONALS_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR" -D probe_flag -D probe_value=forty-two
-require_line parse_conditionals '^expr_macros_expanded=6$'
+require_line parse_conditionals '^expr_macros_expanded=7$'
 "$WORK_DIR/app-parse_conditionals/out.exe" >"$ARTIFACT_DIR/parse_conditionals.stdout" 2>"$ARTIFACT_DIR/parse_conditionals.stderr"
 diff -u "$PARSE_CONDITIONALS_DIR/expected.stdout" "$ARTIFACT_DIR/parse_conditionals.stdout"
 echo "PROJECT_MACRO_MODULE_PARSE_CONDITIONALS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
