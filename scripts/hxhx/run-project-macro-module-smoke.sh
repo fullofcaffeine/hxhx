@@ -13,6 +13,7 @@ set -euo pipefail
 # project-macro-reification (quoted syntax), project-macro-constant-args (String, Int, Float, and
 # Bool parameters, an inferred result), expr_macro_pass_driver/suite (the upstream unit-suite
 # TestMain shape), and project-macro-context (haxe.macro.Context services and Context.error).
+# Before them, project-macro-runtime-type checks a macro whose module holds a runtime type test.
 #
 # The hxhx binary must contain the current compiler sources. Until the committed bootstrap
 # snapshot includes the plugin build driver, pass HXHX_BIN (and HXHX_MACRO_HOST_EXE) built from
@@ -314,6 +315,21 @@ echo "PROJECT_MACRO_MODULE_NEGATIVE_PATHS:PASS" | tee -a "$ARTIFACT_DIR/markers.
 require_line plain '^expr_macros_expanded=1$'
 run_app plain
 echo "PROJECT_MACRO_MODULE_PLAIN_COMMAND:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# A macro whose module holds a runtime type test (Std.isOfType) builds as a plugin, as upstream's
+# test builder does through try/catch (haxe.Exception.caught), and the program prints what
+# upstream prints.
+RUNTIME_TYPE_DIR="$ROOT/test/fixtures/project-macro-runtime-type"
+(
+  cd "$RUNTIME_TYPE_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/runtime_type.oracle.stdout" 2>"$ARTIFACT_DIR/runtime_type.oracle.stderr"
+diff -u "$RUNTIME_TYPE_DIR/expected.stdout" "$ARTIFACT_DIR/runtime_type.oracle.stdout"
+compile_app runtime_type "$RUNTIME_TYPE_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line runtime_type '^expr_macros_expanded=1$'
+"$WORK_DIR/app-runtime_type/out.exe" >"$ARTIFACT_DIR/runtime_type.stdout" 2>"$ARTIFACT_DIR/runtime_type.stderr"
+diff -u "$RUNTIME_TYPE_DIR/expected.stdout" "$ARTIFACT_DIR/runtime_type.stdout"
+echo "PROJECT_MACRO_MODULE_RUNTIME_TYPE:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 # A macro whose body is written with reification (`macro { ... }`, `$v{}`, `$b{}`, `$a{}`, `$e{}`,
 # field splices, `@:pos`) builds as a plugin and the program prints what upstream prints.
