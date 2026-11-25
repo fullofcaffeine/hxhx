@@ -4328,6 +4328,16 @@ class TyperStage {
 					case EIdent("__hxhx_throw") if (args.length == 1):
 						inferExprType(args[0], scope, ctx, pos);
 						return TyType.noNormalCompletion();
+					case EIdent("__hxhx_int_literal") if (args.length == 2):
+						// The parser's suffixed integer literal (`7i32`). Haxe 4.3.7 types it by its
+						// suffix (typer.ml:1867-1888): i32 is Int, u32 is UInt and i64 is haxe.Int64.
+						return switch args[1] {
+							case EString("i32"): TyType.fromHintText("Int");
+							case EString("u32"): typeFromHintInContext("UInt", ctx, scope, pos);
+							case EString("i64"): typeFromHintInContext("haxe.Int64", ctx, scope, pos);
+							case EString(suffix): throw new TyperError(ctx.getFilePath(), pos, suffix + " is not a valid integer suffix");
+							case _: throw new TyperError(ctx.getFilePath(), pos, "integer literal suffix is not a string");
+						};
 					case EIdent("__hxhx_optional_lambda") | EIdent("__hxhx_rest_lambda") if (args.length == 2):
 						// These parser wrappers describe argument omission; they return the same callable.
 						final callable = inferExprType(args[0], scope, ctx, pos);
