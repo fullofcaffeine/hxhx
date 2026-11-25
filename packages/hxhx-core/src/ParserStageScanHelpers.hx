@@ -339,7 +339,7 @@ class ParserStageScanHelpers {
 		- Full enum reflection metadata beyond the enum type marker needed by runtime type checks.
 		- Enum abstracts (we treat `enum abstract` values as field/function stubs).
 	**/
-	public static function scanModuleLocalHelperEnums(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
+	public static function scanModuleLocalHelperEnums(source:String, mainTypeName:Null<String>, authoredSyntax:Bool = false):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
 		if (source == null || source.length == 0)
 			return out;
@@ -487,7 +487,7 @@ class ParserStageScanHelpers {
 				if (headerTok.text != "{")
 					continue;
 				if (isEnumAbstract) {
-					final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
+					final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos, authoredSyntax);
 					i = scanned.nextPos;
 				} else {
 					final scanned = scanEnumBodyForCtors(source, headerTok.nextPos);
@@ -508,7 +508,7 @@ class ParserStageScanHelpers {
 			final functions = new Array<HxFunctionDecl>();
 			var enumDeclaration:Null<HxEnumDeclaration> = null;
 			if (isEnumAbstract) {
-				final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos);
+				final scanned = scanEnumAbstractBodyForValues(source, headerTok.nextPos, authoredSyntax);
 				i = scanned.nextPos;
 				for (field in scanned.fields)
 					fields.push(field);
@@ -933,7 +933,7 @@ class ParserStageScanHelpers {
 		  indexing and bring-up emission.
 		- Leaves operator binding and other advanced abstract semantics to the typer.
 	**/
-	public static function scanModuleLocalHelperAbstracts(source:String, mainTypeName:Null<String>):Array<HxClassDecl> {
+	public static function scanModuleLocalHelperAbstracts(source:String, mainTypeName:Null<String>, authoredSyntax:Bool = false):Array<HxClassDecl> {
 		final out = new Array<HxClassDecl>();
 		if (source == null || source.length == 0)
 			return out;
@@ -1009,7 +1009,7 @@ class ParserStageScanHelpers {
 				}
 				if (enumHeaderTok.text == "{") {
 					if (isEnumAbstract) {
-						final scanned = scanEnumAbstractBodyForValues(source, enumHeaderTok.nextPos);
+						final scanned = scanEnumAbstractBodyForValues(source, enumHeaderTok.nextPos, authoredSyntax);
 						i = scanned.nextPos;
 					} else {
 						final scanned = scanEnumBodyForCtors(source, enumHeaderTok.nextPos);
@@ -1065,7 +1065,7 @@ class ParserStageScanHelpers {
 				headerTok = scanNextToken(source, headerTok.nextPos);
 			}
 			if (headerTok.text == "{") {
-				final scanned = scanClassBodyForStatics(source, headerTok.nextPos);
+				final scanned = scanClassBodyForStatics(source, headerTok.nextPos, authoredSyntax);
 				i = scanned.nextPos;
 				fields = scanned.fields;
 				functions = scanned.functions;
@@ -1483,8 +1483,9 @@ class ParserStageScanHelpers {
 	}
 
 	/** Keep enum values and methods from one declaration scan; typing assigns omitted values. */
-	public static function scanEnumAbstractBodyForValues(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
-		final scanned = scanClassBodyForStatics(source, start);
+	public static function scanEnumAbstractBodyForValues(source:String, start:Int,
+			authoredSyntax:Bool = false):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
+		final scanned = scanClassBodyForStatics(source, start, authoredSyntax);
 		final fields = new Array<HxFieldDecl>();
 		for (field in scanned.fields) {
 			if (HxFieldDecl.getIsStatic(field)) {
@@ -1507,7 +1508,8 @@ class ParserStageScanHelpers {
 		classes and abstracts. Bodies and source ranges belong to the declaration;
 		later compiler phases decide whether their behavior is supported.
 	**/
-	public static function scanClassBodyForStatics(source:String, start:Int):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
+	public static function scanClassBodyForStatics(source:String, start:Int,
+			authoredSyntax:Bool = false):{nextPos:Int, fields:Array<HxFieldDecl>, functions:Array<HxFunctionDecl>} {
 		final fields = new Array<HxFieldDecl>();
 		final functions = new Array<HxFunctionDecl>();
 
@@ -2059,7 +2061,7 @@ class ParserStageScanHelpers {
 					}
 
 					final bodyBraced = scanNextToken(source, i).text == "{";
-					final bodyCapture = scanFunctionBody(source, i, true);
+					final bodyCapture = scanFunctionBody(source, i, true, authoredSyntax);
 					// Parsing owns the authored body, including branches and unsupported
 					// syntax nodes. Typing and target checks must see those nodes rather
 					// than an empty method that silently loses its behavior.
@@ -2318,7 +2320,7 @@ class ParserStageScanHelpers {
 	}
 
 	/** Declaration recovery delegates unbraced body boundaries to the statement parser. */
-	static function scanFunctionBody(source:String, start:Int, capture:Bool = true):{
+	static function scanFunctionBody(source:String, start:Int, capture:Bool = true, authoredSyntax:Bool = false):{
 		body:Array<HxStmt>,
 		bodyText:String,
 		nextPos:Int,
@@ -2333,7 +2335,7 @@ class ParserStageScanHelpers {
 				hasBody: false
 			};
 		if (token.text != "{") {
-			final parsed = HxParser.parseUnbracedFunctionBodyAt(source, start);
+			final parsed = HxParser.parseUnbracedFunctionBodyAt(source, start, authoredSyntax);
 			return capture ? parsed : {
 				body: [],
 				bodyText: "",
@@ -2352,7 +2354,7 @@ class ParserStageScanHelpers {
 		var body = new Array<HxStmt>();
 		if (block.bodyText.length > 0) {
 			try {
-				body = HxParser.parseFunctionBodyTextAt(block.bodyText, source, token.nextPos);
+				body = HxParser.parseFunctionBodyTextAt(block.bodyText, source, token.nextPos, authoredSyntax);
 				if (hasUnsupportedStmtList(body))
 					body = [];
 			} catch (_:HxParseError) {
