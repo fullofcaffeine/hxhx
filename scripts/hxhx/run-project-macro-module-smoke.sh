@@ -9,11 +9,13 @@ set -euo pipefail
 # writes a receipt into its plugin cache, loads the plugin in-process, and runs the macro. The
 # native program must print what upstream Haxe 4.3.7 prints.
 #
-# Later steps compile five more fixtures the same way and compare each program with upstream:
+# Later steps compile seven more fixtures the same way and compare each program with upstream:
 # project-macro-reification (quoted syntax), project-macro-constant-args (String, Int, Float, and
 # Bool parameters, an inferred result), expr_macro_pass_driver/suite (the upstream unit-suite
-# TestMain shape), project-macro-context (haxe.macro.Context services and Context.error), and
-# project-macro-define (Context.defineModule and Context.defineType).
+# TestMain shape), project-macro-context (haxe.macro.Context services and Context.error),
+# project-macro-define (Context.defineModule and Context.defineType), project-macro-typeof
+# (Context.typeof, Context.follow, and Ref.get), and project-macro-lazy (a macro that builds TLazy
+# fails clearly).
 #
 # The hxhx binary must contain the current compiler sources. Until the committed bootstrap
 # snapshot includes the plugin build driver, pass HXHX_BIN (and HXHX_MACRO_HOST_EXE) built from
@@ -397,6 +399,36 @@ require_line define '^expr_macros_expanded=2$'
 "$WORK_DIR/app-define/out.exe" >"$ARTIFACT_DIR/define.stdout" 2>"$ARTIFACT_DIR/define.stderr"
 diff -u "$DEFINE_DIR/expected.stdout" "$ARTIFACT_DIR/define.stdout"
 echo "PROJECT_MACRO_MODULE_DEFINE:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# Macros that read the compiler's types (Context.typeof, Context.follow, Ref.get), in the shape of
+# upstream's unit test builder, print what upstream prints. No Context answer is unsupported.
+TYPEOF_DIR="$ROOT/test/fixtures/project-macro-typeof"
+(
+  cd "$TYPEOF_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/typeof.oracle.stdout" 2>"$ARTIFACT_DIR/typeof.oracle.stderr"
+diff -u "$TYPEOF_DIR/expected.stdout" "$ARTIFACT_DIR/typeof.oracle.stdout"
+compile_app typeof "$TYPEOF_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line typeof '^expr_macros_expanded=16$'
+if grep -q '^macro_context_unsupported=' "$ARTIFACT_DIR/typeof.compile.stdout"; then
+  echo "Project macro typeof step: a Context answer was unsupported" >&2
+  exit 1
+fi
+"$WORK_DIR/app-typeof/out.exe" >"$ARTIFACT_DIR/typeof.stdout" 2>"$ARTIFACT_DIR/typeof.stderr"
+diff -u "$TYPEOF_DIR/expected.stdout" "$ARTIFACT_DIR/typeof.stdout"
+echo "PROJECT_MACRO_MODULE_TYPEOF:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# A macro that builds TLazy itself runs upstream (expected.stdout), but hxhx has no native form for
+# its function payload: the plugin build fails at that constructor with the emitter's message.
+LAZY_DIR="$ROOT/test/fixtures/project-macro-lazy"
+(
+  cd "$LAZY_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/lazy.oracle.stdout" 2>"$ARTIFACT_DIR/lazy.oracle.stderr"
+diff -u "$LAZY_DIR/expected.stdout" "$ARTIFACT_DIR/lazy.oracle.stdout"
+expect_failure lazy "$LAZY_DIR/src" Main "OCaml enum payload representation is not implemented: haxe.macro.Type#static:TLazy" \
+  --hxhx-macro-cache "$CACHE_DIR"
+echo "PROJECT_MACRO_MODULE_LAZY:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 {
   echo "candidate_commit=$CANDIDATE_COMMIT"

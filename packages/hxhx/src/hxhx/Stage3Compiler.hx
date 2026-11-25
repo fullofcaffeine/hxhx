@@ -605,6 +605,8 @@ class Stage3Compiler {
 			return error("internal: Stage3 typing requires the request's module loader");
 		if (expressionMacroSession != null) {
 			requestOutput.stdoutLine("expr_macros_expanded=" + macroPass.expandedCount);
+			if (hxhx.macro.MacroState.getContextUnsupported() > 0)
+				requestOutput.stdoutLine("macro_context_unsupported=" + hxhx.macro.MacroState.getContextUnsupported());
 			if (macroPass.unexecuted.length > 0) {
 				requestOutput.stdoutLine("expr_macros_unexecuted=" + macroPass.unexecuted.length);
 				for (position in 0...macroPass.unexecuted.length) {

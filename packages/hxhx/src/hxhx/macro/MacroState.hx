@@ -221,8 +221,28 @@ class MacroState {
 		definedModulePaths.clear();
 	}
 
+	/**
+		`unsupported` answers to plugin Context requests in this request
+		(`MacroContextHostServices.handle`). The compiler prints the count, so a macro that catches
+		the failure (as upstream's test builder catches typing errors) still shows it.
+	**/
+	static var contextUnsupported = 0;
+
+	public static function noteContextUnsupported():Void
+		contextUnsupported++;
+
+	public static function getContextUnsupported():Int
+		return contextUnsupported;
+
+	/** A new request starts with no Context answers and no type handles. */
+	public static function clearContextRequests():Void {
+		contextUnsupported = 0;
+		MacroTypeHandles.reset();
+	}
+
 	public static function reset():Void {
 		clearDefinedModules();
+		clearContextRequests();
 		defines.clear();
 		ocamlModules.clear();
 		classPaths.resize(0);

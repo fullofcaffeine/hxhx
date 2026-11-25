@@ -15,7 +15,10 @@ import TypedExactEnumConstructorSource.TypedExactEnumConstructorCall;
 	The native payload contract covers Int, Bool, String, Dynamic, anonymous records,
 	typed arrays, runtime type values, and boxed ordinary enums,
 	including their optional and nullable forms. Other payload representations fail
-	explicitly until their typed conversion is implemented.
+	explicitly until their typed conversion is implemented. A function payload
+	(`Unrepresentable`) fails where it is used: a constructor call, or a pattern that
+	binds or tests that payload. Declaring the enum, or matching the constructor with
+	`_` in that position, still builds.
 **/
 class Stage3OcamlEnums {
 	final owners:Map<String, Stage3OcamlEnumPlan> = new Map();
@@ -135,7 +138,32 @@ class Stage3OcamlEnums {
 			case NullableValue(value):
 				payloadType(value, declaration);
 				"Obj.t";
+			// The slot keeps the variant's shape; no emitted code builds or reads it.
+			case Unrepresentable(_): "Obj.t";
 		};
+	}
+
+	/**
+		A constructor pattern may name an unrepresentable payload only with `_`: binding or
+		testing it needs a value no emitted code can build. `arguments` are the pattern's own
+		payload patterns, in declaration order.
+	**/
+	public function requireBindable(selected:TypedNamedPattern, arguments:Array<HxSwitchPattern>):Void {
+		switch selected.getKind() {
+			case Constructor(identity, _, index, _):
+				final owner = owners.get(identity.getCanonicalName());
+				if (owner == null || index < 0 || index >= owner.constructors.length)
+					return;
+				final payloads = owner.constructors[index].payloads;
+				for (position in 0...arguments.length) {
+					if (position >= payloads.length)
+						break;
+					final failure = Stage3OcamlEnumPlan.unrepresentable(payloads[position].storage);
+					if (failure != null && !arguments[position].match(PWildcard))
+						throw failure;
+				}
+			case _:
+		}
 	}
 
 	/** Produce one enum module; ordinary classes continue through their own emitter. */
@@ -201,6 +229,11 @@ class Stage3OcamlEnums {
 				throw "OCaml enum call selected a singleton field";
 			if (constructor.declaration != selected.declaration || selected.arguments.length > constructor.payloads.length)
 				throw "OCaml enum call disagrees with its exact constructor declaration";
+			for (payload in constructor.payloads) {
+				final failure = Stage3OcamlEnumPlan.unrepresentable(payload.storage);
+				if (failure != null)
+					throw failure;
+			}
 			final operands = selected.arguments.copy();
 			while (operands.length < constructor.payloads.length) {
 				if (!constructor.payloads[operands.length].optional)

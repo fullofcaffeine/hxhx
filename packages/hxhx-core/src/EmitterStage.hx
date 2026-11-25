@@ -5844,7 +5844,8 @@ class EmitterStage {
 					fallback: backendDialect.dynamicNullValue(),
 					dialect: backendDialect,
 					quote: escapeOcamlString,
-					names: currentFunctionLocalOcamlNames
+					names: currentFunctionLocalOcamlNames,
+					checkConstructor: (selected, arguments) -> if (currentEnums != null) currentEnums.requireBindable(selected, arguments)
 				});
 				"(let " + switchName + " = (" + sw + ") in " + chain + ")";
 			case ESwitchRaw(_raw):
@@ -7404,7 +7405,8 @@ class EmitterStage {
 						fallback: "()",
 						dialect: backendDialect,
 						quote: escapeOcamlString,
-						names: currentFunctionLocalOcamlNames
+						names: currentFunctionLocalOcamlNames,
+						checkConstructor: (selected, arguments) -> if (currentEnums != null) currentEnums.requireBindable(selected, arguments)
 					});
 					"(let " + switchName + " = (" + sw + ") in " + chain + ")";
 				case SIf(cond, thenBranch, elseBranch, _pos):

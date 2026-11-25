@@ -1425,6 +1425,27 @@ class TyperStage {
 		return result;
 	}
 
+	/**
+		The type of one expression in `context`'s module and class, outside any method body.
+
+		`Context.typeof` in a project macro uses it: the expression is typed at the macro call's
+		module, with its imports and the class's statics, as `inferDeclaredFieldType` types a field
+		initializer. The call site's locals are not in scope. A typing failure is thrown as
+		`TyperError`. It runs before the request types its modules, so it binds the index's
+		on-demand inference of unannotated fields and method results, as `buildTypedClasses` does.
+	**/
+	public static function typeStandaloneExpression(expression:HxExpr, context:TyperContext, loader:Null<ModuleLoader>, position:HxPos):TyType {
+		final index = context.getIndex();
+		index.getMethodBodyResults().configure(declaration -> inferDeclaredMethodResult(declaration, index, loader));
+		index.getFieldInitializerTypes().configure((field, source) -> inferDeclaredFieldType(field, source, index, loader));
+		final key = "<macro-typeof>";
+		final scope = new TyFunctionEnv(key, [], [], TyType.unknown(), TyType.unknown(), key, null, false, 0, true,
+			new TyControlScope(key, TypedBodyFingerprint.forExpression(expression), Initializer), null, []);
+		final result = inferExprType(expression, scope, context, position);
+		scope.sealInference();
+		return result;
+	}
+
 	/** Infer in the declaring module, never under the imports or binders of its consumer. */
 	static function inferDeclaredMethodResult(declaration:TyDeclarationInfo, index:TyperIndex, loader:ModuleLoader):TyMethodBodyResults.TyMethodBodyResult {
 		final module = index.getRegisteredModule(declaration.getModulePath());
