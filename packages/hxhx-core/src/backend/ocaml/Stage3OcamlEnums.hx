@@ -138,6 +138,89 @@ class Stage3OcamlEnums {
 		};
 	}
 
+	/**
+		Why an open record cannot enter a record payload as `destination`, or null when it can.
+
+		Upstream binds a record literal's open parts (`[]`, an unresolved value) when the
+		constructor call unifies them (`FFun(func)` in `tests/unit/src/unit/UnitBuilder.hx`). hxhx's
+		typer proves the record compatible but keeps those parts unknown. The record carrier stores
+		each field value as the literal built it. That is the destination's own storage only where
+		the destination stores a reference: an Array, structure, class instance, enum, String, or a
+		nullable reference. An open part anywhere else (Int, Float, Bool, Dynamic, a function) is
+		rejected and named.
+	**/
+	function openRecordFailure(source:TyType, destination:TyType, path:String, classIdentity:Null<TyType->Bool>):Null<String> {
+		if (!destination.isAnonymous())
+			return openFieldMessage(path, destination);
+		final targets = destination.getAnonymousFields();
+		for (field in source.getAnonymousFields()) {
+			if (!field.type.hasUnknownComponent())
+				continue;
+			var target:Null<TyType> = null;
+			for (candidate in targets)
+				if (candidate.name == field.name)
+					target = candidate.type;
+			final name = path + field.name;
+			if (target == null)
+				return "OCaml record enum argument has open field `" + name + "` with no destination field";
+			final failure = openValueFailure(field.type, target, name, classIdentity);
+			if (failure != null)
+				return failure;
+		}
+		return null;
+	}
+
+	function openValueFailure(source:TyType, destination:TyType, path:String, classIdentity:Null<TyType->Bool>):Null<String> {
+		final target = TyAliasExpansion.reveal(destination);
+		if (source.isUnknown() || (source.isNullable() && source.unwrapNull().isUnknown()))
+			return storesReference(target, classIdentity) ? null : openFieldMessage(path, target);
+		if (source.isNullable())
+			return openValueFailure(source.unwrapNull(), target.unwrapNull(), path, classIdentity);
+		if (source.isAnonymous())
+			return openRecordFailure(source, target, path + ".", classIdentity);
+		final sourceIdentity = source.getNominalIdentity();
+		final targetIdentity = target.getNominalIdentity();
+		if (sourceIdentity != null
+			&& sourceIdentity.getCanonicalName() == "Array"
+			&& targetIdentity != null
+			&& targetIdentity.getCanonicalName() == "Array"
+			&& source.getTypeArguments().length == 1
+			&& target.getTypeArguments().length == 1) {
+			// `[]`: the field stores the Array object itself, and the literal has no element yet.
+			final element = source.getTypeArguments()[0];
+			return element.isUnknown() ? null : openValueFailure(element, target.getTypeArguments()[0], path + "[]", classIdentity);
+		}
+		return openFieldMessage(path, target);
+	}
+
+	/** Whether a value of `type` keeps its own `Obj.t` in a record field. */
+	function storesReference(type:TyType, classIdentity:Null<TyType->Bool>):Bool {
+		if (type.hasUnknownComponent() || type.isDynamic() || type.isFunction())
+			return false;
+		if (type.isNullable()) {
+			final inner = TyAliasExpansion.reveal(type.unwrapNull());
+			// Null<Int>, Null<Float>, and Null<Bool> use their own nullable carriers.
+			return inner.isPrimitive() ? inner.getDisplay() == "String" : storesReference(inner, classIdentity);
+		}
+		if (type.isPrimitive())
+			return type.getDisplay() == "String";
+		if (type.isAnonymous())
+			return true;
+		final identity = type.getNominalIdentity();
+		if (identity == null)
+			return false;
+		if (identity.getCanonicalName() == "Array" || owners.exists(identity.getCanonicalName()))
+			return true;
+		return classIdentity != null && classIdentity(type);
+	}
+
+	static function openFieldMessage(path:String, destination:TyType):String
+		return "OCaml record enum argument cannot store open field `"
+			+ path
+			+ "` as "
+			+ destination.getDisplay()
+			+ ": an open part needs a reference destination (Array, structure, class, enum, String, or a nullable reference)";
+
 	/** Produce one enum module; ordinary classes continue through their own emitter. */
 	public function render(projection:TypedBackendClassProjection):Null<String> {
 		if (HxClassDecl.getEnumDeclaration(projection.getDeclaration()) == null)
@@ -190,7 +273,7 @@ class Stage3OcamlEnums {
 		constructor plan owns the destination and selects the conversion.
 	**/
 	public function call(selected:TypedExactEnumConstructorCall, emit:HxExpr->String, names:Stage3OcamlLocalNames,
-			argumentFacts:HxExpr->Null<TypedBackendCallArgument>):String {
+			argumentFacts:HxExpr->Null<TypedBackendCallArgument>, ?classIdentity:TyType->Bool):String {
 		final owner = owners.get(selected.owner);
 		if (owner == null || owner.moduleIdentity != selected.modulePath)
 			throw "OCaml enum call has no exact program owner: " + selected.owner;
@@ -242,9 +325,15 @@ class Stage3OcamlEnums {
 									|| fact.expression != operands[index]
 									|| fact.expectedType == null
 									|| TyAliasExpansion.revealNonNullable(fact.expectedType).getSemanticKey() != key
-									|| !TyAliasExpansion.revealNonNullable(fact.type).isAnonymous()
-									|| fact.type.hasUnknownComponent())
+									|| !TyAliasExpansion.revealNonNullable(fact.type).isAnonymous())
 									throw "OCaml record enum argument requires its exact typed record operand and destination";
+								// An open literal (`{args: [], ret: null}`) keeps its parts as stored; see openRecordFailure.
+								if (fact.type.hasUnknownComponent()) {
+									final failure = openRecordFailure(TyAliasExpansion.revealNonNullable(fact.type),
+										TyAliasExpansion.revealNonNullable(fact.expectedType), "", classIdentity);
+									if (failure != null)
+										throw failure;
+								}
 								// The typed object owner already stores fields, including Bool,
 								// inside this carrier. Preserve the object instead of rebuilding it.
 								rendered;
