@@ -54,6 +54,39 @@ class TypedConstructorPath {
 		return null;
 	}
 
+	/**
+		The constructor that a class without its own `new` inherits, as upstream Haxe 4.3.7 gives
+		such a non-extern class one (`typeloadFunction.ml`, `add_constructor`, lines 183-240): the
+		nearest ancestor's `new`, applied through this class's view of that ancestor, with a Void
+		result. `class C<T> extends P<Array<T>>` inherits `P`'s `new(items:S)` as
+		`new(items:Array<T>)`. Null for an extern class, an interface, an enum, an abstract, a class
+		that declares `new`, a class without an inherited constructor, and an overloaded one.
+
+		This is a derived view for typed-signature tools such as the typed oracle. The index and the
+		typed classes keep only declared functions, so constructor selection
+		(`select`) and every backend are unchanged. `declaration` is the ancestor's `new`.
+	**/
+	public static function inheritedSignature(index:TyperIndex, info:Null<TyNominalInfo>):Null<{declaration:TyDeclarationInfo, signature:TyFunSig}> {
+		if (index == null || info == null || !Std.isOfType(info, TyClassInfo))
+			return null;
+		final cls:TyClassInfo = cast info;
+		if (cls.getIsInterface() || cls.getIsEnum() || cls.getIsExtern() || cls.instanceMethodCandidates("new").length != 0)
+			return null;
+		final path = select(index, TyType.nominal(cls.getIdentity(), [for (parameter in cls.getTypeParameterIds()) TyType.typeParameter(parameter)]));
+		if (path == null || path.getOwner() == info)
+			return null;
+		final candidates = path.getOwner().instanceMethodCandidates("new");
+		final declaration = candidates.length == 1 ? path.getOwner().declarationForSignature(candidates[0]) : null;
+		if (declaration == null)
+			return null;
+		final applied = TyNominalApplication.signature(index, path.getOwner(), path.getOwnerType(), candidates[0]);
+		return {
+			declaration: declaration,
+			signature: new TyFunSig("new", false, applied.getArgNames(), applied.getArgs(), applied.getArgOptional(), applied.getArgRest(),
+				TyType.fromHintText("Void"), applied.getPos())
+		};
+	}
+
 	public function getOwner():TyNominalInfo
 		return owner;
 
