@@ -210,7 +210,7 @@ class ModuleLoader extends LazyTypeLoader {
 				}
 			}
 			for (entry in work) {
-				index.publishResolvedModule(entry);
+				index.publishResolvedModule(entry, macroContext);
 				signatureStates.set(entry.modulePath, Ready);
 			}
 		} catch (error:TyperError) {
