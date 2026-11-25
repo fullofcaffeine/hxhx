@@ -875,6 +875,45 @@ class TyFunctionInference {
 		};
 	}
 
+	/**
+		An object literal's own term, built from its field values' terms: an omitted input keeps its
+		variable, and an empty array keeps its element variable. Haxe 4.3.7 gives the literal's
+		structure those same monomorphs, so a later use of the value binds them: after
+		`var e = null; e = {b: p};`, `return e` as `Pair` gives the omitted `p` the type `String`
+		(haxe.macro.MacroStringTools.toFieldExpr). The term is recorded once for the expression,
+		so replay reads the same term. Null when no field value keeps a term: such a literal keeps
+		its ordinary checks.
+	**/
+	public function literalTerm(expression:HxExpr, type:TyType, environment:TyFunctionEnv):Null<TyInferenceTerm> {
+		return switch expression {
+			case EParenthesized(inner, _): literalTerm(inner, type, environment);
+			case EAnon(names, values) if (type.isAnonymous()):
+				final recorded = occurrence(expression);
+				if (recorded != null || solver.isSealed())
+					return recorded;
+				final fields = type.getAnonymousFields();
+				final retained = [
+					for (field in fields) {
+						final at = names.indexOf(field.name);
+						final value = at < 0 ? null : values[at];
+						final term = value == null ? null : sourceTerm(value, environment);
+						term != null
+					|| value == null ? term : literalTerm(value, field.type.unwrapNull(), environment);
+					}
+				];
+				if (retained.filter(term -> term != null).length == 0)
+					return null;
+				// Haxe 4.3.7 types a `null` field value as `Null<?>`, so it can still meet `Null<String>`.
+				final term = Structure([
+					for (index in 0...fields.length)
+						retained[index] != null ? retained[index] : fields[index].type.isNullLiteral() ? Nullable(solver.freshNullLiteralValue()) : TyInferenceSolver.fromType(fields[index].type)
+				], type);
+				occurrences.push({expression: expression, term: term});
+				term;
+			case _: null;
+		};
+	}
+
 	/** Class aliases keep their declaration scheme; only this exact contextual use owns fresh variables. */
 	function classValueTerm(expression:HxExpr, scheme:TyClassValueScheme, environment:TyFunctionEnv):TyInferenceTerm {
 		for (entry in classValueUses)

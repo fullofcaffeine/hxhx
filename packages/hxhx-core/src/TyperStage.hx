@@ -4941,7 +4941,8 @@ class TyperStage {
 									// that same term.
 									if ((sym.getType().isUnknown() || sym.getType().isNullLiteral())
 										&& scope.getInference().sourceTerm(a, scope) == null) {
-										final assignedTerm = scope.getInference().sourceTerm(b, scope);
+										final retainedTerm = scope.getInference().sourceTerm(b, scope);
+										final assignedTerm = retainedTerm != null ? retainedTerm : scope.getInference().literalTerm(b, rhs, scope);
 										if (assignedTerm != null)
 											scope.getInference().recordLocal(sym, assignedTerm);
 									}

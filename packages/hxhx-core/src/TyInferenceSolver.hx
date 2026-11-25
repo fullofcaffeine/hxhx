@@ -86,6 +86,13 @@ class TyInferenceSolver {
 		return term;
 	}
 
+	/** A `null` literal's `Null<?>` content accepts later constraints and defaults to Dynamic at seal, like an empty array element. */
+	public function freshNullLiteralValue():TyInferenceTerm {
+		final term = allocate(null);
+		visitDynamicUse(term, false);
+		return term;
+	}
+
 	/** An unconstrained use erases only at seal; later result contexts can still choose its instance argument. */
 	public function freshClassValueArgument():TyInferenceTerm {
 		final term = allocate(null);
