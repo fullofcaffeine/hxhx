@@ -25,11 +25,17 @@ typedef FunctionRenderInput = {
 		type. The value keeps its own representation inside the `Obj.t` payload.
 	**/
 	final ?referenceCarrier:TyType->Null<String>;
+
+	/**
+		The exact typed type of a `for` iterable in this body, or null when it is unknown. Only an
+		Array loop has a native adapter here (`HxBootArray.iter`); see `validate`.
+	**/
+	final ?iterableType:HxExpr->Null<TyType>;
 }
 
 /** Each closure owns a return exception; the nearest invocation catches its own exit. */
 function render(input:FunctionRenderInput):String {
-	final selected = plan(input.facts, input.body, input.isEnumBox, input.referenceCarrier);
+	final selected = plan(input.facts, input.body, input.isEnumBox, input.referenceCarrier, input.iterableType);
 	if (input.names == null)
 		throw "OCaml block function requires its local naming owner";
 	final arguments = switch input.facts.expression {
@@ -89,7 +95,8 @@ function render(input:FunctionRenderInput):String {
 	`isEnumBox` must answer from the request's registered enum declarations.
 	A reference result uses the carrier `referenceCarrier` selects for it.
  */
-function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType->Bool, ?referenceCarrier:TyType->Null<String>):FunctionStatements {
+function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType->Bool, ?referenceCarrier:TyType->Null<String>,
+		?iterableType:HxExpr->Null<TyType>):FunctionStatements {
 	if (facts == null)
 		throw "OCaml block function requires its exact lambda facts";
 	switch facts.expression {
@@ -119,7 +126,7 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType
 	});
 	var returns = 0;
 	for (statement in statements)
-		returns += validate(statement);
+		returns += validate(statement, iterableType);
 	if (returns != facts.getReturnTypes().length || returns != mapped.length)
 		throw "OCaml block function lost its typed return operands";
 	return {
@@ -130,26 +137,32 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType
 	};
 }
 
-/** Keep unsupported native statement paths from becoming silent placeholder success. */
-private function validate(statement:HxStmt):Int {
+/**
+	Keep unsupported native statement paths from becoming silent placeholder success.
+	A `for` over an Array uses the statement emitter's `HxBootArray.iter` loop, whose body raises
+	this region's return exception and the loop's own break and continue signals, as a range loop
+	does. Any other iterable has no validated adapter here.
+**/
+private function validate(statement:HxStmt, iterableType:Null<HxExpr->Null<TyType>>):Int {
 	return switch statement {
 		case SBlock(entries, _):
 			var count = 0;
 			for (entry in entries)
-				count += validate(entry);
+				count += validate(entry, iterableType);
 			count;
-		case SIf(_, yes, no, _): validate(yes) + (no == null ? 0 : validate(no));
-		case SWhile(_, body, _) | SDoWhile(body, _, _): validate(body);
-		case SForIn(_, ERange(_, _), body, _): validate(body);
+		case SIf(_, yes, no, _): validate(yes, iterableType) + (no == null ? 0 : validate(no, iterableType));
+		case SWhile(_, body, _) | SDoWhile(body, _, _): validate(body, iterableType);
+		case SForIn(_, ERange(_, _), body, _): validate(body, iterableType);
+		case SForIn(_, iterable, body, _) if (iterableType != null && isArray(iterableType(iterable))): validate(body, iterableType);
 		case SSwitch(_, _, branches, _) | SGuardedSwitch(_, _, _, branches, _):
 			var count = 0;
 			for (branch in branches)
-				count += validate(branch);
+				count += validate(branch, iterableType);
 			count;
 		case STry(body, catches, _):
-			var count = validate(body);
+			var count = validate(body, iterableType);
 			for (handler in catches)
-				count += validate(handler.body);
+				count += validate(handler.body, iterableType);
 			count;
 		case SThrow(_, _): 0;
 		// The shared projection already checked that these target the nearest loop
@@ -159,4 +172,13 @@ private function validate(statement:HxStmt):Int {
 		case SVar(_, _, _, _, _) | SExpr(_, _): 0;
 		case _: throw "OCaml block function requires a validated adapter for this control form";
 	};
+}
+
+/** An exact, non-null `Array<T>`: the only iterable `HxBootArray.iter` loops over. */
+private function isArray(type:Null<TyType>):Bool {
+	if (type == null || type.isNullable() || type.hasUnknownComponent())
+		return false;
+	final revealed = TyAliasExpansion.reveal(type);
+	final identity = revealed.getNominalIdentity();
+	return identity != null && identity.getCanonicalName() == "Array" && revealed.getTypeArguments().length == 1;
 }
