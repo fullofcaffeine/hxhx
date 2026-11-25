@@ -952,7 +952,7 @@ class HxParser {
 				bump();
 				final typeText = StringTools.trim(readTypeHintText(() -> cur.kind.match(TColon) || cur.kind.match(TComma) || cur.kind.match(TRBrace)
 					|| cur.kind.match(TEof) || cur.kind.match(TKeyword(KIf)) || isOtherChar("|")));
-				typeText.length == 0 ? PWildcard : PEnumValue(typeText);
+				typeText.length == 0 ? PWildcard : PEnumValue(typeText, authoredSyntax ? true : null);
 			case TIdent("_"):
 				bump();
 				PWildcard;
@@ -1023,7 +1023,7 @@ class HxParser {
 							// parser bring-up can keep these switches structured.
 							bump(); // `.`
 							bump(); // `code`
-							PInt(s == null || s.length == 0 ? -1 : s.charCodeAt(0));
+							PInt(s == null || s.length == 0 ? -1 : s.charCodeAt(0), authoredSyntax ? s : null);
 						case _:
 							PString(s);
 					}
@@ -1858,7 +1858,13 @@ class HxParser {
 					EReturn(value);
 				} else if (k == KInline) {
 					bump();
-					cur.kind.match(TKeyword(KFunction)) ? parseFunctionExpr(Value, true) : parsePrimaryExpr();
+					// Upstream keeps a call-site `inline expr` as `@:inline expr`; authored parsing keeps it.
+					cur.kind.match(TKeyword(KFunction)) ? parseFunctionExpr(Value, true) : authoredSyntax ? ECall(EIdent(HxAuthoredSyntax.META), [
+						EString(":inline"),
+						EString(""),
+						parseUnaryExpr(() -> cur.kind.match(TSemicolon) || cur.kind.match(TRParen) || cur.kind.match(TRBrace) || cur.kind.match(TComma)
+							|| cur.kind.match(TEof))
+					]) : parsePrimaryExpr();
 				} else if (k == KNew) {
 					bump();
 					var typePath = readConstructorTypePath();
@@ -2883,7 +2889,8 @@ class HxParser {
 					name:String,
 					args:String,
 					position:HxPos,
-					privateAccess:Bool
+					privateAccess:Bool,
+					compiler:Bool
 				}>();
 				while (cur.kind.match(TOther("@".code))) {
 					final position = cur.getPos();
@@ -2900,14 +2907,20 @@ class HxParser {
 						name: meta.name,
 						args: argsText,
 						position: position,
-						privateAccess: compilerMetadata && meta.name == "privateAccess"});
+						privateAccess: compilerMetadata && meta.name == "privateAccess",
+						compiler: compilerMetadata
+					});
 				}
 				var inner = parseUnaryExpr(stop);
 				var i = metadata.length - 1;
 				while (i >= 0) {
 					final entry = metadata[i];
+					// Authored parsing keeps the full name (`:nullSafety` against `nullSafety`) for the
+					// export; ordinary consumers read `__hxhx_expr_meta` (haxe_ocaml-ac5i9.4).
 					inner = entry.privateAccess ? EPrivateAccess(inner,
-						entry.position) : ECall(EIdent("__hxhx_expr_meta"), [EString(entry.name), EString(entry.args), inner]);
+						entry.position) : authoredSyntax ? ECall(EIdent(HxAuthoredSyntax.META),
+							[EString((entry.compiler ? ":" : "") + entry.name), EString(entry.args), inner]) : ECall(EIdent("__hxhx_expr_meta"),
+							[EString(entry.name), EString(entry.args), inner]);
 					i--;
 				}
 				inner;
