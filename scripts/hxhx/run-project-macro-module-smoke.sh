@@ -13,6 +13,7 @@ set -euo pipefail
 # project-macro-reification (quoted syntax), project-macro-constant-args (String, Int, Float, and
 # Bool parameters, an inferred result), expr_macro_pass_driver/suite (the upstream unit-suite
 # TestMain shape), and project-macro-context (haxe.macro.Context services and Context.error).
+# Before them, project-macro-parse-conditionals checks #if blocks in text a macro parses.
 #
 # The hxhx binary must contain the current compiler sources. Until the committed bootstrap
 # snapshot includes the plugin build driver, pass HXHX_BIN (and HXHX_MACRO_HOST_EXE) built from
@@ -314,6 +315,20 @@ echo "PROJECT_MACRO_MODULE_NEGATIVE_PATHS:PASS" | tee -a "$ARTIFACT_DIR/markers.
 require_line plain '^expr_macros_expanded=1$'
 run_app plain
 echo "PROJECT_MACRO_MODULE_PLAIN_COMMAND:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# Text a macro parses (Context.parseInlineString) keeps upstream's conditional compilation:
+# #if, #elseif, #else, and #end use the compilation's defines, including the target's.
+PARSE_CONDITIONALS_DIR="$ROOT/test/fixtures/project-macro-parse-conditionals"
+(
+  cd "$PARSE_CONDITIONALS_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/parse_conditionals.oracle.stdout" 2>"$ARTIFACT_DIR/parse_conditionals.oracle.stderr"
+diff -u "$PARSE_CONDITIONALS_DIR/expected.stdout" "$ARTIFACT_DIR/parse_conditionals.oracle.stdout"
+compile_app parse_conditionals "$PARSE_CONDITIONALS_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR" -D probe_flag -D probe_value=forty-two
+require_line parse_conditionals '^expr_macros_expanded=6$'
+"$WORK_DIR/app-parse_conditionals/out.exe" >"$ARTIFACT_DIR/parse_conditionals.stdout" 2>"$ARTIFACT_DIR/parse_conditionals.stderr"
+diff -u "$PARSE_CONDITIONALS_DIR/expected.stdout" "$ARTIFACT_DIR/parse_conditionals.stdout"
+echo "PROJECT_MACRO_MODULE_PARSE_CONDITIONALS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 # A macro whose body is written with reification (`macro { ... }`, `$v{}`, `$b{}`, `$a{}`, `$e{}`,
 # field splices, `@:pos`) builds as a plugin and the program prints what upstream prints.

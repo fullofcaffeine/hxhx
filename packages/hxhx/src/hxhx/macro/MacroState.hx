@@ -190,6 +190,7 @@ class MacroState {
 	}
 
 	public static function reset():Void {
+		compilationDefines = new haxe.ds.StringMap<String>();
 		defines.clear();
 		ocamlModules.clear();
 		classPaths.resize(0);
@@ -266,6 +267,48 @@ class MacroState {
 		if (name == null || name.length == 0)
 			return false;
 		return defines.exists(name);
+	}
+
+	/**
+		The defines of the compilation the macros run for, as the request built them
+		(`Stage3SetupSupport.buildDefinesMap`): the `-D` defines plus the target's (`sys`, the
+		backend, `target.*`).
+
+		Upstream's macro API answers `Context.defined` and lexes `Context.parse` text with the
+		calling compilation's defines (`src/typing/macroContext.ml`, `ctx.com`; Haxe 4.3.7).
+		`contextDefined`, `contextDefinedValue`, and `contextDefines` read these together with the
+		defines macros add while they run (`Compiler.define`).
+	**/
+	static var compilationDefines = new haxe.ds.StringMap<String>();
+
+	public static function setCompilationDefines(values:haxe.ds.StringMap<String>):Void {
+		compilationDefines = new haxe.ds.StringMap<String>();
+		if (values != null)
+			for (name => value in values)
+				compilationDefines.set(name, value);
+	}
+
+	/** Whether the calling compilation defines `name` (see `setCompilationDefines`). */
+	public static function contextDefined(name:String):Bool
+		return name != null && name.length > 0 && (defines.exists(name) || compilationDefines.exists(name));
+
+	/** The calling compilation's value of `name`, or null when it is not defined. */
+	public static function contextDefinedValue(name:String):Null<String> {
+		if (name == null || name.length == 0)
+			return null;
+		if (defines.exists(name))
+			return defines.get(name);
+		return compilationDefines.exists(name) ? compilationDefines.get(name) : null;
+	}
+
+	/** Every define the calling compilation has, for conditional compilation of parsed text. */
+	public static function contextDefines():haxe.ds.StringMap<String> {
+		final out = new haxe.ds.StringMap<String>();
+		for (name => value in compilationDefines)
+			out.set(name, value);
+		for (name => value in defines)
+			out.set(name, value);
+		return out;
 	}
 
 	public static function definedValue(name:String):String {

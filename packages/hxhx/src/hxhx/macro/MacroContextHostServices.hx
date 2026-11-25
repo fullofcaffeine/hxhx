@@ -39,7 +39,10 @@ class MacroContextParseError {
 	The services follow upstream Haxe 4.3.7 (`src/macro/macroApi.ml`):
 	- `defined` and `definedValue` read the compilation's defines after `-` becomes `_`
 	  (`Common.external_defined`, `src/context/common.ml`, lines 454-463); an undefined value is
-	  `null`.
+	  `null`. They are the calling compilation's defines, including the target's (`sys`,
+	  `target.*`), as upstream's macro API uses `ctx.com` (`MacroState.contextDefined`).
+	- `parse` and `parseInlineString` apply conditional compilation (`#if`, `#elseif`, `#else`,
+	  `#end`) to the text with those defines, as upstream's lexer does.
 	- `parse` gives every node of the parsed syntax the position the macro passed.
 	  `parseInlineString` does the same for now; upstream places each node inside the string,
 	  which waits on per-node source ranges (`haxe_ocaml-9sj5p.2`).
@@ -95,11 +98,14 @@ class MacroContextHostServices {
 				final position:Position = {file: filePath, min: start, max: start};
 				return position;
 			},
-			defined: name -> MacroState.defined(defineName(name)),
-			definedValue: name -> MacroState.defined(defineName(name)) ? MacroState.definedValue(defineName(name)) : null,
+			defined: name -> MacroState.contextDefined(defineName(name)),
+			definedValue: name -> MacroState.contextDefinedValue(defineName(name)),
 			parse: (code, position) -> {
+				// Upstream's lexer evaluates `#if` in the text with the same defines (haxe_ocaml-w1zmu).
+				// The filter keeps every offset, so positions inside the text stay where they were.
+				final active = HxConditionalCompilation.filterSource(code, MacroState.contextDefines());
 				final parsed = try {
-					HxParser.parseExprText(code);
+					HxParser.parseExprText(active);
 				} catch (error:HxParseError) {
 					throw new MacroContextParseError(error.message);
 				} catch (error:String) {
