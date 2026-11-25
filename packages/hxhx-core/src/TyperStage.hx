@@ -5168,9 +5168,19 @@ class TyperStage {
 			case EArrayDecl(values):
 				// An enum constructor's payload literal (`[items]`) can see a recursive
 				// typedef expanded on one side and as its alias on the other.
+				// A subclass or implementing element fits a class or interface element type, as
+				// upstream unifies an instance with its declared ancestors (haxe_ocaml-h9hun).
+				final acceptsAncestor = (expected:TyType, actual:TyType) -> {
+					final target = expected.unwrapNull();
+					final identity = target.getNominalIdentity();
+					final ancestor = identity == null ? null : TyNominalAncestor.view(ctx.getIndex(), actual.unwrapNull(), identity);
+					ancestor != null
+					&& ancestor.getSemanticKey() == target.getSemanticKey();
+				};
 				final acceptsArrayElement = (expected:TyType,
 					actual:TyType) -> actual.isDynamic()
 						|| TyAssignmentCompatibility.sameType(expected, actual)
+						|| acceptsAncestor(expected, actual)
 						|| TyFunctionConstraint.accepts(expected.unwrapNull(), actual)
 						|| TyStructuralArgument.compatibility(ctx.getIndex(), expected, actual) == Compatible
 						|| TyImplicitConversionPlan.select(ctx.getIndex(), expected.unwrapNull(), actual.unwrapNull()) != null
