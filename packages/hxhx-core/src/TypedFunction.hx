@@ -6,6 +6,13 @@
 	shared declaration record supplies the exact stable declaration identity.
 	The parsed body and arguments keep separate exact identities because their
 	arrays can change after typing. Deriving another body must reject such edits.
+
+	A macro function in a target compile has no typed body, as in upstream Haxe 4.3.7
+	(`typeloadFields.ml`, lines 1298-1345): its macro context is the project-macro plugin build.
+	It is typed from a copy of its declaration with an empty body and its arguments
+	(`getSourceDeclaration()`), and keeps the declaration as written (`getAuthoredDeclaration()`),
+	which the declaration index and the expression macro pass use. Backends do not emit it
+	(`isBodyOmitted()`).
 **/
 class TypedFunction {
 	final ownerName:String;
@@ -17,9 +24,12 @@ class TypedFunction {
 	final environment:Null<TyFunctionEnv>;
 	final body:TypedFunctionBody;
 	final defaults:Array<TypedFunctionDefault>;
+	final authoredDeclaration:Null<HxFunctionDecl>;
 
+	/** With `authoredDeclaration`, the function's body was omitted and `sourceDeclaration` is its bodyless copy. */
 	public function new(ownerName:String, sourceOrdinal:Int, sourceDeclaration:HxFunctionDecl, declaration:Null<TyDeclarationInfo>,
-			environment:Null<TyFunctionEnv>, body:TypedFunctionBody, ?defaults:Array<TypedFunctionDefault>) {
+			environment:Null<TyFunctionEnv>, body:TypedFunctionBody, ?defaults:Array<TypedFunctionDefault>, ?authoredDeclaration:HxFunctionDecl) {
+		this.authoredDeclaration = authoredDeclaration;
 		this.ownerName = ownerName == null ? "" : ownerName;
 		this.sourceOrdinal = sourceOrdinal;
 		this.sourceDeclaration = sourceDeclaration;
@@ -49,6 +59,18 @@ class TypedFunction {
 	public function getSourceDeclaration():HxFunctionDecl
 		return sourceDeclaration;
 
+	/** The declaration as written; for an omitted body, not the bodyless copy that was typed. */
+	public function getAuthoredDeclaration():HxFunctionDecl
+		return authoredDeclaration == null ? sourceDeclaration : authoredDeclaration;
+
+	/** A macro function of a target compile: typed as a declaration only, never emitted. */
+	public function isBodyOmitted():Bool
+		return authoredDeclaration != null;
+
+	/** This function with its body omitted: `authored` is the declaration it was copied from. */
+	public function withOmittedBody(authored:HxFunctionDecl):TypedFunction
+		return new TypedFunction(ownerName, sourceOrdinal, sourceDeclaration, declaration, environment, body, defaults, authored);
+
 	public function getDeclaration():Null<TyDeclarationInfo>
 		return declaration;
 
@@ -66,7 +88,7 @@ class TypedFunction {
 	public function withBody(loweredBody:TypedFunctionBody, ?loweredDefaults:Array<TypedFunctionDefault>):TypedFunction {
 		assertParsedBodyCurrent();
 		return new TypedFunction(ownerName, sourceOrdinal, sourceDeclaration, declaration, environment, loweredBody,
-			loweredDefaults == null ? defaults : loweredDefaults);
+			loweredDefaults == null ? defaults : loweredDefaults, authoredDeclaration);
 	}
 
 	/** Compute the exact owner used by function-local identities before body typing begins. **/
