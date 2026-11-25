@@ -681,6 +681,11 @@ class Stage3Compiler {
 				} catch (e:String) {
 					closeMacroSession();
 					return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + e);
+				} catch (e:haxe.Exception) {
+					// Any other thrown value, such as a macro service's haxe.macro.Error, still ends the
+					// request with its message instead of escaping it (haxe_ocaml-rb8ow).
+					closeMacroSession();
+					return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + formatDynamicException(e));
 				}
 				// Incorporate any newly loaded modules into the worklist.
 				for (nm in moduleLoader.drainNewModules()) {
@@ -726,6 +731,9 @@ class Stage3Compiler {
 			} catch (e:String) {
 				closeMacroSession();
 				return error("type failed during shared operator lowering: " + e);
+			} catch (e:haxe.Exception) {
+				closeMacroSession();
+				return error("type failed during shared operator lowering: " + formatDynamicException(e));
 			}
 			rootTyped = null;
 			for (typed in sealedTypedModules)
@@ -817,6 +825,9 @@ class Stage3Compiler {
 			} catch (e:String) {
 				closeMacroSession();
 				return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + e);
+			} catch (e:haxe.Exception) {
+				closeMacroSession();
+				return error("type failed: " + ResolvedModule.getFilePath(m) + ": " + formatDynamicException(e));
 			}
 			for (nm in moduleLoader.drainNewModules()) {
 				resolvedForTyping.push(nm);
@@ -850,6 +861,9 @@ class Stage3Compiler {
 		} catch (e:String) {
 			closeMacroSession();
 			return error("type failed during method input finalization: " + e);
+		} catch (e:haxe.Exception) {
+			closeMacroSession();
+			return error("type failed during method input finalization: " + formatDynamicException(e));
 		}
 		if (!requestContext.checkpoint("hooks"))
 			return CompilationRequestContext.CANCELLED_EXIT_CODE;
