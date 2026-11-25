@@ -213,7 +213,8 @@
         "var:explicitMainExprText",
         "var:nextSyntheticLocalTVarId",
         "final:definedModules",
-        "final:definedModulePaths"
+        "final:definedModulePaths",
+        "var:contextUnsupported"
       ],
       "reset_owner": "Stage3Compiler.runOne -> MacroState.reset",
       "reason": "Defines, generated modules, resources, hook registrations, diagnostics, compiler settings, and local IDs all belong to one macro request. Macro execution and this mutable state remain fresh or reset for every request and are excluded from initial typed-module reuse."
