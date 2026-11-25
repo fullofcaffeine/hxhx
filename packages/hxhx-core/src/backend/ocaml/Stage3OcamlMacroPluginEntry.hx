@@ -166,15 +166,16 @@ class Stage3OcamlMacroPluginEntry {
 
 	/**
 		The parameters of macro `owner.method`, read from its declaration as written. The lookup
-		needs only class and method names, argument type hints, and the result hint, so it reads the
-		parsed module, not the declaration-only backend view, which rejects any module with a runtime
-		type operand (`haxe.Exception.caught`, or a macro's own `Std.isOfType`) (haxe_ocaml-kbtmo).
+		needs only class and method names, argument type hints, and the result hint, so it reads each
+		typed class's source declaration, not the declaration-only backend view, which rejects any
+		module with a runtime type operand (`haxe.Exception.caught`, or a macro's own `Std.isOfType`)
+		(haxe_ocaml-kbtmo). It reads no function body.
 	**/
 	static function checkedParameters(key:String, owner:String, method:String, modules:Array<TypedModule>):Array<MacroPluginParameter> {
 		for (typed in modules) {
-			final declaration = typed.getParsed().getDecl();
-			final packagePath = HxModuleDecl.getPackagePath(declaration);
-			for (source in HxModuleDecl.getClasses(declaration)) {
+			final packagePath = typed.getEnv().getPackagePath();
+			for (typedClass in typed.getTypedClasses()) {
+				final source = typedClass.getSourceDeclaration();
 				final name = HxClassDecl.getName(source);
 				final fullName = packagePath.length == 0 ? name : packagePath + "." + name;
 				if (fullName != owner)
