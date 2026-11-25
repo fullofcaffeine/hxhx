@@ -483,6 +483,24 @@ class TyFunctionInference {
 	}
 
 	/**
+		Haxe 4.3.7 unifies every return value of a method with one result monomorph, so a returned
+		value of still-unknown type, such as an omitted input, takes the type its peer returns
+		choose: `if (flag) return first; return 5;` gives `first:Int`, and
+		`if (second == null) return first; return second;` gives `first` the same `Null<?>` as
+		`second`. `result` is the peers' result term. The inputs are bound together; on a conflict
+		none is bound.
+	**/
+	public function bindReturnedInputs(inputs:Array<TyInferenceTerm>, result:TyInferenceTerm):Void {
+		if (solver.isSealed() || inputs.length == 0)
+			return;
+		final candidate = solver.fork();
+		for (input in inputs)
+			if (!candidate.constrain(input, result))
+				return;
+		solver.commit(candidate);
+	}
+
+	/**
 		A named local function can call itself before its body has chosen a result, as in
 		`function loop(n:Int) { if (n > 0) loop(n - 1); }`. Give its symbol a callable term with a
 		result variable while the body is typed, so recursive calls share that variable instead of
