@@ -22,7 +22,8 @@
     "request_lifecycle_owners": [
       {
         "paths": [
-          "packages/hxhx/src/hxhx/macro/MacroState.hx"
+          "packages/hxhx/src/hxhx/macro/MacroState.hx",
+          "packages/hxhx/src/hxhx/macro/MacroTypeHandles.hx"
         ],
         "kind": "macro-request-state",
         "cache_eligibility": "never-in-initial-typed-reuse",
@@ -218,6 +219,18 @@
       ],
       "reset_owner": "Stage3Compiler.runOne -> MacroState.reset",
       "reason": "Defines, generated modules, resources, hook registrations, diagnostics, compiler settings, and local IDs all belong to one macro request. Macro execution and this mutable state remain fresh or reset for every request and are excluded from initial typed-module reuse."
+    },
+    {
+      "path": "packages/hxhx/src/hxhx/macro/MacroTypeHandles.hx",
+      "immutable_fields": [],
+      "request_reset_fields": [
+        "var:entries",
+        "var:issuedIn",
+        "var:interned",
+        "var:call"
+      ],
+      "reset_owner": "Stage3Compiler.runOne -> MacroState.reset -> MacroState.clearContextRequests -> MacroTypeHandles.reset",
+      "reason": "Host type handles given to project-macro plugins (Context PR 3) are interned per compilation and valid only within one macro call; they belong to one macro request and are reset with the other macro request state, never reused across requests."
     }
   ]
 }
