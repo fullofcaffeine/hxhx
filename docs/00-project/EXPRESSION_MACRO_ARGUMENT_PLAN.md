@@ -155,9 +155,37 @@ encoding (`src/macro/macroApi.ml`, lines 1181-1245):
 1. **PR 1, this section's first slice:** the callback, the wire, and the services above. Fixture
    `test/fixtures/project-macro-context`, checked by `npm run test:macro-runtime:project-module`
    against upstream's output, and `test/M14MacroContextWireTest.hx`.
-2. **PR 2:** `defineModule` and `defineType`.
+2. **PR 2:** `defineModule` and `defineType` (see "Defined modules" below). Fixture
+   `test/fixtures/project-macro-define`.
 3. **PR 3:** `Type` reaches plugins; `typeof`, `follow`, and `Ref.get` over handles.
 4. **PR 4:** Gate 1 Lite runs the real `generateSpec`.
+
+**Defined modules (PR 2).** `Context.defineModule(path, types, imports, usings)` and
+`Context.defineType(type)` are host requests (`context.defineModule`, `context.defineType`). The
+wire gains `TypeDefinition`, `TypeDefKind`, `AbstractFlag`, and `ImportExpr` codecs.
+- The host builds parser declarations directly (`hxhx.macro.MacroDefinitionImport`), with no
+  source text. `TDClass` becomes an `HxClassDecl`; `FFun`, `FVar`, and `FProp` become methods and
+  fields; imports and usings become module directives.
+- `MacroState.defineModule` queues the module. `Stage3ExprMacroPass` adds it to the request's
+  modules like a module the loader found, rebuilds the index, and the request types it in the same
+  compile, so code such as `new spec.TestAlpha()` finds it. `defineType` defines module
+  `pack.name`, as upstream does.
+- Not yet, each reported as `unsupported` or `invalid`:
+  - kinds other than `TDClass`;
+  - type parameters, abstract classes, and metadata with parameters;
+  - types added to a module that already exists (upstream adds them);
+  - a type package that differs from the module path (`invalid`).
+- `moduleDependency` is ignored: a defined module has no file of its own (its file name is
+  `<defined>/pack/Name.hx`).
+- Records given straight to an enum constructor in macro code (`FFun(func)` with an untyped
+  `{args: [], ret: null, ...}`, `TDClass({pack: [], ...})`) need declared types. Upstream binds
+  their open parts when the call unifies them. hxhx's typer leaves them unknown, and the Stage3
+  emitter cannot store such a record in an enum value.
+- The fixture consumes the returned `new $tp()` literal as upstream's `TestMain` does: it iterates
+  the literal and pushes each element into a base-typed array. hxhx's typer rejects a subclass
+  element in an array literal that has an expected element type
+  (`final specs:Array<SpecBase> = [new Sub()]`), which upstream accepts. That is a typer gap
+  outside this PR.
 
 **Known gaps in PR 1.**
 - `currentPos` is the call's file and the start of its first argument, not the call's range.
