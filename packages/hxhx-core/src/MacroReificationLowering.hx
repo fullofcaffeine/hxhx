@@ -82,8 +82,6 @@ class MacroReificationLowering {
 	static inline final TYPE_PATH_SPLICE_PREFIX = "__hxhx_macro_type_path_splice:";
 	static inline final MARKER_PREFIX = "__hxhx_macro_";
 
-	final file:String;
-	final anchor:HxPos;
 	final root:Position;
 	final positions:MacroSyntaxPositions;
 	final holes:Array<MacroReificationHole>;
@@ -91,16 +89,25 @@ class MacroReificationLowering {
 
 	final rooted:Bool;
 
-	function new(file:String, anchor:HxPos, valueType:HxExpr->TyType, rooted:Bool) {
+	/** True for syntax a macro receives (`exportQuotation`), written as upstream's parser writes it. */
+	final exporting:Bool;
+
+	function new(positions:MacroSyntaxPositions, root:Position, valueType:HxExpr->TyType, rooted:Bool, exporting:Bool) {
+		this.positions = positions;
+		this.root = root;
+		this.valueType = valueType;
 		this.rooted = rooted;
+		this.exporting = exporting;
+		holes = [];
+	}
+
+	/** A lowering in the typer: positions in `file`, and the quote as a whole at `anchor`. */
+	static function inFile(file:String, anchor:HxPos, valueType:HxExpr->TyType, rooted:Bool):MacroReificationLowering {
 		if (file == null || file.length == 0)
 			throw failure("the macro's source file is unknown");
-		this.file = file;
-		this.anchor = anchor;
-		this.valueType = valueType;
-		positions = new MacroSyntaxPositions(file);
-		root = MacroSyntaxPositions.isKnown(anchor) ? positions.export(anchor) : {file: file, min: 0, max: 0};
-		holes = [];
+		final positions = new MacroSyntaxPositions(file);
+		final root:Position = MacroSyntaxPositions.isKnown(anchor) ? positions.export(anchor) : {file: file, min: 0, max: 0};
+		return new MacroReificationLowering(positions, root, valueType, rooted, false);
 	}
 
 	/**
@@ -120,16 +127,41 @@ class MacroReificationLowering {
 	**/
 	public static function lowerExpression(quoted:HxExpr, wrappers:Null<Array<String>>, file:String, anchor:HxPos, valueType:HxExpr->TyType,
 			inMacroContext:Bool, rooted:Bool = true):HxExpr {
-		final lowering = new MacroReificationLowering(file, anchor, valueType, rooted);
+		final lowering = inFile(file, anchor, valueType, rooted);
+		if (wrappers != null && wrappers.indexOf("class") >= 0) {
+			// The parser keeps a placeholder definition for Stage3 bring-up code; a macro
+			// module (plugin build) would hand a macro an empty class, so it is refused.
+			if (inMacroContext)
+				throw failure("`macro class` quotations are not lowered yet (haxe_ocaml-9sj5p.5.4); a macro module cannot use one");
+			return quoted;
+		}
+		return lowering.construction(quoted, wrappers);
+	}
+
+	/**
+		The syntax a macro receives for `macro <quoted>` in code it parses (`Context.parse`) or in
+		its arguments, as upstream's parser writes it. Upstream reifies a quotation while it parses
+		(`parse_macro_expr` ends in `reify_expr`, `src/syntax/grammar.mly` lines 1275-1294 in Haxe
+		4.3.7), so `macro 1` is `({expr: EConst(CInt("1", null)), pos: {file: .., min: .., max: ..}} :
+		haxe.macro.Expr)`:
+		- the same construction as `lowerExpression`, with upstream's bare constructor names and plain
+		  position records (`MacroReificationSyntax.upstreamSpelling`);
+		- `$v{x}` is `haxe.macro.Context.makeExpr(x, haxe.macro.Context.makePosition(<position>))`,
+		  decided when the macro runs, as upstream writes it;
+		- `positions` and `root` are the exporter's. Quoted nodes keep the positions hxhx records today;
+		  exact ranges wait on `haxe_ocaml-9sj5p.2`.
+	**/
+	public static function exportQuotation(quoted:HxExpr, wrappers:Null<Array<String>>, positions:MacroSyntaxPositions, root:Position):HxExpr {
+		if (wrappers != null && wrappers.indexOf("class") >= 0)
+			throw failure("`macro class` quotations are not exported yet (haxe_ocaml-9sj5p.5.4)");
+		final lowering = new MacroReificationLowering(positions, root, _ -> TyType.unknown(), false, true);
+		return ECheckType(lowering.construction(quoted, wrappers), "haxe.macro.Expr");
+	}
+
+	/** The construction syntax of `quoted`, inside its `untyped` wrappers. */
+	function construction(quoted:HxExpr, wrappers:Null<Array<String>>):HxExpr {
 		var expression = quoted;
 		if (wrappers != null) {
-			if (wrappers.indexOf("class") >= 0) {
-				// The parser keeps a placeholder definition for Stage3 bring-up code; a macro
-				// module (plugin build) would hand a macro an empty class, so it is refused.
-				if (inMacroContext)
-					throw failure("`macro class` quotations are not lowered yet (haxe_ocaml-9sj5p.5.4); a macro module cannot use one");
-				return quoted;
-			}
 			var index = wrappers.length;
 			while (index > 0) {
 				index--;
@@ -137,13 +169,13 @@ class MacroReificationLowering {
 					expression = EUntyped(expression);
 			}
 		}
-		final exported = new MacroSyntaxExport(lowering.positions, lowering.splice).quotation(expression, lowering.root);
-		return lowering.syntax().expression(exported);
+		final exported = new MacroSyntaxExport(positions, splice).quotation(expression, root);
+		return syntax().expression(exported);
 	}
 
 	/** Syntax that builds the `ComplexType` of `macro :<typeText>`. */
 	public static function lowerType(typeText:String, file:String, anchor:HxPos, rooted:Bool = true):HxExpr {
-		final lowering = new MacroReificationLowering(file, anchor, _ -> TyType.unknown(), rooted);
+		final lowering = inFile(file, anchor, _ -> TyType.unknown(), rooted);
 		final authored = typeText == null ? "" : StringTools.trim(typeText);
 		if (authored.length == 0)
 			throw failure("`macro :` requires a type");
@@ -161,7 +193,7 @@ class MacroReificationLowering {
 	}
 
 	function syntax():MacroReificationSyntax
-		return new MacroReificationSyntax(holes, value, rooted);
+		return new MacroReificationSyntax(holes, value, rooted, exporting);
 
 	function hole(kind:MacroReificationHole):ExprDef {
 		holes.push(kind);
@@ -237,9 +269,18 @@ class MacroReificationLowering {
 		return EAnon(["expr", "pos"], [ECall(syntax().enumPath("ExprDef", "EConst"), [constant]), at]);
 	}
 
-	/** The constant for a `$v{payload}` whose static type is `type`; `at` is the position syntax. */
-	function value(payload:HxExpr, at:HxExpr):HxExpr
+	/**
+		The constant for a `$v{payload}` whose static type is `type`; `at` is the position syntax.
+		Syntax a macro receives keeps upstream's run-time conversion instead (`exportQuotation`).
+	**/
+	function value(payload:HxExpr, at:HxExpr):HxExpr {
+		if (exporting)
+			return ECall(HxRootedPath.expression("haxe.macro.Context.makeExpr", false), [
+				payload,
+				ECall(HxRootedPath.expression("haxe.macro.Context.makePosition", false), [at])
+			]);
 		return valueOfType(payload, valueType(payload), at);
+	}
 
 	function valueOfType(payload:HxExpr, type:TyType, at:HxExpr):HxExpr {
 		if (type == null || type.isUnknown())

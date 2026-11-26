@@ -38,16 +38,27 @@ class MacroReificationSyntax {
 	final holes:Array<MacroReificationHole>;
 	final valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr;
 	final rooted:Bool;
+
+	/**
+		Upstream's own spelling, for syntax a macro receives (`MacroReificationLowering.exportQuotation`):
+		enum constructors by their bare names and positions as plain `{file, min, max}` records, as
+		upstream's parser writes a quotation (`src/syntax/reification.ml`, `to_pos`).
+	**/
+	final upstreamSpelling:Bool;
+
 	var positionOverride:Null<HxExpr>;
 
 	/**
 		`valueSplice` builds the `$v{}` constant for a typed payload; the lowering owns that policy.
 		`rooted` selects rooted paths (`HxRootedPath`); see `MacroReificationLowering.lowerExpression`.
+		`upstreamSpelling` writes upstream's bare names and plain position records instead.
 	**/
-	public function new(holes:Array<MacroReificationHole>, valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr, rooted:Bool) {
+	public function new(holes:Array<MacroReificationHole>, valueSplice:(payload:HxExpr, position:HxExpr) -> HxExpr, rooted:Bool,
+			upstreamSpelling:Bool = false) {
 		this.holes = holes;
 		this.valueSplice = valueSplice;
 		this.rooted = rooted;
+		this.upstreamSpelling = upstreamSpelling;
 		positionOverride = null;
 	}
 
@@ -61,7 +72,7 @@ class MacroReificationSyntax {
 
 	/** The fully qualified constructor `haxe.macro.Expr.<owner>.<name>`, rooted so no user name captures `haxe`. */
 	public function enumPath(owner:String, name:String):HxExpr
-		return HxRootedPath.expression(MODULE + "." + owner + "." + name, rooted);
+		return upstreamSpelling ? EIdent(name) : HxRootedPath.expression(MODULE + "." + owner + "." + name, rooted);
 
 	/** `haxe.macro.Expr.<owner>.<name>(args)`, or the bare constructor value when it has no payload. */
 	function ctor(owner:String, name:String, args:Array<HxExpr>):HxExpr {
@@ -121,6 +132,8 @@ class MacroReificationSyntax {
 			return positionOverride;
 		final facts:hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWirePosition = cast value;
 		final fields = record(["file", "min", "max"], [str(facts.file), EInt(facts.min), EInt(facts.max)]);
+		if (upstreamSpelling)
+			return fields;
 		// A hinted cast names the destination without an inference variable; the backends emit the record itself.
 		// The hint stays unrooted: a type hint is resolved only as a type, so no local, parameter, or
 		// field can capture it, and Haxe has no lowercase type or alias that could stand for `haxe`.
@@ -389,12 +402,18 @@ class MacroReificationSyntax {
 			case _:
 				throw "macro reification: only a `TypePath` value can be spliced into `new`";
 		}
-		return record(["pack", "name", "params", "sub"], [
+		final names = ["pack", "name", "params"];
+		final values:Array<HxExpr> = [
 			list([for (p in value.pack) str(p)]),
 			str(value.name),
-			value.params == null ? ENull : list([for (p in value.params) typeParam(p)]),
-			optionalString(value.sub)
-		]);
+			value.params == null ? ENull : list([for (p in value.params) typeParam(p)])
+		];
+		// Upstream writes `sub` only when the path names one (`src/syntax/reification.ml`, `to_tpath`).
+		if (!upstreamSpelling || value.sub != null) {
+			names.push("sub");
+			values.push(optionalString(value.sub));
+		}
+		return record(names, values);
 	}
 
 	function typeParam(value:TypeParam):HxExpr {
