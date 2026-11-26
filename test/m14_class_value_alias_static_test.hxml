@@ -1,0 +1,10 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp packages/reflaxe.ocaml/src
+-cp scripts/oracle
+-cp scripts/oracle/shared
+-D reflaxe
+
+-main M14ClassValueAliasStaticTest
+--interp

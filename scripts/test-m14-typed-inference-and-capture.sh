@@ -27,6 +27,7 @@ haxe test/m14_class_value_cast_pattern_test.hxml
 haxe test/m14_callback_field_requirement_input_test.hxml
 
 # Sorted section: add new tests here, in alphabetical order.
+haxe test/m14_abstract_compound_inferred_op_test.hxml
 haxe test/m14_abstract_field_operator_test.hxml
 haxe test/m14_abstract_overload_syntax_test.hxml
 haxe test/m14_anonymous_argument_variance_test.hxml
@@ -39,7 +40,9 @@ haxe test/m14_bound_input_keeps_type_test.hxml
 haxe test/m14_cast_pattern_syntax_test.hxml
 haxe test/m14_char_code_pattern_syntax_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
+haxe test/m14_class_value_alias_static_test.hxml
 haxe test/m14_compiler_json_value_integration_test.hxml
+haxe test/m14_conditional_mid_line_block_test.hxml
 haxe test/m14_discarded_control_test.hxml
 haxe test/m14_dynamic_generic_evidence_test.hxml
 haxe test/m14_dynamic_join_transparent_test.hxml
@@ -49,8 +52,11 @@ haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
 haxe test/m14_extractor_pattern_syntax_test.hxml
 haxe test/m14_extractor_pattern_type_test.hxml
+haxe test/m14_generic_abstract_operator_test.hxml
+haxe test/m14_generic_argument_cast_test.hxml
 haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_inherited_constructor_signature_test.hxml
+haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
 haxe test/m14_literal_term_inference_test.hxml
 haxe test/m14_macro_block_syntax_test.hxml
@@ -71,6 +77,7 @@ haxe test/m14_open_value_test.hxml
 haxe test/m14_optional_field_type_equality_test.hxml
 haxe test/m14_parse_oracle_abstract_constructor_test.hxml
 haxe test/m14_primitive_constructor_effects_test.hxml
+haxe test/m14_project_macro_runtime_type_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_return_if_syntax_test.hxml
 haxe test/m14_returned_input_binding_test.hxml

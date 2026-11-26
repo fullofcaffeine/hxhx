@@ -1769,7 +1769,10 @@ class TyperStage {
 						initializerType = inferLocalInitializer(init, hasWrittenType ? hinted : null, scope, ctx, pos, typeHint);
 					}
 					final initializerTerm = init == null ? null : scope.getInference().sourceTerm(init, scope);
+					final staticsOwner = hasWrittenType || init == null ? null : classStaticsOwner(init, scope, ctx);
 					final sym = scope.declareLocal(name, hinted, Variable);
+					if (staticsOwner != null)
+						sym.markStaticsOwner(staticsOwner);
 					if (initializerType != null) {
 						final u = hasWrittenType && scope.isUntypedContext() ? hinted : assignedLocalType(sym.getType(), initializerType);
 						if (u == null) {
@@ -3094,7 +3097,9 @@ class TyperStage {
 			case EField(object, field) | ENullSafeField(object, field):
 				switch (object) {
 					case EIdent(typeOrValue):
-						final staticOwner = scope.resolveSymbol(typeOrValue) == null
+						// A local holding a class's statics (`var s = Something`) calls its static methods.
+						final alias = TypedRuntimeTypeResolver.staticsAlias(object, scope);
+						final staticOwner = alias != null ? alias : scope.resolveSymbol(typeOrValue) == null
 							&& isUpperStartName(typeOrValue) ? ctx.resolveType(typeOrValue) : null;
 						if (staticOwner != null) return resolveCallSelectionCandidate(staticOwner, field, true, args, scope, ctx, pos);
 					case _:
@@ -3506,6 +3511,19 @@ class TyperStage {
 		overloaded method values need separate contextual binding and remain outside
 		this selection boundary.
 	 */
+	/**
+		The class whose statics an untyped local's initializer names: `var s = Something;` (or an
+		alias of such a local). Haxe 4.3.7 types that local as the class's statics, so its fields
+		are static accesses (`TySymbol.getStaticsOwner`). Interfaces and enums have no such statics.
+	**/
+	static function classStaticsOwner(initializer:HxExpr, scope:TyFunctionEnv, ctx:TyperContext):Null<TyNominalInfo> {
+		final owner = TypedRuntimeTypeResolver.resolveQualifier(initializer, scope, ctx);
+		if (owner == null || !Std.isOfType(owner, TyClassInfo))
+			return null;
+		final cls:TyClassInfo = cast owner;
+		return cls.getIsInterface() || cls.getIsEnum() ? null : owner;
+	}
+
 	static function resolveStaticMethodValue(expression:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, ?expected:TyType):Null<TyDeclarationInfo> {
 		function select(owner:TyNominalInfo, name:String):Null<TyDeclarationInfo> {
 			if (owner == null || owner.fieldInfo(name) != null)
@@ -3637,7 +3655,8 @@ class TyperStage {
 				final dotted = dottedFieldPath(object);
 				final dottedParts = dotted.split(".");
 				final dottedLast = dottedParts.length == 0 ? "" : dottedParts[dottedParts.length - 1];
-				final staticOwner = dotted.length == 0
+				final alias = TypedRuntimeTypeResolver.staticsAlias(object, scope);
+				final staticOwner = alias != null ? alias : dotted.length == 0
 					|| scope.resolveSymbol(dottedParts[0]) != null
 					|| !isUpperStartName(dottedLast) ? null : ctx.resolveType(dotted);
 				if (staticOwner != null) {
@@ -4251,6 +4270,14 @@ class TyperStage {
 				// - When `obj` is a dotted field chain whose last segment looks like a type name
 				//   (UpperStart), ask the context to resolve it as a type.
 				// - This triggers ModuleLoader-based on-demand loading.
+				// A local holding a class's statics (`var s = Something`) reads its static members.
+				final staticsAlias = TypedRuntimeTypeResolver.staticsAlias(obj, scope);
+				if (staticsAlias != null) {
+					inferExprType(obj, scope, ctx, pos);
+					final memberType = declaredMemberReadType(staticsAlias, _field, true, ctx);
+					if (memberType != null)
+						return memberType;
+				}
 				final dotted = dottedFieldPath(obj);
 				if (dotted.length > 0) {
 					final parts = dotted.split(".");
@@ -4343,6 +4370,16 @@ class TyperStage {
 					case EIdent("__hxhx_throw") if (args.length == 1):
 						inferExprType(args[0], scope, ctx, pos);
 						return TyType.noNormalCompletion();
+					case EIdent("__hxhx_int_literal") if (args.length == 2):
+						// The parser's suffixed integer literal (`7i32`). Haxe 4.3.7 types it by its
+						// suffix (typer.ml:1867-1888): i32 is Int, u32 is UInt and i64 is haxe.Int64.
+						return switch args[1] {
+							case EString("i32"): TyType.fromHintText("Int");
+							case EString("u32"): typeFromHintInContext("UInt", ctx, scope, pos);
+							case EString("i64"): typeFromHintInContext("haxe.Int64", ctx, scope, pos);
+							case EString(suffix): throw new TyperError(ctx.getFilePath(), pos, suffix + " is not a valid integer suffix");
+							case _: throw new TyperError(ctx.getFilePath(), pos, "integer literal suffix is not a string");
+						};
 					case EIdent("__hxhx_optional_lambda") | EIdent("__hxhx_rest_lambda") if (args.length == 2):
 						// These parser wrappers describe argument omission; they return the same callable.
 						final callable = inferExprType(args[0], scope, ctx, pos);
@@ -4450,7 +4487,9 @@ class TyperStage {
 						// Static call through a type name (imported or same-package): `Util.ping()`.
 						switch (obj) {
 							case EIdent(typeName):
-								final c = scope.resolveSymbol(typeName) == null
+								// A local holding a class's statics (`var s = Something`) calls its static methods.
+								final alias = TypedRuntimeTypeResolver.staticsAlias(obj, scope);
+								final c = alias != null ? alias : scope.resolveSymbol(typeName) == null
 									&& isUpperStartName(typeName) ? ctx.resolveType(typeName) : null;
 								if (c != null) {
 									selectedCallType(resolveMethodCall(c, field, true, args, scope, ctx, pos), capture);
@@ -4644,7 +4683,11 @@ class TyperStage {
 								final writtenType = StringTools.trim(typeHint == null ? "" : typeHint);
 								final localType = writtenType.length == 0 ? initializerType : typeFromHintInContext(writtenType, ctx, scope,
 									declarationPosition);
-								scope.declareLocal(name, localType, Variable);
+								final staticsOwner = writtenType.length > 0
+									|| initializer == null ? null : classStaticsOwner(initializer, scope, ctx);
+								final local = scope.declareLocal(name, localType, Variable);
+								if (staticsOwner != null)
+									local.markStaticsOwner(staticsOwner);
 								resultType = TyType.fromHintText("Void");
 							case SExpr(value, expressionPosition):
 								resultType = inferExprType(value, scope, ctx, expressionPosition);
