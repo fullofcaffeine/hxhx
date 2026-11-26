@@ -40,6 +40,7 @@ haxe test/m14_cast_pattern_syntax_test.hxml
 haxe test/m14_char_code_pattern_syntax_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
 haxe test/m14_compiler_json_value_integration_test.hxml
+haxe test/m14_conditional_mid_line_block_test.hxml
 haxe test/m14_discarded_control_test.hxml
 haxe test/m14_dynamic_generic_evidence_test.hxml
 haxe test/m14_dynamic_join_transparent_test.hxml
@@ -56,6 +57,7 @@ haxe test/m14_macro_block_syntax_test.hxml
 haxe test/m14_macro_context_wire_test.hxml
 haxe test/m14_macro_source_positions_test.hxml
 haxe test/m14_macro_target_signature_test.hxml
+haxe test/m14_markup_literal_syntax_test.hxml
 haxe test/m14_method_local_construction_test.hxml
 haxe test/m14_named_pattern_projection_test.hxml
 haxe test/m14_native_class_storage_test.hxml
@@ -69,6 +71,7 @@ haxe test/m14_open_value_test.hxml
 haxe test/m14_optional_field_type_equality_test.hxml
 haxe test/m14_parse_oracle_abstract_constructor_test.hxml
 haxe test/m14_primitive_constructor_effects_test.hxml
+haxe test/m14_project_macro_runtime_type_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_return_if_syntax_test.hxml
 haxe test/m14_stage3_enum_open_record_test.hxml
