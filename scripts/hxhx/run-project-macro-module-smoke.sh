@@ -9,13 +9,9 @@ set -euo pipefail
 # writes a receipt into its plugin cache, loads the plugin in-process, and runs the macro. The
 # native program must print what upstream Haxe 4.3.7 prints.
 #
-# Later steps compile seven more fixtures the same way and compare each program with upstream:
-# project-macro-reification (quoted syntax), project-macro-constant-args (String, Int, Float, and
-# Bool parameters, an inferred result), expr_macro_pass_driver/suite (the upstream unit-suite
-# TestMain shape), project-macro-context (haxe.macro.Context services and Context.error),
-# project-macro-define (Context.defineModule and Context.defineType), project-macro-typeof
-# (Context.typeof, Context.follow, and Ref.get), and project-macro-lazy (a macro that builds TLazy
-# fails clearly).
+# Each later step compiles one more fixture from test/fixtures the same way, compares the program
+# with upstream, and prints a PROJECT_MACRO_MODULE_<NAME>:PASS marker. The steps below are the
+# list. This comment does not repeat it, so a new step does not need to edit it.
 #
 # The hxhx binary must contain the current compiler sources. Until the committed bootstrap
 # snapshot includes the plugin build driver, pass HXHX_BIN (and HXHX_MACRO_HOST_EXE) built from
@@ -318,6 +314,21 @@ require_line plain '^expr_macros_expanded=1$'
 run_app plain
 echo "PROJECT_MACRO_MODULE_PLAIN_COMMAND:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# Spec text with structure types that declare methods (upstream's AnonFieldAccess.unit.hx), parsed
+# by a macro, imported back, and typed. Upstream prints expected.stdout. hxhx does not run the
+# program: Stage3 cannot call a method of a runtime-provided value (an Array) through a structure
+# type. The generic `map<T>` line is left out, because the typer cannot check `Array<Int>` against
+# `{function map<T>(s:Int->T):Array<T>;}` yet; M14MacroSyntaxRoundTripTest imports that shape.
+ANON_METHODS_DIR="$ROOT/test/fixtures/project-macro-anon-methods"
+(
+  cd "$ANON_METHODS_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/anon_methods.oracle.stdout" 2>"$ARTIFACT_DIR/anon_methods.oracle.stderr"
+diff -u "$ANON_METHODS_DIR/expected.stdout" "$ARTIFACT_DIR/anon_methods.oracle.stdout"
+compile_app anon_methods "$ANON_METHODS_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line anon_methods '^expr_macros_expanded=6$'
+echo "PROJECT_MACRO_MODULE_ANON_METHODS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
 # A macro whose body is written with reification (`macro { ... }`, `$v{}`, `$b{}`, `$a{}`, `$e{}`,
 # field splices, `@:pos`) builds as a plugin and the program prints what upstream prints.
 REIFICATION_DIR="$ROOT/test/fixtures/project-macro-reification"
@@ -386,20 +397,6 @@ expect_failure context_error "$CONTEXT_DIR/src" ErrorMain "src/ErrorMain.hx:4: c
 diff -u "$CONTEXT_DIR/expected-error.stderr" "$ARTIFACT_DIR/context_error.compile.stderr"
 echo "PROJECT_MACRO_MODULE_CONTEXT:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
-# Macros that define modules (Context.defineModule, Context.defineType) in the shape of upstream's
-# UnitBuilder: the compile types the defined classes and the program prints what upstream prints.
-DEFINE_DIR="$ROOT/test/fixtures/project-macro-define"
-(
-  cd "$DEFINE_DIR"
-  haxe oracle.hxml
-) >"$ARTIFACT_DIR/define.oracle.stdout" 2>"$ARTIFACT_DIR/define.oracle.stderr"
-diff -u "$DEFINE_DIR/expected.stdout" "$ARTIFACT_DIR/define.oracle.stdout"
-compile_app define "$DEFINE_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
-require_line define '^expr_macros_expanded=2$'
-"$WORK_DIR/app-define/out.exe" >"$ARTIFACT_DIR/define.stdout" 2>"$ARTIFACT_DIR/define.stderr"
-diff -u "$DEFINE_DIR/expected.stdout" "$ARTIFACT_DIR/define.stdout"
-echo "PROJECT_MACRO_MODULE_DEFINE:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
-
 # Macros that read the compiler's types (Context.typeof, Context.follow, Ref.get), in the shape of
 # upstream's unit test builder, print what upstream prints. No Context answer is unsupported.
 TYPEOF_DIR="$ROOT/test/fixtures/project-macro-typeof"
@@ -429,6 +426,20 @@ diff -u "$LAZY_DIR/expected.stdout" "$ARTIFACT_DIR/lazy.oracle.stdout"
 expect_failure lazy "$LAZY_DIR/src" Main "OCaml enum payload representation is not implemented: haxe.macro.Type#static:TLazy" \
   --hxhx-macro-cache "$CACHE_DIR"
 echo "PROJECT_MACRO_MODULE_LAZY:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# Macros that define modules (Context.defineModule, Context.defineType) in the shape of upstream's
+# UnitBuilder: the compile types the defined classes and the program prints what upstream prints.
+DEFINE_DIR="$ROOT/test/fixtures/project-macro-define"
+(
+  cd "$DEFINE_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/define.oracle.stdout" 2>"$ARTIFACT_DIR/define.oracle.stderr"
+diff -u "$DEFINE_DIR/expected.stdout" "$ARTIFACT_DIR/define.oracle.stdout"
+compile_app define "$DEFINE_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line define '^expr_macros_expanded=2$'
+"$WORK_DIR/app-define/out.exe" >"$ARTIFACT_DIR/define.stdout" 2>"$ARTIFACT_DIR/define.stderr"
+diff -u "$DEFINE_DIR/expected.stdout" "$ARTIFACT_DIR/define.stdout"
+echo "PROJECT_MACRO_MODULE_DEFINE:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 {
   echo "candidate_commit=$CANDIDATE_COMMIT"
