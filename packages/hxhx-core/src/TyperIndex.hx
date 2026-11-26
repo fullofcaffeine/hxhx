@@ -839,7 +839,7 @@ class TyperIndex {
 	}
 
 	/** Build resolved fields, signatures, declaration records, and abstract catalog entries for one registered module. **/
-	function indexModule(module:ResolvedModule):Void {
+	function indexModule(module:ResolvedModule, macroContext:Null<MacroCompilationContext>):Void {
 		if (module == null || ResolvedModule.getParsed(module) == null)
 			return;
 		final parsedModule = ResolvedModule.getParsed(module);
@@ -974,41 +974,57 @@ class TyperIndex {
 						if (parameterBounds.exists(key))
 							resolvedConstraints.set(key, parameterBounds.get(key).copy());
 					}
-				final args = new Array<TyType>();
 				for (key => bounds in resolvedConstraints)
 					parameterBounds.set(key, bounds.copy());
-				final argNames = new Array<String>();
-				final argOptional = new Array<Bool>();
-				final argRest = new Array<Bool>();
-				// Each argument hint is searched after the previous one, so `(a:Box<Int>, b:Box<Int>)` points at b's own hint.
-				var argumentAnchor = HxFunctionDecl.getPos(functionDeclaration);
-				for (argument in HxFunctionDecl.getArgs(functionDeclaration)) {
-					argNames.push(HxFunctionArg.getName(argument));
-					final hint = HxFunctionArg.getTypeHint(argument);
-					final written = hintPosition(hint, argumentAnchor);
-					args.push(semanticType(hint, packagePath, moduleName, directives, functionParams, written));
-					if (written.getIndex() >= 0)
-						argumentAnchor = new HxPos(written.getIndex() + 1, written.getLine(), written.getColumn() + 1);
-					// Omission is allowed by a default as well as by ?. The declared value type stays unchanged.
-					final hasDefault = switch (HxFunctionArg.getDefaultValue(argument)) {
-						case Default(_): true;
-						case NoDefault: false;
-					};
-					argOptional.push(HxFunctionArg.getIsOptional(argument) || hasDefault);
-					argRest.push(HxFunctionArg.getIsRest(argument));
+				// A target compile sees a macro function through its target view (`TyMacroTargetView`):
+				// that is the signature it types and selects; calls keep the written one.
+				final targetView = macroContext != null
+					&& !macroContext.typesMacroBodies(ResolvedModule.getModulePath(module), ResolvedModule.getFilePath(module))
+					&& TyMacroTargetView.applies(functionDeclaration, shortName, ResolvedModule.getFilePath(module));
+				function signatureOf(fn:HxFunctionDecl, rejectsPosInfos:Bool):TyFunSig {
+					final args = new Array<TyType>();
+					final argNames = new Array<String>();
+					final argOptional = new Array<Bool>();
+					final argRest = new Array<Bool>();
+					// Each argument hint is searched after the previous one, so `(a:Box<Int>, b:Box<Int>)` points at b's own hint.
+					var argumentAnchor = HxFunctionDecl.getPos(fn);
+					final written = HxFunctionDecl.getArgs(fn);
+					for (argumentIndex in 0...written.length) {
+						final argument = written[argumentIndex];
+						argNames.push(HxFunctionArg.getName(argument));
+						final hint = HxFunctionArg.getTypeHint(argument);
+						final position = hintPosition(hint, argumentAnchor);
+						// An instance macro's first argument receives `this` and is not part of its target view.
+						if (rejectsPosInfos && (isStatic || argumentIndex > 0) && TyMacroTargetView.rejectsTypeHint(hint))
+							throw new TyperError(signatureFilePath, position, TyMacroTargetView.POS_INFOS_ERROR);
+						args.push(semanticType(hint, packagePath, moduleName, directives, functionParams, position));
+						if (position.getIndex() >= 0)
+							argumentAnchor = new HxPos(position.getIndex() + 1, position.getLine(), position.getColumn() + 1);
+						// Omission is allowed by a default as well as by ?. The declared value type stays unchanged.
+						final hasDefault = switch (HxFunctionArg.getDefaultValue(argument)) {
+							case Default(_): true;
+							case NoDefault: false;
+						};
+						argOptional.push(HxFunctionArg.getIsOptional(argument) || hasDefault);
+						argRest.push(HxFunctionArg.getIsRest(argument));
+					}
+					final returnHint = HxFunctionDecl.getReturnTypeHint(fn);
+					if (rejectsPosInfos && TyMacroTargetView.rejectsTypeHint(returnHint))
+						throw new TyperError(signatureFilePath, hintPosition(returnHint, returnHintAnchor(fn)), TyMacroTargetView.POS_INFOS_ERROR);
+					final returnType = functionName == "new" ? TyType.nominal(identity,
+						[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(returnHint, packagePath, moduleName, directives,
+							functionParams, returnHintAnchor(fn));
+					return new TyFunSig(functionName, isStatic, argNames, args, argOptional, argRest, returnType, HxFunctionDecl.getPos(fn));
 				}
-
-				final returnType = functionName == "new" ? TyType.nominal(identity,
-					[for (parameter in parameterIds) TyType.typeParameter(parameter)]) : semanticType(HxFunctionDecl.getReturnTypeHint(functionDeclaration),
-						packagePath, moduleName, directives, functionParams, returnHintAnchor(functionDeclaration));
-				final signature = new TyFunSig(functionName, isStatic, argNames, args, argOptional, argRest, returnType,
-					HxFunctionDecl.getPos(functionDeclaration));
+				final writtenSignature = signatureOf(functionDeclaration, targetView);
+				final signature = targetView ? signatureOf(TyMacroTargetView.declaration(functionDeclaration), false) : writtenSignature;
 				if (isStatic)
 					addMethod(statics, staticLists, signature)
 				else
 					addMethod(instances, instanceLists, signature);
 
-				final signatureKey = (HxFunctionDecl.getIsModuleLevel(functionDeclaration) ? "module:" : "") + declarationSignatureKey(signature);
+				// The identity names the written declaration, so it is the same in macro and target compiles.
+				final signatureKey = (HxFunctionDecl.getIsModuleLevel(functionDeclaration) ? "module:" : "") + declarationSignatureKey(writtenSignature);
 				final occurrence = signatureOccurrences.exists(signatureKey) ? signatureOccurrences.get(signatureKey) : 0;
 				signatureOccurrences.set(signatureKey, occurrence + 1);
 				final declarationId = new TyDeclarationId(identity.getCanonicalName() + "#" + signatureKey + "#" + occurrence);
@@ -1016,7 +1032,8 @@ class TyperIndex {
 					HxFunctionDecl.getPos(functionDeclaration), hasMetadata(functionMetadata, "inline"),
 					HxFunctionDecl.getVisibility(functionDeclaration) == HxVisibility.Public, semanticModulePath, resolvedConstraints, isEnumConstructor,
 					isEnumConstructor ? functionParams : methodParameterIds,
-					entry.implementation == functionDeclaration ? null : implementationDeclarations.get(entry.implementation));
+					entry.implementation == functionDeclaration ? null : implementationDeclarations.get(entry.implementation),
+					targetView ? writtenSignature : null);
 				if (entry.implementation != functionDeclaration && declarationInfo.getImplementation() == declarationInfo)
 					throw "overload signature lost its primary implementation declaration";
 				declarations.push(declarationInfo);
@@ -1085,8 +1102,14 @@ class TyperIndex {
 			registerModuleIdentities(module);
 	}
 
-	/** Publish signatures once, after the loader has prepared declaration dependencies. */
-	public function publishResolvedModule(module:ResolvedModule):Void {
+	/**
+		Publish signatures once, after the loader has prepared declaration dependencies.
+
+		`macroContext` is the request's macro compilation context. Where it does not type a module's
+		macro bodies, that module's macro functions get their target view (`TyMacroTargetView`).
+		Without it, every declaration keeps its written signature.
+	**/
+	public function publishResolvedModule(module:ResolvedModule, ?macroContext:MacroCompilationContext):Void {
 		final modulePath = canonicalModulePath(HxModuleDecl.getPackagePath(module.parsed.getDecl()), expectedModuleNameFromFile(module.filePath));
 		if (publishedModules.exists(modulePath))
 			return;
@@ -1097,7 +1120,7 @@ class TyperIndex {
 				expectedModuleNameFromFile(module.filePath), alias.getName()));
 			typeUseResolver.validateDeclaration(declaration);
 		}
-		indexModule(module);
+		indexModule(module, macroContext);
 		publishedModules.set(modulePath, true);
 	}
 

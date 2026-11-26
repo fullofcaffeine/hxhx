@@ -53,6 +53,7 @@ haxe test/m14_interpolation_syntax_test.hxml
 haxe test/m14_literal_term_inference_test.hxml
 haxe test/m14_macro_context_wire_test.hxml
 haxe test/m14_macro_source_positions_test.hxml
+haxe test/m14_macro_target_signature_test.hxml
 haxe test/m14_method_local_construction_test.hxml
 haxe test/m14_named_pattern_projection_test.hxml
 haxe test/m14_native_class_storage_test.hxml
