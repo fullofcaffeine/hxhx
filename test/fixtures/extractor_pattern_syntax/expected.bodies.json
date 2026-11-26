@@ -1,0 +1,7 @@
+{
+	"size": "{\n\treturn switch (value) {\n\t\tcase _.length => 0:{\n\t\t\t\"empty\";\n\t\t};\n\t\tcase _.toUpperCase() => \"ABC\":{\n\t\t\t\"abc\";\n\t\t};\n\t\tcase ~/^[0-9]+$/.match(_) => true:{\n\t\t\t\"digits\";\n\t\t};\n\t\tcase Std.parseInt(_) => n if (n != null && n < 0):{\n\t\t\t\"negative\";\n\t\t};\n\t\tcase _ + \",\" + _ => \"x,x\":{\n\t\t\t\"x\";\n\t\t};\n\t\tcase _:{\n\t\t\t\"other\";\n\t\t};\n\t};\n}",
+	"nested": "{\n\treturn switch (value) {\n\t\tcase [first(_) => 1, _]:{\n\t\t\t\"starts with one\";\n\t\t};\n\t\tcase ((_ : Array<Int>)) => []:{\n\t\t\t\"none\";\n\t\t};\n\t\tcase _:{\n\t\t\t\"other\";\n\t\t};\n\t};\n}",
+	"person": "{\n\treturn switch (value) {\n\t\tcase { name : _.length => 3, age : _ * 2 => 4 }:{\n\t\t\t\"bob two\";\n\t\t};\n\t\tcase _:{\n\t\t\t\"other\";\n\t\t};\n\t};\n}",
+	"chained": "{\n\treturn switch (value) {\n\t\tcase _.toLowerCase() => _.charAt(0) => \"q\":{\n\t\t\t\"q\";\n\t\t};\n\t\tcase _:{\n\t\t\t\"other\";\n\t\t};\n\t};\n}",
+	"first": "{\n\treturn value;\n}"
+}
