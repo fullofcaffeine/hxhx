@@ -238,6 +238,9 @@ class TyperStage {
 				return true;
 			if (target.isAnonymous() && target.getAnonymousFieldNames().length == 0)
 				return TyEmptyObjectConstraint.accepts(actual, index);
+			final constructible = TyConstructibleBound.accepts(index, target, actual, (expected, constructor) -> constructorFits(expected, constructor, index));
+			if (constructible != null)
+				return constructible;
 			final owner = target.getNominalIdentity();
 			if (owner != null && actual.getNominalIdentity() != null) {
 				final ancestor = TyNominalAncestor.view(index, actual, owner);
@@ -245,6 +248,26 @@ class TyperStage {
 			}
 			return overloadArgScore(target, actual, [], index) >= 0;
 		});
+	}
+
+	/**
+		Whether a constructor of type `constructor` can stand where a function of type `expected` is
+		required: each of `expected`'s parameter types must be accepted by the constructor's
+		parameter (contravariant), and a Void result accepts any constructor (tUnification.ml:824-838
+		unifies the constructor field type with Constructible's argument).
+	**/
+	static function constructorFits(expected:TyType, constructor:TyType, index:TyperIndex):Bool {
+		if (!expected.isFunction() || !constructor.isFunction())
+			return expected.isDynamic();
+		final want = expected.getFunctionArguments();
+		final have = constructor.getFunctionArguments();
+		if (want.length != have.length)
+			return false;
+		for (slot in 0...want.length)
+			if (!constraintAccepts(have[slot], want[slot], index))
+				return false;
+		final result = expected.getFunctionReturn();
+		return result == null || result.isVoid() || constraintAccepts(result, constructor.getFunctionReturn(), index);
 	}
 
 	/** The top-level `Any` abstract from the standard library, not a user type spelled `pkg.Any`. */
