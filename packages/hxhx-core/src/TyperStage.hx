@@ -3030,9 +3030,20 @@ class TyperStage {
 		if (TyStructuralFieldRead.resolve(TyReceiverMemberLookup.structuralView(receiverType, field, ctx), field) != null)
 			return null;
 		final extensionArguments = [receiver].concat(args == null ? [] : args);
+		// Haxe 4.3.7 skips a `using` candidate whose receiver fails to unify, including a failed
+		// type-parameter constraint, and tries the next one (haxe_ocaml-5l9ut). When every candidate
+		// was skipped that way, the receiver has no such field.
+		var rejected = false;
 		for (extension in ctx.extensionMethods(field, receiverType)) {
-			final resolution = resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments,
-				inferenceScope.copyForInference(), ctx, pos, extension.getCandidates());
+			final resolution = try {
+				resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments, inferenceScope.copyForInference(),
+					ctx, pos, extension.getCandidates());
+			} catch (error:TyperError) {
+				if (!StringTools.startsWith(error.getMessage(), "Constraint check failure for "))
+					throw error;
+				rejected = true;
+				continue;
+			}
 			if (resolution.declaration != null) {
 				if (applyContext && resolution.order != null && resolution.actual != null) {
 					final expected = resolution.order.sourceContexts(TyMethodGenericBinding.specializeParameters(resolution.declaration,
@@ -3048,6 +3059,8 @@ class TyperStage {
 				};
 			}
 		}
+		if (rejected)
+			throw new TyperError(ctx.getFilePath(), pos, TyAliasExpansion.revealNonNullable(receiverType).getDisplay() + " has no field " + field);
 		return null;
 	}
 
