@@ -242,7 +242,6 @@ class MacroState {
 
 	public static function reset():Void {
 		clearDefinedModules();
-		clearContextRequests();
 		defines.clear();
 		ocamlModules.clear();
 		classPaths.resize(0);
@@ -272,6 +271,7 @@ class MacroState {
 		explicitLocalContext = null;
 		explicitMainExprText = null;
 		nextSyntheticLocalTVarId = 1;
+		clearContextRequests();
 	}
 
 	public static function setDefine(name:String, value:String):Void {
