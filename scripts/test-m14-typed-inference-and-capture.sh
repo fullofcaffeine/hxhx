@@ -49,6 +49,7 @@ haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
 haxe test/m14_extractor_pattern_syntax_test.hxml
 haxe test/m14_extractor_pattern_type_test.hxml
+haxe test/m14_generic_abstract_operator_test.hxml
 haxe test/m14_generic_argument_cast_test.hxml
 haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
