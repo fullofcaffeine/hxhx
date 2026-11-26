@@ -535,8 +535,8 @@ class ParserStageScanHelpers {
 						continue;
 					final ctorArgs = ctor.args == null ? [] : ctor.args;
 					if (ctorArgs.length == 0) {
-						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, enumValueType, enumRuntimeValue(enumName, ctorName, ctorIndex, []),
-							ctor.metadata));
+						fields.push(new HxFieldDecl(ctorName, HxVisibility.Public, true, ctor.returnHint.length > 0 ? ctor.returnHint : enumValueType,
+							enumRuntimeValue(enumName, ctorName, ctorIndex, []), ctor.metadata));
 					} else {
 						final args = new Array<HxFunctionArg>();
 						final values = new Array<HxExpr>();
@@ -546,9 +546,10 @@ class ParserStageScanHelpers {
 							values.push(EIdent(a.name));
 						// Target storage may differ, but constructor results retain the source
 						// enum and its binders before any backend chooses a representation.
-						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args, enumValueType, [
-							SReturn(enumRuntimeValue(enumName, ctorName, ctorIndex, values), HxPos.unknown())
-						], "", ctor.metadata));
+						functions.push(new HxFunctionDecl(ctorName, HxVisibility.Public, true, args,
+							ctor.returnHint.length > 0 ? ctor.returnHint : enumValueType, [
+								SReturn(enumRuntimeValue(enumName, ctorName, ctorIndex, values), HxPos.unknown())
+							], "", ctor.metadata));
 					}
 				}
 			}
@@ -1194,9 +1195,21 @@ class ParserStageScanHelpers {
 		return {fromTypes: fromTypes, toTypes: toTypes};
 	}
 
-	public static function scanEnumBodyForCtors(source:String,
-			start:Int):{nextPos:Int, ctors:Array<{name:String, args:Array<{name:String, typeHint:String, isOptional:Bool}>, metadata:Array<String>}>} {
-		final ctors = new Array<{name:String, args:Array<{name:String, typeHint:String, isOptional:Bool}>, metadata:Array<String>}>();
+	public static function scanEnumBodyForCtors(source:String, start:Int):{
+		nextPos:Int,
+		ctors:Array<{
+			name:String,
+			args:Array<{name:String, typeHint:String, isOptional:Bool}>,
+			metadata:Array<String>,
+			returnHint:String
+		}>
+	} {
+		final ctors = new Array<{
+			name:String,
+			args:Array<{name:String, typeHint:String, isOptional:Bool}>,
+			metadata:Array<String>,
+			returnHint:String
+		}>();
 
 		var depth = 1; // we start just after `{`
 		var i = start;
@@ -1271,6 +1284,31 @@ class ParserStageScanHelpers {
 					case ">":
 						if (angleDepth > 0)
 							angleDepth -= 1;
+					case _:
+				}
+			}
+		}
+
+		/** `:Type` after a constructor, up to its terminating `;` or the enum's `}`; empty when absent. */
+		function scanCtorReturnHint(startPos:Int):{hint:String, nextPos:Int} {
+			final colon = scanNextToken(source, startPos);
+			if (colon.text != ":")
+				return {hint: "", nextPos: startPos};
+			final parts = new Array<String>();
+			var j = colon.nextPos;
+			var nesting = 0;
+			while (true) {
+				final tok = scanNextToken(source, j);
+				if (tok.text.length == 0 || (nesting == 0 && (tok.text == ";" || tok.text == "}")))
+					return {hint: parts.join(""), nextPos: j};
+				parts.push(tok.text);
+				j = tok.nextPos;
+				switch (tok.text) {
+					case "(" | "[" | "{" | "<":
+						nesting += 1;
+					case ")" | "]" | "}" | ">":
+						if (nesting > 0)
+							nesting -= 1;
 					case _:
 				}
 			}
@@ -1353,6 +1391,14 @@ class ParserStageScanHelpers {
 			final ctorArgs = new Array<{name:String, typeHint:String, isOptional:Bool}>();
 			final ctorMetadata = pendingMetadata.copy();
 			pendingMetadata = [];
+			// A constructor may declare its own type parameters (`E1<T:String>(v:T)`, `EBinop<C>(...)`),
+			// recorded as function type parameters (haxe_ocaml-lfpdo).
+			final ctorTypeParams = scanTypeParameterNames(source, i);
+			if (ctorTypeParams.nextPos != i) {
+				for (entry in functionTypeParamsMetadata(source, i, ctorTypeParams.nextPos))
+					ctorMetadata.push(entry);
+				i = ctorTypeParams.nextPos;
+			}
 
 			// Optional `(a:T, b:U)` parameter list.
 			final nt = scanFunctionParamListOpen(i);
@@ -1435,7 +1481,15 @@ class ParserStageScanHelpers {
 				}
 			}
 
-			ctors.push({name: ctorName, args: ctorArgs, metadata: ctorMetadata});
+			// A GADT-style constructor declares its result: `EBinop<C>(...):Ex<T>`, `Nil:Stack<TNil>`.
+			final ctorReturn = scanCtorReturnHint(i);
+			i = ctorReturn.nextPos;
+			ctors.push({
+				name: ctorName,
+				args: ctorArgs,
+				metadata: ctorMetadata,
+				returnHint: ctorReturn.hint
+			});
 
 			// Consume tokens until the terminating `;` so we don't interpret type names
 			// as additional constructors.

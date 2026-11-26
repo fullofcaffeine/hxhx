@@ -41,6 +41,16 @@ function compatibility(index:TyperIndex, expected:TyType, actual:TyType, ?parame
 	// (`Array<Dynamic>` with `Array<FunctionArg>`); a local function's body sees those open
 	// fields as `Dynamic`.
 	final openRecord = source.isAnonymous() && hasOpenComponent(source) && !generic;
+	// An abstract argument supplies a structure through a declared `to` type, which keeps the
+	// storage: `Foo<Array<Int>>` declared `to T` is an `Iterable<Int>` (haxe_ocaml-uyvpx).
+	if (target.isAnonymous()
+		&& sourceIdentity != null
+		&& index != null
+		&& index.getAbstractByFullName(sourceIdentity.getCanonicalName()) != null) {
+		for (view in TyAbstractConversionViews.declaredOutputs(index, source))
+			if (view.getSemanticKey() != source.getSemanticKey() && compatibility(index, expected, view, parameters) == Compatible)
+				return Compatible;
+	}
 	if (!target.isAnonymous()
 		|| target.hasUnknownComponent()
 		|| (source.hasUnknownComponent() && !openRecord)

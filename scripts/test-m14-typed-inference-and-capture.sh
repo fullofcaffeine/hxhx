@@ -37,6 +37,7 @@ haxe test/m14_array_subclass_element_test.hxml
 haxe test/m14_bitwise_parameter_inference_test.hxml
 haxe test/m14_block_ends_expression_test.hxml
 haxe test/m14_bound_input_keeps_type_test.hxml
+haxe test/m14_cast_method_arguments_test.hxml
 haxe test/m14_cast_pattern_syntax_test.hxml
 haxe test/m14_char_code_pattern_syntax_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
@@ -48,6 +49,7 @@ haxe test/m14_discarded_control_test.hxml
 haxe test/m14_dynamic_generic_evidence_test.hxml
 haxe test/m14_dynamic_join_transparent_test.hxml
 haxe test/m14_enum_arg_open_literal_test.hxml
+haxe test/m14_enum_constructor_parameters_test.hxml
 haxe test/m14_expression_metadata_syntax_test.hxml
 haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
@@ -55,6 +57,7 @@ haxe test/m14_extractor_pattern_syntax_test.hxml
 haxe test/m14_extractor_pattern_type_test.hxml
 haxe test/m14_generic_abstract_operator_test.hxml
 haxe test/m14_generic_argument_cast_test.hxml
+haxe test/m14_generic_cast_arguments_test.hxml
 haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
@@ -65,6 +68,7 @@ haxe test/m14_macro_source_positions_test.hxml
 haxe test/m14_macro_target_signature_test.hxml
 haxe test/m14_markup_literal_syntax_test.hxml
 haxe test/m14_method_local_construction_test.hxml
+haxe test/m14_module_macro_function_test.hxml
 haxe test/m14_named_pattern_projection_test.hxml
 haxe test/m14_native_class_storage_test.hxml
 haxe test/m14_native_stored_callback_views_test.hxml

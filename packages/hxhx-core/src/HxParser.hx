@@ -5124,6 +5124,11 @@ class HxParser {
 							moduleFunctionMetadata.push("overload");
 							bump();
 							keepModuleModifiers = true;
+						case TIdent(name) if (name == "macro" && peekKind().match(TKeyword(KFunction))):
+							// A module-level `macro function` keeps its modifier, as a class member does.
+							moduleFunctionMetadata.push("macro");
+							bump();
+							keepModuleModifiers = true;
 						case TIdent(name) if (name == "extern" || name == "override"):
 							if (name == "extern")
 								typeIsExtern = true;
