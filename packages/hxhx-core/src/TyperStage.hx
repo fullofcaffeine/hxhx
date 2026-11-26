@@ -881,6 +881,7 @@ class TyperStage {
 			final functionEnvironments = new Array<TyFunctionEnv>();
 			final typeResolver:TypedExprTypeResolver = {
 				tracesDisabled: context.hasDefine("no-traces"),
+				enumMatch: (expression, position, environment) -> enumMatchSwitch(expression, environment, context, position),
 				// Reads the receiver in a copied environment, so the typed-body replay is unchanged.
 				abstractFieldReader: (object, field, position,
 					environment) -> abstractFieldReader(inferExprType(object, environment.copyForInference(), context, position), field, context),
@@ -4042,6 +4043,20 @@ class TyperStage {
 		return declaredMemberReadType(owner, field, false, ctx, receiverType) == null ? reader.getSignature().getName() : null;
 	}
 
+	/**
+		The switch that `subject.match(pattern)` stands for when `subject` is an enum value
+		(`TyEnumMatch`), or null for an ordinary call. The subject is typed in a copied environment,
+		so inference sees it once, as the switch's scrutinee.
+	**/
+	static function enumMatchSwitch(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<HxExpr> {
+		return switch expr {
+			case ECall(EField(subject, "match"), [argument]) if (HxMatchPattern.fromExpr(argument) != null):
+				TyEnumMatch.switchFor(subject, argument, inferExprType(subject, scope.copyForInference(), ctx, pos), ctx, pos);
+			case _:
+				null;
+		}
+	}
+
 	static function inferExprValueType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, expectedResult:Null<TyType>,
 			?capture:TyMethodCallCapture):TyType {
 		switch HxLiteralCharacterCode.resolve(expr) {
@@ -4291,6 +4306,9 @@ class TyperStage {
 				final fieldType = inferExprType(EField(obj, field), scope, ctx, pos);
 				fieldType.isNullable() ? fieldType : TyType.nullable(fieldType);
 			case ECall(sourceCallee, args):
+				final matchSwitch = enumMatchSwitch(expr, scope, ctx, pos);
+				if (matchSwitch != null)
+					return inferExprType(matchSwitch, scope, ctx, pos, TyType.fromHintText("Bool"));
 				if (TyTraceCall.isDisabled(expr, ctx.hasDefine("no-traces")))
 					return TyType.fromHintText("Void");
 				if (TyTraceCall.isLanguageCall(expr)) {

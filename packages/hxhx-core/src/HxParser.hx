@@ -1081,7 +1081,7 @@ class HxParser {
 					}
 				}
 				final qualified = patternName != name;
-				if ((qualified || isUpperStart(name)) && cur.kind.match(TLParen)) {
+				if (HxSwitchPatternName.isConstructor(name, qualified) && cur.kind.match(TLParen)) {
 					bump();
 					final args = new Array<HxSwitchPattern>();
 					var bareWildcardSuffix = false;
@@ -1099,11 +1099,10 @@ class HxParser {
 					if (cur.kind.match(TRParen))
 						bump();
 					PEnumExtract(patternName, args, bareWildcardSuffix);
-				} else if (!qualified && !isUpperStart(name) && acceptOtherChar("=")) {
+				} else if (!HxSwitchPatternName.isConstructor(name, qualified) && acceptOtherChar("=")) {
 					PCapture(name, parseSwitchPatternAtom());
 				} else {
-					qualified
-					|| isUpperStart(name) ? PEnumValue(patternName) : PBind(name);
+					HxSwitchPatternName.isConstructor(name, qualified) ? PEnumValue(patternName) : PBind(name);
 				}
 			case _:
 				// Upstream rejects every other expression as a pattern (for example a

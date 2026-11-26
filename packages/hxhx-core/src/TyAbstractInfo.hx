@@ -19,6 +19,7 @@ class TyAbstractInfo extends TyNominalInfo {
 	final enumDomain:Null<TyEnumAbstractDomain>;
 	final multiTypePolicy:Null<TyMultiTypePolicy>;
 	final coreType:Bool;
+	final forwarding:Bool;
 	var fieldReader:Null<TyDeclarationInfo>;
 
 	public function new(identity:TyNominalTypeId, shortName:String, modulePath:String, fields:haxe.ds.StringMap<TyFieldInfo>,
@@ -28,7 +29,8 @@ class TyAbstractInfo extends TyNominalInfo {
 			implicitToTypes:Array<TyType>, visibility:HxVisibility, policies:{
 			enumDomain:Null<TyEnumAbstractDomain>,
 			multiType:Null<TyMultiTypePolicy>,
-			?coreType:Bool
+			?coreType:Bool,
+			?forwarding:Bool
 		}) {
 		super(identity, shortName, modulePath, fields, properties, staticMethods, instanceMethods, staticMethodLists, instanceMethodLists, declarations,
 			visibility);
@@ -42,6 +44,7 @@ class TyAbstractInfo extends TyNominalInfo {
 		this.enumDomain = policies.enumDomain;
 		this.multiTypePolicy = policies.multiType;
 		this.coreType = policies.coreType == true;
+		this.forwarding = policies.forwarding == true;
 		}
 
 	/** Null for ordinary abstracts; otherwise retain the exact declaration-bound specialization policy. */
@@ -54,6 +57,10 @@ class TyAbstractInfo extends TyNominalInfo {
 	**/
 	public function isCoreType():Bool
 		return coreType;
+
+	/** Whether the abstract is declared `@:forward` (with or without a field list). */
+	public function isForwarding():Bool
+		return forwarding;
 
 	/**
 		The `@:op(a.b)` method that reads an unknown field by name (`resolve(name:String):T`), or

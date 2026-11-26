@@ -44,6 +44,7 @@ haxe test/m14_discarded_control_test.hxml
 haxe test/m14_dynamic_generic_evidence_test.hxml
 haxe test/m14_dynamic_join_transparent_test.hxml
 haxe test/m14_enum_arg_open_literal_test.hxml
+haxe test/m14_enum_value_match_test.hxml
 haxe test/m14_expression_metadata_syntax_test.hxml
 haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
