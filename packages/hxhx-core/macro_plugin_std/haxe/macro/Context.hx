@@ -1,9 +1,11 @@
 package haxe.macro;
 
 import haxe.macro.Expr;
+import haxe.macro.Type;
 import hxhxmacrohost.MacroContextAbort;
 import hxhxmacrohost.MacroContextWire;
 import hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWirePosition;
+import hxhxmacrohost.MacroTypeWire;
 
 /**
 	hxhx's `haxe.macro.Context` for project-macro plugins.
@@ -13,16 +15,17 @@ import hxhxmacrohost.MacroSyntaxWire.MacroSyntaxWirePosition;
 	  `std/haxe/macro/Context.hx` line 848 in Haxe 4.3.7), which a native plugin does not have.
 	  The plugin build puts this class's classpath (`packages/hxhx-core/macro_plugin_std`) before
 	  the standard library, so project macros compile against it instead.
-	- It declares no service that returns `haxe.macro.Type` (`typeof`, `follow`), so a plugin does
-	  not compile `haxe.macro.Type`. Those services come with type handles
-	  (`docs/00-project/EXPRESSION_MACRO_ARGUMENT_PLAN.md`, "Macro Context services").
+	- Types (`typeof`, `follow`) are the compiler's: the plugin holds `haxe.macro.Type` values whose
+	  `Ref`s are compiler handles (`hxhxmacrohost.MacroTypeWire`). The Stage3 emitter cannot build
+	  `TLazy`, and no plugin needs to: the compiler never sends one.
 
-	What (Context PRs 1 and 2)
+	What (Context PRs 1 to 3)
 	- Local: `makePosition` and `getPosInfos` build and read the `{file, min, max}` record that
 	  plugins use as a position; `error` stops the macro with `MacroContextAbort`.
 	- Compiler services (`MacroContextWire` requests through `HxHxMacroModuleHost.call_host`):
-	  `currentPos`, `defined`, `definedValue`, `parse`, `parseInlineString`, `defineModule`, and
-	  `defineType`.
+	  `currentPos`, `defined`, `definedValue`, `parse`, `parseInlineString`, `defineModule`,
+	  `defineType`, `typeof`, and `follow`. `typeof` reports a typing error as
+	  `haxe.macro.Expr.Error`, which the macro may catch.
 	- The signatures are upstream's, so project macros compile unchanged. A macro that calls a
 	  service this class does not declare fails its plugin build with a missing-field error.
 **/
@@ -71,6 +74,17 @@ class Context {
 	/** Define one type in its own module (`pack.name`). */
 	public static function defineType(t:TypeDefinition, ?moduleDependency:String):Void
 		MacroContextWire.readUnit(ContextHost.call(MacroContextWire.requestDefineType(t, moduleDependency)));
+
+	/** The type of `e`, typed at the macro call. */
+	public static function typeof(e:Expr):Type
+		return types.typeof(e);
+
+	/** `t` without monomorphs, typedefs, and `Null`; with `once`, one step. */
+	public static function follow(t:Type, ?once:Bool):Type
+		return types.follow(t, once == true);
+
+	/** One decoder for the plugin, so `follow` can send back the refs `typeof` received. */
+	static final types = new MacroTypeWire(request -> ContextHost.call(request));
 }
 
 /** The native host call; `HxHxMacroModuleHost.call_host` passes the strings through unread. */

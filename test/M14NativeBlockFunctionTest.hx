@@ -2,7 +2,7 @@
 class M14NativeBlockFunctionTest {
 	static function main():Void {
 		rejectedSource('class Main {static function main():Void {var callback = function(value:Dynamic):Array<Int> {return value;};}}',
-			"OCaml block function requires a supported concrete return carrier");
+			"OCaml block function requires a supported concrete return carrier: Array<Int>");
 		final root = "test/fixtures/native_block_function";
 		final expected = "10\n99\n15\nbool\ntrue\nfalse\n1\ntext\neffect\nafter\n4\n2\n3\n36\n10\n11\n12\nselect\n21\nbad\n7\n3\nunmatched\nfalse\n12\n";
 		if (run("node_modules/.bin/haxe", ["-cp", root, "--run", "Main"]) != expected)

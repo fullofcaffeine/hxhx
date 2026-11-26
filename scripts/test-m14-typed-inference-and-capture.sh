@@ -58,6 +58,7 @@ haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
 haxe test/m14_macro_block_syntax_test.hxml
+haxe test/m14_macro_context_type_test.hxml
 haxe test/m14_macro_context_wire_test.hxml
 haxe test/m14_macro_source_positions_test.hxml
 haxe test/m14_macro_target_signature_test.hxml
@@ -78,6 +79,7 @@ haxe test/m14_primitive_constructor_effects_test.hxml
 haxe test/m14_project_macro_runtime_type_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_return_if_syntax_test.hxml
+haxe test/m14_stage3_deferred_enum_payload_test.hxml
 haxe test/m14_stage3_enum_open_record_test.hxml
 haxe test/m14_stage3_local_function_array_for_test.hxml
 haxe test/m14_statement_control_projection_test.hxml
