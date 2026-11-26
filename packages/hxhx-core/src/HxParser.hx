@@ -3312,12 +3312,48 @@ class HxParser {
 			}
 
 			consumeBinop(peekedOp.len);
+			if (op == "is" && isTypePathWithArguments()) {
+				// Upstream reads a type after `is` (grammar.mly `expr_next`), and an expression cannot
+				// hold type arguments, so `x is T<Int>` keeps its type as text in a parser marker.
+				final typeText = readTypeHintText(() -> stop()
+					|| !(cur.kind.match(TIdent(_)) || cur.kind.match(TDot) || isOtherChar("<")));
+				left = binaryExpression(op, left, ECall(EIdent("__hxhx_is_type_arguments"), [EString(typeText)]));
+				continue;
+			}
 			final nextMin = isRightAssoc(op) ? prec : (prec + 1);
 			final right = parseBinaryExpr(nextMin, stop);
 			left = binaryExpression(op, left, right);
 		}
 
 		return left;
+	}
+
+	/**
+		Whether a dotted type path with type arguments starts here (`T<Int>`, `haxe.ds.Map<K, V>`).
+		The type after `is` is otherwise read as an expression, which keeps its existing parser form.
+		Nothing is consumed.
+	**/
+	function isTypePathWithArguments():Bool {
+		final pending = [cur];
+		for (token in [peeked1, peeked2, peeked3])
+			if (token != null)
+				pending.push(token);
+		final lookahead = lex.fork();
+		var index = 0;
+		final nextToken = () -> index < pending.length ? pending[index++] : lookahead.next();
+		if (!nextToken().kind.match(TIdent(_)))
+			return false;
+		while (true) {
+			switch nextToken().kind {
+				case TDot:
+					if (!nextToken().kind.match(TIdent(_)))
+						return false;
+				case TOther(c) if (c == "<".code):
+					return true;
+				case _:
+					return false;
+			}
+		}
 	}
 
 	function parseExpr(stop:() -> Bool):HxExpr {

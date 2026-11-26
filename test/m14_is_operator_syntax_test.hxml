@@ -1,0 +1,5 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp test/fixtures/is_operator_syntax
+-main M14IsOperatorSyntaxTest
+--interp

@@ -14,7 +14,7 @@ import HxLambdaSignature.HxLambdaParameter;
 	with the parser's exact body fingerprint.
 
 	Totality: every `ExprDef` constructor is handled. Constructors with no faithful parser form
-	yet (`ESwitch`, `EDisplay`, `EIs`, metadata other than `@:privateAccess`, local functions with
+	yet (`ESwitch`, `EDisplay`, `EIs` with a type that is not a path, metadata other than `@:privateAccess`, local functions with
 	type parameters, typed constants with suffixes) are rejected with a message that starts with
 	`macro syntax import:`. The caller turns it into a compile error at the macro call.
 
@@ -162,8 +162,30 @@ class MacroSyntaxImport {
 				if (entry.name != ":privateAccess" || (entry.params != null && entry.params.length != 0))
 					throw failure("metadata `@" + entry.name + "` on an expression is not imported yet; only `@:privateAccess` is kept by the parser");
 				EPrivateAccess(convert(inner, false), position(expression));
-			case EIs(_, _):
-				throw failure("the `is` operator is not imported yet");
+			case EIs(value, type):
+				HxExpr.EBinop("is", convert(value, false), isOperand(type));
+		};
+	}
+
+	/**
+		The right side of `x is T` in the parser's form. A type path without arguments is the path
+		written as an expression, read with the expression parser exactly as the parser reads it
+		after `is`; a type with arguments is `__hxhx_is_type_arguments` with its compact text.
+		Upstream accepts only type paths there.
+	**/
+	static function isOperand(type:ComplexType):HxExpr {
+		return switch type {
+			case TPath(path) if (path.params == null || path.params.length == 0):
+				final text = typePathText(path);
+				try {
+					HxParser.parseCompleteExprText(text);
+				} catch (error:HxParseError) {
+					throw failure("the `is` type `" + text + "` could not be read: " + error.message);
+				}
+			case TPath(_):
+				ECall(EIdent("__hxhx_is_type_arguments"), [EString(typeText(type))]);
+			case _:
+				throw failure("the type of an `is` operator must be a type path");
 		};
 	}
 
