@@ -126,8 +126,8 @@ class TypedBodyFingerprint {
 			case PBind(name):
 				addString(state, "pattern-bind");
 				addString(state, name);
-			case POr(patterns, caseList):
-				addString(state, caseList == true ? "pattern-case-list" : "pattern-or");
+			case POr(patterns):
+				addString(state, "pattern-or");
 				addPatterns(state, patterns);
 		}
 	}
@@ -302,10 +302,8 @@ class TypedBodyFingerprint {
 			case ESwitchRaw(raw):
 				addString(state, "expr-switch-raw");
 				addString(state, raw);
-			case ESwitch(scrutinee, patterns, branches, defaultArm):
-				addString(state, defaultArm == null ? "expr-switch" : "expr-switch-default");
-				if (defaultArm != null)
-					addInt(state, defaultArm);
+			case ESwitch(scrutinee, patterns, branches):
+				addString(state, "expr-switch");
 				addExpression(state, scrutinee);
 				addPatterns(state, patterns);
 				addExpressions(state, branches);
