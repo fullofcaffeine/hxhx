@@ -87,21 +87,73 @@ class TyAbstractBinaryBinding {
 				+ declaration.getIdentity().getCanonicalKey());
 	}
 
+	/**
+		The operator with its own type parameters bound to the operands that its first and second
+		parameters receive. Haxe 4.3.7 gives each such parameter a constrained monomorph and unifies
+		the operands with the mapped argument types (`operators.ml`, lines 466-520), so UInt's
+		`equalsInt<T:Int>(a:UInt, b:T)` serves `u == 3` with T = Int. Null when an operand breaks a
+		parameter's constraint (the declaration does not apply). A type parameter used anywhere but
+		as a whole parameter type is still unsupported (`ensureNonGeneric`).
+	**/
+	static function instantiate(index:TyperIndex, candidate:TyAbstractBinaryOperatorInfo, firstOperand:TyType, secondOperand:TyType, filePath:String,
+			position:HxPos):Null<TyAbstractBinaryOperatorInfo> {
+		final declaration = candidate.getDeclaration();
+		final parameters = declaration.getTypeParameterIds();
+		if (parameters.length == 0) {
+			ensureNonGeneric(candidate, filePath, position);
+			return candidate;
+		}
+		final bindings = new haxe.ds.StringMap<TyType>();
+		for (pair in [
+			{declared: candidate.getLeftType(), actual: firstOperand},
+			{declared: candidate.getRightType(), actual: secondOperand}
+		]) {
+			final parameter = pair.declared.getTypeParameterIdentity();
+			if (parameter == null || parameters.filter(owned -> owned.equals(parameter)).length == 0) {
+				if (containsTypeParameter(pair.declared))
+					ensureNonGeneric(candidate, filePath, position);
+				continue;
+			}
+			if (pair.actual == null || pair.actual.hasUnknownComponent())
+				return null;
+			final key = parameter.getCanonicalKey();
+			if (!bindings.exists(key))
+				bindings.set(key, pair.actual);
+		}
+		final constraints = declaration.getResolvedTypeParameterConstraints();
+		for (parameter in parameters) {
+			final key = parameter.getCanonicalKey();
+			if (!bindings.exists(key))
+				ensureNonGeneric(candidate, filePath, position);
+			final bounds = constraints.exists(key) ? constraints.get(key) : [];
+			for (bound in bounds)
+				if (TyAbstractBinaryConversion.select(index, bound, bindings.get(key)) == null)
+					return null;
+		}
+		final result = TyTypeSubstitution.apply(candidate.getResultType(), bindings);
+		if (containsTypeParameter(result))
+			ensureNonGeneric(candidate, filePath, position);
+		return new TyAbstractBinaryOperatorInfo(candidate.getOperator(), declaration, TyTypeSubstitution.apply(candidate.getLeftType(), bindings),
+			TyTypeSubstitution.apply(candidate.getRightType(), bindings), result, candidate.getIsCommutative());
+	}
+
 	/** Keep declaration order; conversion quality only chooses one declaration's orientation. */
 	static function firstMatch(index:TyperIndex, candidates:Array<TyAbstractBinaryOperatorInfo>, leftType:TyType, rightType:TyType, filePath:String,
 			position:HxPos, ?indexedLeft:TyIndexedNullableAbstractOperand):Null<TyBinaryCandidateMatch> {
-		for (candidate in candidates) {
-			ensureNonGeneric(candidate, filePath, position);
-			final directLeft = argument(index, candidate.getLeftType(), leftType, indexedLeft);
-			final directRight = argument(index, candidate.getRightType(), rightType);
+		for (generic in candidates) {
+			// Each orientation binds the operator's own type parameters from its operands.
+			final candidate = instantiate(index, generic, leftType, rightType, filePath, position);
+			final directLeft = candidate == null ? null : argument(index, candidate.getLeftType(), leftType, indexedLeft);
+			final directRight = candidate == null ? null : argument(index, candidate.getRightType(), rightType);
 			final directScore = directLeft == null || directRight == null ? -1 : directLeft.getScore() + directRight.getScore();
-			if (candidate.getIsCommutative()) {
-				final reverseLeft = argument(index, candidate.getRightType(), leftType, indexedLeft);
-				final reverseRight = argument(index, candidate.getLeftType(), rightType);
+			if (generic.getIsCommutative()) {
+				final reversed = instantiate(index, generic, rightType, leftType, filePath, position);
+				final reverseLeft = reversed == null ? null : argument(index, reversed.getRightType(), leftType, indexedLeft);
+				final reverseRight = reversed == null ? null : argument(index, reversed.getLeftType(), rightType);
 				final reverseScore = reverseLeft == null || reverseRight == null ? -1 : reverseLeft.getScore() + reverseRight.getScore();
 				if (reverseScore > directScore)
 					return {
-						info: candidate,
+						info: reversed,
 						reverseArguments: true,
 						sourceLeftArgument: reverseLeft,
 						sourceRightArgument: reverseRight,
@@ -132,6 +184,20 @@ class TyAbstractBinaryBinding {
 		if (plan != null)
 			return TyAbstractBinaryArgument.converted(plan);
 		return operand != null && operand.admits(expected, actual) ? TyAbstractBinaryArgument.indexed(operand, expected) : null;
+	}
+
+	/**
+		The operator with its effective result type. The catalog keeps the declared signature, whose
+		result is unknown for an operator without a written return type; the method's body supplies
+		it (`TyMethodBodyResults`), as Haxe 4.3.7 types the call `a + b` that `a += b` stands for.
+		A compound assignment needs that result to fit its destination.
+	**/
+	static function withEffectiveResult(index:TyperIndex, info:TyAbstractBinaryOperatorInfo):TyAbstractBinaryOperatorInfo {
+		if (!info.getResultType().hasUnknownComponent())
+			return info;
+		final effective = index.getMethodBodyResults().signature(info.getDeclaration()).getReturnType();
+		return effective.hasUnknownComponent() ? info : new TyAbstractBinaryOperatorInfo(info.getOperator(), info.getDeclaration(), info.getLeftType(),
+			info.getRightType(), effective, info.getIsCommutative());
 	}
 
 	static function bind(match:TyBinaryCandidateMatch, op:String, requiresWriteback:Bool):TyBoundAbstractBinaryOperator {
@@ -223,13 +289,14 @@ class TyAbstractBinaryBinding {
 			final baseCandidates = collect(index, lookupLeft, rightType, baseOperator);
 			final match = firstMatch(index, baseCandidates, leftType, rightType, filePath, position, indexedLeft);
 			if (match != null) {
-				final resultConversion = TyAbstractBinaryConversion.select(index, leftType, match.info.getResultType());
+				final info = withEffectiveResult(index, match.info);
+				final resultConversion = TyAbstractBinaryConversion.select(index, leftType, info.getResultType());
 				// A selected base operator must fit the destination. Do not silently
 				// select a later declaration merely because its result would fit.
 				if (resultConversion == null)
-					throw noApplicable(op, leftType, rightType, [match.info], filePath, position);
+					throw noApplicable(op, leftType, rightType, [info], filePath, position);
 				return validateBodyless(index, bind({
-					info: match.info,
+					info: info,
 					reverseArguments: match.reverseArguments,
 					sourceLeftArgument: match.sourceLeftArgument,
 					sourceRightArgument: match.sourceRightArgument,
