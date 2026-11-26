@@ -367,6 +367,20 @@ class TyperIndex {
 		return false;
 	}
 
+	/** `@:name` or `@:name(arguments)`: Haxe 4.3.7's `Meta.has` ignores the arguments. */
+	static function hasMetadataWithOrWithoutArguments(metadata:Array<String>, name:String):Bool {
+		if (hasMetadata(metadata, name) || metadata == null)
+			return metadata != null;
+		for (entry in metadata) {
+			var clean = entry == null ? "" : StringTools.trim(entry);
+			while (StringTools.startsWith(clean, "@") || StringTools.startsWith(clean, ":"))
+				clean = clean.substr(1);
+			if (StringTools.startsWith(clean, name + "("))
+				return true;
+		}
+		return false;
+	}
+
 	/**
 		The type paths of every `@:using(path, ...)` entry, in source order:
 		`@:using(eval.luv.Result.ResultTools)` gives `["eval.luv.Result.ResultTools"]`.
@@ -1056,7 +1070,8 @@ class TyperIndex {
 					declarations, underlying, parameterIds, implicitFromTypes, implicitToTypes, HxClassDecl.getVisibility(classDeclaration), {
 						enumDomain: enumConstants == null ? null : new TyEnumAbstractDomain(identity, enumMembers),
 						multiType: TyMultiTypePolicy.fromMetadata(classMetadata, parameterIds),
-						coreType: hasMetadata(classMetadata, "coreType")
+						coreType: hasMetadata(classMetadata, "coreType"),
+						forwarding: hasMetadataWithOrWithoutArguments(classMetadata, "forward")
 					});
 				catalogOperators(info, ResolvedModule.getFilePath(module));
 				completed.push({source: classDeclaration, info: info});
