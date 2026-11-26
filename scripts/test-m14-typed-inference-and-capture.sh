@@ -58,6 +58,7 @@ haxe test/m14_generic_argument_cast_test.hxml
 haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
+haxe test/m14_lambda_field_read_test.hxml
 haxe test/m14_macro_block_syntax_test.hxml
 haxe test/m14_macro_context_type_test.hxml
 haxe test/m14_macro_context_wire_test.hxml

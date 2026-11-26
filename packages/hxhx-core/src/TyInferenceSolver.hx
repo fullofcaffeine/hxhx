@@ -270,6 +270,11 @@ class TyInferenceSolver {
 					throw "field requirement is absent from sealed inference";
 				final child = allocate(null, identity.kind);
 				fields.push({name: name, term: child});
+				// A field read only names the field; when nothing else gives its value a type, the
+				// field is Dynamic at seal, where upstream keeps a monomorph (haxe_ocaml-0pwiv).
+				// An omitted method input may stay unknown, so its fields keep that rule.
+				if (identity.kind.match(Required))
+					visitDynamicUse(child, false);
 				child;
 			case Structure(fields, signature):
 				final ordinal = signature.getAnonymousFieldNames().indexOf(name);
