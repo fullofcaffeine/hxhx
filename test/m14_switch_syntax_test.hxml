@@ -1,0 +1,5 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp test/fixtures/switch_syntax
+-main M14SwitchSyntaxTest
+--interp

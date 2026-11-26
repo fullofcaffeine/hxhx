@@ -177,8 +177,17 @@ class M14MacroSyntaxRoundTripTest {
 			case _:
 				throw "break changed";
 		}
-		requireFailure("switch", "macro syntax import:", "switch", () -> importer.result({
-			expr: ESwitch({expr: EConst(CIdent("x")), pos: created}, [], null),
+		// Switches import (haxe_ocaml-ujjik); a case pattern with no parser form still fails.
+		requireFailure("switch pattern", "macro syntax import:", "case pattern", () -> importer.result({
+			expr: ESwitch({expr: EConst(CIdent("x")), pos: created}, [
+				{
+					values: [
+						{expr: EBinop(OpAdd, {expr: EConst(CIdent("a")), pos: created}, {expr: EConst(CIdent("b")), pos: created}), pos: created}
+					],
+					guard: null,
+					expr: null
+				}
+			], null),
 			pos: created
 		}));
 		requireFailure("metadata", "macro syntax import:", "@:keep", () -> importer.result({

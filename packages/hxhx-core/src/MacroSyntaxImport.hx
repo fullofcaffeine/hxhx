@@ -1,4 +1,5 @@
 import haxe.macro.Expr;
+import HxSwitchPattern;
 import HxSourceFunction.HxSourceFunctionKind;
 import HxSourceFunction.HxSourceFunctionPlacement;
 import HxLambdaSignature.HxLambdaParameter;
@@ -14,7 +15,7 @@ import HxLambdaSignature.HxLambdaParameter;
 	with the parser's exact body fingerprint.
 
 	Totality: every `ExprDef` constructor is handled. Constructors with no faithful parser form
-	yet (`ESwitch`, `EDisplay`, `EIs`, metadata other than `@:privateAccess`, local functions with
+	yet (`EDisplay`, `EIs`, switch patterns without a parser form, metadata other than `@:privateAccess`, local functions with
 	type parameters, typed constants with suffixes) are rejected with a message that starts with
 	`macro syntax import:`. The caller turns it into a compile error at the macro call.
 
@@ -128,8 +129,8 @@ class MacroSyntaxImport {
 					case _: [convert(body, false)];
 				};
 				HxExpr.EWhile(convert(condition, false), entries, isBlock, position(expression), normalWhile ? Normal : DoWhile);
-			case ESwitch(_, _, _):
-				throw failure("switch expressions are not imported yet; their patterns need the parser's pattern model");
+			case ESwitch(subject, cases, otherwise):
+				switchSyntax(subject, cases, otherwise);
 			case ETry(body, catches):
 				if (catches == null || catches.length == 0)
 					throw failure("a try expression has no catch");
@@ -165,6 +166,121 @@ class MacroSyntaxImport {
 			case EIs(_, _):
 				throw failure("the `is` operator is not imported yet");
 		};
+	}
+
+	/**
+		A switch in the parser's form: one arm per case, a comma list as `POr(alternatives, true)`, a
+		guard as `PGuard`, and every arm body as a source group. A null body is an empty arm; it takes
+		the position of its patterns, where the export placed it. The default becomes the last arm, a
+		wildcard marked as the written `default:`.
+	**/
+	function switchSyntax(subject:Expr, cases:Array<Case>, otherwise:Null<Expr>):HxExpr {
+		if (cases == null)
+			throw failure("a switch has no case list");
+		final patterns = new Array<HxSwitchPattern>();
+		final bodies = new Array<HxExpr>();
+		for (entry in cases) {
+			if (entry.values == null || entry.values.length == 0)
+				throw failure("a switch case has no pattern");
+			var pattern = entry.values.length == 1 ? patternOf(entry.values[0]) : POr([for (value in entry.values) patternOf(value)], true);
+			if (entry.guard != null)
+				pattern = PGuard(pattern, convert(entry.guard, false));
+			patterns.push(pattern);
+			bodies.push(entry.expr == null ? ESourceGroup([], position(entry.values[0])) : armBody(entry.expr));
+		}
+		var defaultArm:Null<Int> = null;
+		if (otherwise != null) {
+			defaultArm = patterns.length;
+			patterns.push(PWildcard);
+			bodies.push(armBody(otherwise));
+		}
+		return ESwitch(convert(subject, false), patterns, bodies, defaultArm);
+	}
+
+	function armBody(body:Expr):HxExpr {
+		final shape:ExprDef = body.expr;
+		return switch shape {
+			case EBlock(entries): ESourceGroup(statements(entries), position(body));
+			case _: ESourceGroup([convert(body, true)], position(body));
+		};
+	}
+
+	/**
+		A case pattern in the parser's form (`HxParser.parseSwitchPatternAtom`): a qualified name or
+		a name that starts with an upper-case letter is a constructor, any other name a capture, and
+		parentheses only group.
+	**/
+	static function patternOf(pattern:Expr):HxSwitchPattern {
+		if (pattern == null || pattern.expr == null)
+			throw failure("a case pattern is missing");
+		final shape:ExprDef = pattern.expr;
+		return switch shape {
+			case EConst(CIdent("null")): PNull;
+			case EConst(CIdent("true")): PBool(true);
+			case EConst(CIdent("false")): PBool(false);
+			case EConst(CIdent("_")): PWildcard;
+			case EConst(CIdent(name)): isConstructorName(name) ? PEnumValue(identifier(name)) : PBind(identifier(name));
+			case EConst(CString(value, _)): PString(value);
+			case EConst(CInt(text, null)): PInt(patternInt(text));
+			case EConst(CFloat(text,
+				null)): StringTools.startsWith(text,
+					"-") ? PFloat(HxFloatPatternText.of(text.substr(1), Std.parseFloat(text.substr(1)),
+						true)) : PFloat(HxFloatPatternText.of(text, Std.parseFloat(text), false));
+			case EUnop(OpNeg, false, {expr: EConst(CInt(text, null))}): PInt(-patternInt(text));
+			case EUnop(OpNeg, false, {expr: EConst(CFloat(text, null))}): PFloat(HxFloatPatternText.of(text, Std.parseFloat(text), true));
+			case EField({expr: EConst(CString(text, _))}, "code", _):
+				if (text == null || text.length == 0)
+					throw failure("a char-code pattern needs one character");
+				PInt(text.charCodeAt(0));
+			case EField(_, _, _): PEnumValue(patternPath(pattern));
+			case ECall(callee, arguments):
+				final name = patternPath(callee);
+				if (name.indexOf(".") < 0 && !isConstructorName(name))
+					throw failure("a call pattern needs a constructor name; `" + name + "` is not one");
+				final last = arguments.length == 0 ? null : arguments[arguments.length - 1];
+				final bareWildcardSuffix = last != null && last.expr != null && last.expr.match(EConst(CIdent("_")));
+				PEnumExtract(name, [for (argument in arguments) patternOf(argument)], bareWildcardSuffix);
+			case EBinop(OpOr, left, right): POr(alternatives(left).concat(alternatives(right)));
+			case EBinop(OpAssign, {expr: EConst(CIdent(name))}, inner) if (!isConstructorName(name)): PCapture(identifier(name), patternOf(inner));
+			case EVars([variable]) if (variable.expr == null && variable.type == null): PCapture(identifier(variable.name), PWildcard);
+			case EParenthesis(inner): patternOf(inner);
+			case EArrayDecl(items): PArray([for (item in items) patternOf(item)]);
+			case EObjectDecl(fields): PObject([for (field in fields) field.field], [for (field in fields) patternOf(field.expr)]);
+			// `case {}:` is an empty block upstream; the parser reads it as an empty object pattern.
+			case EBlock([]): PObject([], []);
+			case ECast(inner, null): PEnumValue(patternPath(inner));
+			case _: throw failure("this case pattern has no parser form yet");
+		};
+	}
+
+	/** The parser flattens `a | b | c` into one or-pattern; a parenthesized one stays nested. */
+	static function alternatives(pattern:Expr):Array<HxSwitchPattern> {
+		final shape:ExprDef = pattern == null ? null : pattern.expr;
+		return switch shape {
+			case EBinop(OpOr, left, right): alternatives(left).concat(alternatives(right));
+			case _: [patternOf(pattern)];
+		};
+	}
+
+	static function isConstructorName(name:String):Bool {
+		final first = name == null || name.length == 0 ? 0 : name.charCodeAt(0);
+		return first >= "A".code && first <= "Z".code;
+	}
+
+	static function patternPath(expression:Expr):String {
+		final shape:ExprDef = expression == null ? null : expression.expr;
+		return switch shape {
+			case EConst(CIdent(name)): identifier(name);
+			case EField(owner, field, _): patternPath(owner) + "." + identifier(field);
+			case _: throw failure("a case pattern name must be a dotted path");
+		};
+	}
+
+	static function patternInt(text:String):Int {
+		final value = Std.parseInt(text);
+		if (value == null)
+			throw failure("the integer case pattern `" + text + "` is not an Int");
+		return value;
 	}
 
 	/** The parser keeps `Owner` in `Owner.field` as a plain identifier, never as an enum value. */

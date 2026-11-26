@@ -301,7 +301,9 @@ class M14MacroReificationLoweringTest {
 		expectFailure("other metadata", "macro @:keep 1", "metadata `@keep` inside a quotation is not lowered yet");
 		expectFailure("value of a structure", "macro $v{obj}", "this payload has type {a:Int}");
 		expectFailure("value of unknown type", "macro $v{mystery}", "requires a payload whose type is known");
-		expectFailure("switch", "macro switch x { case 1: 2; }", "switch expressions are not exported yet");
+		// A quoted switch exports as upstream's `ESwitch` (haxe_ocaml-ujjik); an extractor pattern still fails.
+		lower("macro switch x { case 1: 2; case 3, 4: case _ if (y): 5; default: 6; }");
+		expectFailure("switch extractor", "macro switch x { case _.length => 0: 1; }", "extractor patterns are not exported to macros yet");
 
 		typedRoots();
 		Sys.println("M14_MACRO_REIFICATION_LOWERING:PASS");
