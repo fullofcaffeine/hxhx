@@ -238,6 +238,9 @@ class TyperStage {
 				return true;
 			if (target.isAnonymous() && target.getAnonymousFieldNames().length == 0)
 				return TyEmptyObjectConstraint.accepts(actual, index);
+			final constructible = TyConstructibleBound.accepts(index, target, actual, (expected, constructor) -> constructorFits(expected, constructor, index));
+			if (constructible != null)
+				return constructible;
 			final owner = target.getNominalIdentity();
 			if (owner != null && actual.getNominalIdentity() != null) {
 				final ancestor = TyNominalAncestor.view(index, actual, owner);
@@ -245,6 +248,26 @@ class TyperStage {
 			}
 			return overloadArgScore(target, actual, [], index) >= 0;
 		});
+	}
+
+	/**
+		Whether a constructor of type `constructor` can stand where a function of type `expected` is
+		required: each of `expected`'s parameter types must be accepted by the constructor's
+		parameter (contravariant), and a Void result accepts any constructor (tUnification.ml:824-838
+		unifies the constructor field type with Constructible's argument).
+	**/
+	static function constructorFits(expected:TyType, constructor:TyType, index:TyperIndex):Bool {
+		if (!expected.isFunction() || !constructor.isFunction())
+			return expected.isDynamic();
+		final want = expected.getFunctionArguments();
+		final have = constructor.getFunctionArguments();
+		if (want.length != have.length)
+			return false;
+		for (slot in 0...want.length)
+			if (!constraintAccepts(have[slot], want[slot], index))
+				return false;
+		final result = expected.getFunctionReturn();
+		return result == null || result.isVoid() || constraintAccepts(result, constructor.getFunctionReturn(), index);
 	}
 
 	/** The top-level `Any` abstract from the standard library, not a user type spelled `pkg.Any`. */
@@ -3031,9 +3054,26 @@ class TyperStage {
 		if (TyStructuralFieldRead.resolve(TyReceiverMemberLookup.structuralView(receiverType, field, ctx), field) != null)
 			return null;
 		final extensionArguments = [receiver].concat(args == null ? [] : args);
+		// Haxe 4.3.7 skips a `using` candidate whose receiver fails to unify, including a failed
+		// type-parameter constraint, and tries the next one (haxe_ocaml-5l9ut). When every candidate
+		// was skipped that way, the receiver has no such field.
+		var rejected = false;
 		for (extension in ctx.extensionMethods(field, receiverType)) {
-			final resolution = resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments,
-				inferenceScope.copyForInference(), ctx, pos, extension.getCandidates());
+			final resolution = try {
+				resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments, inferenceScope.copyForInference(),
+					ctx, pos, extension.getCandidates());
+			} catch (error:TyperError) {
+				// Upstream also skips a candidate whose first parameter does not accept the receiver;
+				// a candidate that accepts it is selected, and its argument errors are reported
+				// (haxe_ocaml-cd3jc).
+				final skipped = StringTools.startsWith(error.getMessage(), "Constraint check failure for ")
+					|| (StringTools.startsWith(error.getMessage(), "No compatible method signature for ")
+						&& !extensionAcceptsReceiver(extension, receiverType, ctx));
+				if (!skipped)
+					throw error;
+				rejected = true;
+				continue;
+			}
 			if (resolution.declaration != null) {
 				if (applyContext && resolution.order != null && resolution.actual != null) {
 					final expected = resolution.order.sourceContexts(TyMethodGenericBinding.specializeParameters(resolution.declaration,
@@ -3049,7 +3089,22 @@ class TyperStage {
 				};
 			}
 		}
+		if (rejected)
+			throw new TyperError(ctx.getFilePath(), pos, TyAliasExpansion.revealNonNullable(receiverType).getDisplay() + " has no field " + field);
 		return null;
+	}
+
+	/** Whether some candidate of `extension` takes `receiver` as its first argument. **/
+	static function extensionAcceptsReceiver(extension:TyExtensionMethod, receiver:TyType, ctx:TyperContext):Bool {
+		for (candidate in extension.getCandidates()) {
+			final declaration = extension.getDeclaringProvider().declarationForSignature(candidate);
+			final arguments = candidate.getArgs();
+			if (arguments.length == 0)
+				continue;
+			if (overloadArgScore(arguments[0], receiver, TyMethodGenericBinding.inferableTypeParameters(declaration), ctx.getIndex()) >= 0)
+				return true;
+		}
+		return false;
 	}
 
 	/**
