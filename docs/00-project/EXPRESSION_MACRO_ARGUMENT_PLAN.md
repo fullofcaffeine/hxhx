@@ -105,8 +105,8 @@ the Stage3 emitter cannot represent, so no project macro that used `Context` cou
 **The plugin's `Context`.** Plugins compile hxhx's own `haxe.macro.Context`
 (`packages/hxhx-core/macro_plugin_std/haxe/macro/Context.hx`). The plugin build lists that
 classpath before the standard library (`ProjectMacroPluginRequest.contextClassPath`, part of the
-cache key). It keeps upstream's signatures. It does not declare services that return
-`haxe.macro.Type` until type handles exist, so a plugin does not compile `haxe.macro.Type`.
+cache key). It keeps upstream's signatures. Since PR 3 it declares `typeof` and `follow`, so every
+plugin compiles `haxe.macro.Type` (see "Types in project macros (PR 3)").
 - Local services: `makePosition` and `getPosInfos` build and read the `{file, min, max}` record that
   plugins use as a position. `error` stops the macro with `hxhxmacrohost.MacroContextAbort`.
 - Compiler services: everything that needs the compiler's state is one request to the host.
@@ -127,8 +127,9 @@ answer is the empty string, which the plugin reports as a missing service.
 **The wire `hxhx-macro-context.v1`** (`hxhxmacrohost.MacroContextWire`; it uses the
 `MacroSyntaxWire` encoders for expressions and positions):
 - request: `C`, the message name, then its arguments. The names are `context.currentPos`,
-  `context.defined`, `context.definedValue`, `context.parse`, and `context.parseInlineString` now;
-  `context.defineModule`, `context.typeof`, `type.follow`, and `type.refGet` come later;
+  `context.defined`, `context.definedValue`, `context.parse`, `context.parseInlineString`,
+  `context.defineModule`, `context.defineType`, `context.typeof`, `type.follow`, and
+  `type.refGet`;
 - response: `R` and the value, or `E`, a kind, a message, and an optional position. The kinds:
   - `error`: a compile error at that position; the plugin stops the macro with
     `MacroContextAbort`;
@@ -157,7 +158,8 @@ encoding (`src/macro/macroApi.ml`, lines 1181-1245):
    against upstream's output, and `test/M14MacroContextWireTest.hx`.
 2. **PR 2:** `defineModule` and `defineType` (see "Defined modules" below). Fixture
    `test/fixtures/project-macro-define`.
-3. **PR 3:** `Type` reaches plugins; `typeof`, `follow`, and `Ref.get` over handles.
+3. **PR 3:** `Type` reaches plugins; `typeof`, `follow`, and `Ref.get` over handles (see "Types in
+   project macros" below). Fixture `test/fixtures/project-macro-typeof`.
 4. **PR 4:** Gate 1 Lite runs the real `generateSpec`.
 
 **Defined modules (PR 2).** `Context.defineModule(path, types, imports, usings)` and
@@ -186,6 +188,59 @@ wire gains `TypeDefinition`, `TypeDefKind`, `AbstractFlag`, and `ImportExpr` cod
   element in an array literal that has an expected element type
   (`final specs:Array<SpecBase> = [new Sub()]`), which upstream accepts. That is a typer gap
   outside this PR.
+
+**Types in project macros (PR 3).** `Context.typeof(e)`, `Context.follow(t, ?once)`, and
+`Ref.get()` are host requests (`context.typeof`, `type.follow`, `type.refGet`).
+- **TLazy.** The Stage3 emitter gives a function-typed enum payload an `Unrepresentable` marker
+  (`Stage3OcamlEnumPlan`) instead of failing at the declaration. Building that constructor, or
+  binding or testing its payload in a pattern, fails with the emitter's existing message;
+  `case TLazy(_)` builds. There is no new runtime representation. So a plugin, or an emitting
+  compile, that only imports `haxe.macro.Type` builds.
+- **Values.** `hxhxmacrohost.MacroTypeWire` builds real `haxe.macro.Type` values in the plugin:
+  the shell by value, every `Ref` a handle whose `get` asks the compiler each time, as upstream's
+  refs do. The compiler (`hxhx.macro.MacroTypeServices`) never sends `TLazy`.
+- **Emitter limits the plugin code works around:**
+  - a closure cannot return a nullable value, so `ClassField.expr` and a monomorph's `get` are
+    method values (`MacroTypeUnavailable`, `MacroTypeMonoRef`). A static method value must come
+    from another class: the emitter qualifies it with its own module name;
+  - a closure cannot loop over an array (`haxe_ocaml-kmm68`), so the metadata helpers are methods;
+  - a return whose type is the same storage type under another unfolding of a recursive typedef
+    (`ClassField` inside its own `overloads`) now needs no conversion
+    (`Stage3OcamlCallableConversion`, `TyAliasEquivalence.equivalentTypes`).
+- **Handles** (`MacroTypeHandles`): interned per compilation by declaration name, valid in the
+  macro call that last received them. A stale or unknown handle, or a `Ref` the macro built itself
+  sent back through `follow`, is `invalid`.
+- **Typing.** `typeof` types the expression at the call's module and class, before the request
+  types its modules (`TyperStage.typeStandaloneExpression`). The call site's locals are not in
+  scope. A `TyperError` is an `error` at the expression, which the plugin throws as
+  `haxe.macro.Expr.Error`: a macro may catch it, as upstream's test builder does. An uncaught one
+  is reported at its position.
+- **Follow** is upstream's `follow` (Haxe 4.3.7 `src/core/tFunctions.ml`, lines 493-519):
+  monomorphs, typedefs, and `Null<T>`; with `once`, one typedef step.
+- **Counting.** Every `unsupported` answer is counted, and the compiler prints
+  `macro_context_unsupported=<n>` after `expr_macros_expanded`, so a macro that catches the failure
+  does not hide it.
+- **Records** carry: pack, name, module, `toString`, privacy, externs, type parameters,
+  superclass, interfaces, enum constructors, structure fields, class fields, and an abstract's
+  underlying type and implicit casts. Gaps:
+  - metadata has names only; a type's position is its source range or the file start, and a
+    variable field's position is its type's;
+  - class fields list variables before methods;
+  - an abstract has no operators, array access, `resolve`, or `impl`; a class has no
+    constructor, `init`, overrides, `isFinal`, or `isAbstract`;
+  - `ClassField.expr`, `BaseType.exclude`, and `MetaAccess.add`/`remove` fail as `unsupported`.
+- **Typer gaps that change answers** (outside this PR):
+  - hxhx resolves a typedef name to its body in declared types, so `typeof` of a value declared
+    `Real` (`typedef Real = Float`) is `Float`, where upstream says `TType(Real)`. `follow` gives
+    the same answer either way. The fixture does not print an unfollowed typedef;
+  - outside module typing, hxhx's typer accepts code upstream rejects: an unknown lower-case name
+    is a monomorph, a missing static field is `Dynamic`, and a call with too many arguments has an
+    unknown result. Upstream raises a typing error for each.
+- An emitting compile whose macro class imports `haxe.macro.Context` (`haxe_ocaml-q3mio`,
+  `test/fixtures/target_macro_body`) no longer stops on `TLazy`. It stops next on
+  `haxe.macro.Context.Message.Info(msg, pos:Position)`: hxhx parses `haxe/macro/` modules with
+  `macro` defined, so `Position` is the core-type abstract, which has no enum payload
+  representation either.
 
 **Known gaps in PR 1.**
 - `currentPos` is the call's file and the start of its first argument, not the call's range.

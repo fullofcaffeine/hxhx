@@ -22,6 +22,14 @@ enum Stage3OcamlEnumPayload {
 
 	/** Null and a present value share the runtime's Obj.t boundary without losing either value. */
 	NullableValue(value:Stage3OcamlEnumPayload);
+
+	/**
+		A function payload has no native representation. The constructor stays declared (its slot is
+		`Obj.t`), so a program that only mentions the enum still builds, but building the
+		constructor or binding this payload fails with `message` (`Stage3OcamlEnums`). For
+		example, a project-macro plugin compiles `haxe.macro.Type` and never builds `TLazy`.
+	**/
+	Unrepresentable(message:String);
 }
 
 typedef Stage3OcamlEnumConstructor = {
@@ -128,6 +136,9 @@ class Stage3OcamlEnumPlan {
 
 	static function requiredPayload(type:TyType, declaration:String):Stage3OcamlEnumPayload {
 		final record = TyAliasExpansion.reveal(type);
+		// No new runtime representation: the failure moves to where the payload is used.
+		if (record.isFunction())
+			return Unrepresentable(unrepresentableMessage(declaration, type));
 		if (record.isAnonymous() && !record.hasUnknownComponent())
 			return AnonymousRecord(record.getSemanticKey());
 		if (type.isDynamic())
@@ -150,6 +161,18 @@ class Stage3OcamlEnumPlan {
 		// The request catalog must prove this exact nominal owner is an enum.
 		if (nominal != null && type.getTypeArguments().length == 0)
 			return EnumBox(nominal.getCanonicalName());
-		throw "OCaml enum payload representation is not implemented: " + declaration + " / " + type.getDisplay();
+		throw unrepresentableMessage(declaration, type);
+	}
+
+	static function unrepresentableMessage(declaration:String, type:TyType):String
+		return "OCaml enum payload representation is not implemented: " + declaration + " / " + type.getDisplay();
+
+	/** The failure of a payload that cannot be stored, or null when it can be. */
+	public static function unrepresentable(payload:Stage3OcamlEnumPayload):Null<String> {
+		return switch payload {
+			case Unrepresentable(message): message;
+			case NullableValue(value): unrepresentable(value);
+			case _: null;
+		};
 	}
 }

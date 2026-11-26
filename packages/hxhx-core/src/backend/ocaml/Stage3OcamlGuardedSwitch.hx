@@ -35,9 +35,13 @@ function render(input:GuardedSwitchInput):String {
 			case IsFloat(literal): input.dialect.runtimeDynamicEquals(value, Stage3OcamlFloatConstant.render(literal));
 			case IsString(literal): input.dialect.runtimeDynamicEquals(value, input.quote(literal));
 			case ArrayLength(length): "(HxArray.length (Obj.magic " + value + ") = " + length + ")";
-			case EnumConstructor(_, selection):
+			case EnumConstructor(source, selection):
 				if (input.enums == null)
 					throw "OCaml guarded enum requires its exact program provider";
+				switch source {
+					case PEnumExtract(_, arguments, _): input.enums.requireBindable(selection, arguments);
+					case _:
+				}
 				input.enums.patternCondition(selection, value);
 		},
 		read: (read, value) -> switch read {

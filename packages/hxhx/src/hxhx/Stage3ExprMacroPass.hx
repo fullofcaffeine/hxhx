@@ -100,8 +100,10 @@ class Stage3ExprMacroPass {
 				lexicalGaps: lexicalGaps
 			};
 
-		// Modules a macro defines (`Context.defineModule`, `Context.defineType`) belong to this pass.
+		// Modules a macro defines (`Context.defineModule`, `Context.defineType`) and the type
+		// handles its Context requests receive belong to this pass.
 		MacroState.clearDefinedModules();
+		MacroState.clearContextRequests();
 		var definedCount = 0;
 		var work = modules.copy();
 		var offset = 0;
