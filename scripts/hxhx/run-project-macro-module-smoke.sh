@@ -304,6 +304,26 @@ for mutation in "compiler:compilerIdentity" "abi:abiVersion" "declaration:regist
 done
 echo "PROJECT_MACRO_MODULE_NEGATIVE_PATHS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# A macro defines modules whose fields carry metadata with parameters, as upstream's UnitBuilder
+# gives *Utf8.unit.hx specs @:haxe.warning("-WDeprecated"). Upstream's stderr stays empty, because
+# that parameter suppresses its deprecation warning, and the program prints what upstream prints.
+META_PARAMS_DIR="$ROOT/test/fixtures/project-macro-meta-params"
+(
+  cd "$META_PARAMS_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/meta_params.oracle.stdout" 2>"$ARTIFACT_DIR/meta_params.oracle.stderr"
+diff -u "$META_PARAMS_DIR/expected.stdout" "$ARTIFACT_DIR/meta_params.oracle.stdout"
+if [ -s "$ARTIFACT_DIR/meta_params.oracle.stderr" ]; then
+  echo "Upstream printed a diagnostic for project-macro-meta-params:" >&2
+  cat "$ARTIFACT_DIR/meta_params.oracle.stderr" >&2
+  exit 1
+fi
+compile_app meta_params "$META_PARAMS_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line meta_params '^expr_macros_expanded=1$'
+"$WORK_DIR/app-meta_params/out.exe" >"$ARTIFACT_DIR/meta_params.stdout" 2>"$ARTIFACT_DIR/meta_params.stderr"
+diff -u "$META_PARAMS_DIR/expected.stdout" "$ARTIFACT_DIR/meta_params.stdout"
+echo "PROJECT_MACRO_MODULE_META_PARAMS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
 # The plain command a user types: the default cache directory and no plugin settings.
 (
   cd "$FIXTURE_DIR"

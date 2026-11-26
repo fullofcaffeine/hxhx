@@ -195,6 +195,91 @@ class M14MacroContextWireTest {
 		];
 		require(directives.length == 2, "defined imports: " + directives);
 
+		// Metadata with parameters on a defined field (haxe_ocaml-xie5f), as upstream's UnitBuilder
+		// gives `*Utf8.unit.hx` specs `@:haxe.warning("-WDeprecated")`. Upstream decodes each
+		// parameter as an expression (`decode_meta_entry`, src/macro/macroApi.ml lines 792-795); the
+		// import writes the text the parser stores for the same source.
+		final source = "package spec;\nclass TestMeta extends SpecBase {\n\t@:haxe.warning(\"-WDeprecated\")\n"
+			+ "\t@:probe(1, \"two\", [3, 4], {x: -5}, a.b.C, 'single', \"q\\\"uote\\n\", Macro.build(), -1.5, !true, (\"p\"))\n"
+			+ "\t@:keep\n\tpublic function test() {}\n}\n";
+		final parsedClass = HxModuleDecl.getMainClass(ParserStage.parse(source, "src/spec/TestMeta.hx").getDecl());
+		final parserMetadata = HxFunctionDecl.getMetadata(HxClassDecl.getFunctions(parsedClass)[0]);
+		final metaField:Field = {
+			name: "test",
+			kind: FFun({
+				args: [],
+				ret: null,
+				params: [],
+				expr: macro {}
+			}),
+			pos: p,
+			access: [APublic],
+			meta: [
+				{name: ":haxe.warning", params: [macro "-WDeprecated"], pos: p},
+				{
+					name: ":probe",
+					params: [
+						macro 1,
+						macro "two",
+						macro [3, 4],
+						macro {
+							x: -5
+						},
+						macro a.b.C,
+						macro 'single',
+						macro "q\"uote\n",
+						macro Macro.build(),
+						macro - 1.5,
+						macro !true,
+						macro("p")
+					],
+					pos: p
+				},
+				{name: ":keep", params: [], pos: p}
+			]
+		};
+		final metaType:TypeDefinition = {
+			pack: ["spec"],
+			name: "TestMeta",
+			pos: p,
+			kind: TDClass({pack: [], name: "SpecBase"}),
+			fields: [metaField]
+		};
+		MacroContextWire.readUnit(answer(MacroContextWire.requestDefineModule("spec.TestMeta", [metaType], null, null)));
+		final importedMetadata = HxFunctionDecl.getMetadata(HxClassDecl.getFunctions(HxModuleDecl.getMainClass(ResolvedModule.getParsed(MacroState.drainDefinedModules()[0])
+			.getDecl()))[0]);
+		require(importedMetadata.join("|") == parserMetadata.join("|"),
+			"defined field metadata: hxhx `"
+			+ importedMetadata.join("|")
+			+ "`, parser `"
+			+ parserMetadata.join("|")
+			+ "`");
+		final binop:Field = {
+			name: "test",
+			kind: FFun({
+				args: [],
+				ret: null,
+				params: [],
+				expr: macro {}
+			}),
+			pos: p,
+			access: [APublic],
+			meta: [{name: ":probe", params: [macro 1 + 2], pos: p}]
+		};
+		final binopType:TypeDefinition = {
+			pack: ["spec"],
+			name: "TestBinop",
+			pos: p,
+			kind: TDClass(),
+			fields: [binop]
+		};
+		final unsupportedParameter = failureOf(() -> MacroContextWire.readUnit(answer(MacroContextWire.requestDefineModule("spec.TestBinop", [binopType],
+			null, null))));
+		require(unsupportedParameter != null
+			&& unsupportedParameter.indexOf("macro context: unsupported: a parameter of metadata `@:probe` on field `TestBinop.test`") == 0,
+			"unsupported parameter: "
+			+ unsupportedParameter);
+
 		// defineType defines module `pack.name`; a second definition of one module is rejected.
 		final registry:TypeDefinition = {
 			pack: ["spec"],
