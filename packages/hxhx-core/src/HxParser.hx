@@ -2565,6 +2565,9 @@ class HxParser {
 		if (!cur.kind.match(TLBrace))
 			return false;
 		return switch (peekKind()) {
+			// `macro` is a keyword upstream, so `{ macro : T; }` is a block holding a type quotation.
+			case TIdent("macro"):
+				false;
 			case TIdent(_) | TString(_, _):
 				peekKind2().match(TColon);
 			case _:
@@ -2620,7 +2623,9 @@ class HxParser {
 	function parseBraceExpr():HxExpr {
 		final position = cur.getPos();
 		expect(TLBrace, "'{'");
+		// `macro` is a keyword upstream, so `{ macro : T; }` is a block holding a type quotation.
 		final isAnonLiteral = switch (cur.kind) {
+			case TIdent("macro"): false;
 			case TIdent(_) | TString(_, _): peekKind().match(TColon);
 			case _: false;
 		}

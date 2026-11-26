@@ -1,0 +1,7 @@
+-cp packages/hxhx-core/src
+-cp packages/reflaxe.ocaml/src
+-cp packages/hxhx/src
+-cp scripts/oracle/shared
+-cp test
+-main M14TypeQuotationSyntaxTest
+--interp

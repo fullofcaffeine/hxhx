@@ -213,7 +213,10 @@ class MacroSyntaxExport {
 				throw failure("array comprehensions are not exported yet (haxe_ocaml-20jan)");
 			case ETryCatchRaw(_) | EUnsupported(_):
 				throw failure("unparsed raw syntax cannot be given to a macro");
-			case EMacroExpr(_, _) | EMacroType(_):
+			case EMacroType(typeText):
+				// Upstream turns `macro : T` into construction syntax while it parses.
+				MacroTypeQuotation.expression(typeText, position).expr;
+			case EMacroExpr(_, _):
 				throw failure("macro reification inside a macro argument is not exported yet");
 		};
 	}
