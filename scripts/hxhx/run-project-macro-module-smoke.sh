@@ -424,6 +424,21 @@ require_line define '^expr_macros_expanded=2$'
 diff -u "$DEFINE_DIR/expected.stdout" "$ARTIFACT_DIR/define.stdout"
 echo "PROJECT_MACRO_MODULE_DEFINE:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# A macro whose module holds a runtime type test (Std.isOfType) builds as a plugin, as upstream's
+# test builder does through try/catch (haxe.Exception.caught), and the program prints what
+# upstream prints.
+RUNTIME_TYPE_DIR="$ROOT/test/fixtures/project-macro-runtime-type"
+(
+  cd "$RUNTIME_TYPE_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/runtime_type.oracle.stdout" 2>"$ARTIFACT_DIR/runtime_type.oracle.stderr"
+diff -u "$RUNTIME_TYPE_DIR/expected.stdout" "$ARTIFACT_DIR/runtime_type.oracle.stdout"
+compile_app runtime_type "$RUNTIME_TYPE_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line runtime_type '^expr_macros_expanded=1$'
+"$WORK_DIR/app-runtime_type/out.exe" >"$ARTIFACT_DIR/runtime_type.stdout" 2>"$ARTIFACT_DIR/runtime_type.stderr"
+diff -u "$RUNTIME_TYPE_DIR/expected.stdout" "$ARTIFACT_DIR/runtime_type.stdout"
+echo "PROJECT_MACRO_MODULE_RUNTIME_TYPE:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
 {
   echo "candidate_commit=$CANDIDATE_COMMIT"
   echo "hxhx_bin=$HXHX_BIN_RESOLVED"

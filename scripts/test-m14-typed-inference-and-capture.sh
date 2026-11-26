@@ -70,6 +70,7 @@ haxe test/m14_open_value_test.hxml
 haxe test/m14_optional_field_type_equality_test.hxml
 haxe test/m14_parse_oracle_abstract_constructor_test.hxml
 haxe test/m14_primitive_constructor_effects_test.hxml
+haxe test/m14_project_macro_runtime_type_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_return_if_syntax_test.hxml
 haxe test/m14_stage3_enum_open_record_test.hxml
