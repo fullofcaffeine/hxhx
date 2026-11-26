@@ -186,6 +186,20 @@ class TyAbstractBinaryBinding {
 		return operand != null && operand.admits(expected, actual) ? TyAbstractBinaryArgument.indexed(operand, expected) : null;
 	}
 
+	/**
+		The operator with its effective result type. The catalog keeps the declared signature, whose
+		result is unknown for an operator without a written return type; the method's body supplies
+		it (`TyMethodBodyResults`), as Haxe 4.3.7 types the call `a + b` that `a += b` stands for.
+		A compound assignment needs that result to fit its destination.
+	**/
+	static function withEffectiveResult(index:TyperIndex, info:TyAbstractBinaryOperatorInfo):TyAbstractBinaryOperatorInfo {
+		if (!info.getResultType().hasUnknownComponent())
+			return info;
+		final effective = index.getMethodBodyResults().signature(info.getDeclaration()).getReturnType();
+		return effective.hasUnknownComponent() ? info : new TyAbstractBinaryOperatorInfo(info.getOperator(), info.getDeclaration(), info.getLeftType(),
+			info.getRightType(), effective, info.getIsCommutative());
+	}
+
 	static function bind(match:TyBinaryCandidateMatch, op:String, requiresWriteback:Bool):TyBoundAbstractBinaryOperator {
 		return new TyBoundAbstractBinaryOperator(op, match.info, match.reverseArguments, requiresWriteback, match.sourceLeftArgument,
 			match.sourceRightArgument, match.resultConversion);
@@ -275,13 +289,14 @@ class TyAbstractBinaryBinding {
 			final baseCandidates = collect(index, lookupLeft, rightType, baseOperator);
 			final match = firstMatch(index, baseCandidates, leftType, rightType, filePath, position, indexedLeft);
 			if (match != null) {
-				final resultConversion = TyAbstractBinaryConversion.select(index, leftType, match.info.getResultType());
+				final info = withEffectiveResult(index, match.info);
+				final resultConversion = TyAbstractBinaryConversion.select(index, leftType, info.getResultType());
 				// A selected base operator must fit the destination. Do not silently
 				// select a later declaration merely because its result would fit.
 				if (resultConversion == null)
-					throw noApplicable(op, leftType, rightType, [match.info], filePath, position);
+					throw noApplicable(op, leftType, rightType, [info], filePath, position);
 				return validateBodyless(index, bind({
-					info: match.info,
+					info: info,
 					reverseArguments: match.reverseArguments,
 					sourceLeftArgument: match.sourceLeftArgument,
 					sourceRightArgument: match.sourceRightArgument,
