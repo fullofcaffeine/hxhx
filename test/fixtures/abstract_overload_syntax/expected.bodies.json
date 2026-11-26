@@ -1,0 +1,22 @@
+[
+	{
+		"key": "new",
+		"body": "{\n\tthis = [for (_ in 0 ... length) 0];\n}"
+	},
+	{
+		"key": "new",
+		"body": "{\n\tthis = [for (_ in 0 ... length) value];\n}"
+	},
+	{
+		"key": "sum",
+		"body": "{\n\tvar total = 0;\n\tfor (value in this) total += value;\n\treturn total;\n}"
+	},
+	{
+		"key": "sum",
+		"body": "{\n\tvar total = 0;\n\tfor (value in this) total += value * scale;\n\treturn total;\n}"
+	},
+	{
+		"key": "get_length",
+		"body": "return this.length"
+	}
+]
