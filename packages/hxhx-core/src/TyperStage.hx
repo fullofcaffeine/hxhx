@@ -881,6 +881,7 @@ class TyperStage {
 			final functionEnvironments = new Array<TyFunctionEnv>();
 			final typeResolver:TypedExprTypeResolver = {
 				tracesDisabled: context.hasDefine("no-traces"),
+				functionBind: (expression, position, environment) -> functionBindRewrite(expression, environment, context, position),
 				// Reads the receiver in a copied environment, so the typed-body replay is unchanged.
 				abstractFieldReader: (object, field, position,
 					environment) -> abstractFieldReader(inferExprType(object, environment.copyForInference(), context, position), field, context),
@@ -4082,6 +4083,47 @@ class TyperStage {
 		return declaredMemberReadType(owner, field, false, ctx, receiverType) == null ? reader.getSignature().getName() : null;
 	}
 
+	/**
+		The closure that `f.bind(...)` stands for when `f` is a function value (TyFunctionBind), or null.
+		The callee is typed in a copied environment; the closure then types it once, as its first input.
+		The field name is compared in the body (haxe_ocaml-yuymr).
+	**/
+	static function functionBindRewrite(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<HxExpr> {
+		switch expr {
+			case ECall(EField(callee, field), arguments):
+				if (field != "bind")
+					return null;
+				return ctx.loweredBind(expr,
+					() -> TyFunctionBind.rewrite(callee, arguments, inferExprType(callee, scope.copyForInference(), ctx, pos), pos,
+						(argument, parameter) -> bindArgumentNeedsConversion(argument, parameter, scope, ctx, pos)));
+			case _:
+				return null;
+		}
+	}
+
+	/**
+		Whether `argument` reaches `parameter` only through an abstract's conversion method (`@:from` or
+		`@:to`). Upstream's type_bind runs it once, when the bind runs; a call through a function value
+		cannot publish it yet (TyCallbackArgumentContext), so `f.bind` keeps its older path there
+		(upstream issues/Issue5783). A function literal never needs one here and is not typed twice.
+	**/
+	static function bindArgumentNeedsConversion(argument:HxExpr, parameter:TyType, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Bool {
+		switch argument {
+			case ESourceFunction(_, _, _, _) | ELambda(_, _, _):
+				return false;
+			case _:
+		}
+		final target = parameter.unwrapNull();
+		if (target.hasUnknownComponent())
+			return false;
+		final actual = inferExprType(argument, scope.copyForInference(), ctx, pos);
+		if (actual == null
+			|| actual.hasUnknownComponent()
+			|| TyAssignmentCompatibility.classify(target, actual.unwrapNull(), Unchecked) != Unknown)
+			return false;
+		return TyAbstractMethodConversion.select(ctx.getIndex(), target, actual.unwrapNull()) != null;
+	}
+
 	static function inferExprValueType(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos, expectedResult:Null<TyType>,
 			?capture:TyMethodCallCapture):TyType {
 		switch HxLiteralCharacterCode.resolve(expr) {
@@ -4339,6 +4381,9 @@ class TyperStage {
 				final fieldType = inferExprType(EField(obj, field), scope, ctx, pos);
 				fieldType.isNullable() ? fieldType : TyType.nullable(fieldType);
 			case ECall(sourceCallee, args):
+				final bound = functionBindRewrite(expr, scope, ctx, pos);
+				if (bound != null)
+					return inferExprType(bound, scope, ctx, pos, expectedResult);
 				if (TyTraceCall.isDisabled(expr, ctx.hasDefine("no-traces")))
 					return TyType.fromHintText("Void");
 				if (TyTraceCall.isLanguageCall(expr)) {

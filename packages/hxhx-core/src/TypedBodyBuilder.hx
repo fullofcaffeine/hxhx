@@ -1010,6 +1010,10 @@ class TypedBodyBuilder {
 				TypedExpr.nullSafeFieldRead(buildExpr(object, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver), field,
 					nodeType, position);
 			case ECall(callee, arguments):
+				final bound = typeResolver == null
+					|| environment == null ? null : typeResolver.functionBind(expression, diagnosticPosition, environment);
+				if (bound != null)
+					return buildExpr(bound, position, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected);
 				if (typeResolver != null && TyTraceCall.isLanguageCall(expression))
 					return TypedExpr.traceCall(buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver),
 						position);

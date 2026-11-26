@@ -3,6 +3,9 @@ typedef TypedExprTypeResolver = {
 	/** Request-local language policy, applied before operand inference and binding replay. */
 	final tracesDisabled:Bool;
 
+	/** The closure that `f.bind(...)` stands for on a function value (`TyFunctionBind`); null otherwise. */
+	final functionBind:(expression:HxExpr, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> Null<HxExpr>;
+
 	/** The `@:op(a.b)` method name that reads `object.field`, when `field` is no member of its abstract. */
 	final abstractFieldReader:(object:HxExpr, field:String, diagnosticPosition:HxPos, environment:TyFunctionEnv) -> Null<String>;
 

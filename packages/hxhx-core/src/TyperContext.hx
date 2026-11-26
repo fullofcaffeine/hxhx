@@ -26,6 +26,9 @@ class TyperContext {
 	final inferredReturnTypes:haxe.ds.StringMap<TyType>;
 	final loweredQuotations:Array<{quote:HxExpr, lowered:HxExpr}>;
 
+	/** `f.bind(...)` calls and the closure each stands for (null when it is no function bind). */
+	final loweredBinds:Array<{call:HxExpr, lowered:Null<HxExpr>}>;
+
 	public function new(index:TyperIndex, filePath:String, modulePath:String, packagePath:String, directives:Array<HxModuleDirective>, classFullName:String,
 			?loader:LazyTypeLoader, ?resolvedDirectives:Array<TyModuleDirective>) {
 		this.index = index;
@@ -38,6 +41,22 @@ class TyperContext {
 		this.classFullName = classFullName == null ? "" : classFullName;
 		this.inferredReturnTypes = new haxe.ds.StringMap<TyType>();
 		this.loweredQuotations = [];
+		this.loweredBinds = [];
+	}
+
+	/**
+		The closure one `f.bind(...)` call stands for, built once per call node (haxe_ocaml-kee1x).
+		As with `loweredQuotation`, inference and typed-body building must share one tree, because
+		inference records its facts by expression identity. `lower` runs on the first request and may
+		return null for a call that is not a function bind.
+	**/
+	public function loweredBind(call:HxExpr, lower:() -> Null<HxExpr>):Null<HxExpr> {
+		for (entry in loweredBinds)
+			if (entry.call == call)
+				return entry.lowered;
+		final lowered = lower();
+		loweredBinds.push({call: call, lowered: lowered});
+		return lowered;
 	}
 
 	/**
