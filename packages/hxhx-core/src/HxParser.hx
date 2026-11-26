@@ -282,9 +282,10 @@ class HxParser {
 
 		Semantic metadata loaders use this stricter entry point so malformed text
 		cannot be accepted merely because a valid expression prefix was parsed.
+		`authoredSyntax` keeps upstream syntax as written, as `parseAuthored` does for modules.
 	**/
-	public static function parseCompleteExprText(source:String):HxExpr {
-		final parser = new HxParser(source);
+	public static function parseCompleteExprText(source:String, authoredSyntax:Bool = false):HxExpr {
+		final parser = new HxParser(source, authoredSyntax);
 		final expression = parser.parseExpr(() -> parser.cur.kind.match(TEof));
 		if (!parser.cur.kind.match(TEof))
 			parser.fail("Unexpected trailing input after expression");

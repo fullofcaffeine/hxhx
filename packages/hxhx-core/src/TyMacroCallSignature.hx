@@ -22,7 +22,8 @@
 	How
 	- The declaration and its stored signature stay unchanged: the macro body
 	  still sees its declared `Expr` and `Array<Expr>` types. Only the signature
-	  that call selection scores is rewritten. Parameters with other types, such
+	  that call selection scores is rewritten, starting from the written signature
+	  (`written`) even in a target compile. Parameters with other types, such
 	  as `String` constants, keep their declared types and ordinary checks.
  */
 final class TyMacroCallSignature {
@@ -31,6 +32,15 @@ final class TyMacroCallSignature {
 	/** A declaration written with the `macro` modifier. */
 	public static function isMacro(declaration:Null<TyDeclarationInfo>):Bool
 		return declaration != null && declaration.getMetadata().indexOf(MACRO_METADATA) >= 0;
+
+	/**
+		The signature a call to `declaration` starts from: a macro's written signature
+		(`TyDeclarationInfo.getMacroSignature()`), also where the compile types the macro through
+		its target view (`TyMacroTargetView`), because a call passes syntax to the macro.
+		`signature` for every other declaration.
+	**/
+	public static function written(declaration:Null<TyDeclarationInfo>, signature:TyFunSig):TyFunSig
+		return isMacro(declaration) ? declaration.getMacroSignature() : signature;
 
 	/**
 		Rewrite a resolved macro signature into the contract its callers satisfy.

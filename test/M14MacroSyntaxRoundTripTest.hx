@@ -453,7 +453,46 @@ class M14MacroSyntaxRoundTripTest {
 		});
 	}
 
+	/**
+		Structure types with method fields round-trip, as upstream's `tests/unit/src/unitstd/
+		AnonFieldAccess.unit.hx` writes them (haxe_ocaml-lsk9z). Upstream reads a structure body as
+		class fields (`src/syntax/grammar.mly`, lines 688-698 and 905-920 in Haxe 4.3.7): a method field
+		is `FFun` with no body. The text is written to a file so positions have a line table.
+	**/
+	static function anonymousMethodFields():Void {
+		final file = ".tmp/m14_anonymous_method_fields.hx";
+		final code = [
+			"(([1]:{function shift ():Null<Int>;}).shift() == 1)",
+			"(([]:{function push (x:Int):Int;}).push(1) == 1)",
+			"(([1,2]:{function filter (s:Int->Bool):Array<Int>;}).filter(function (x) return x == 1).length == 1)",
+			"(([1]:{function map <T>(s:Int->T):Array<T>;}).map(function (x) return x+1)[0] == 2)",
+			"(x:{var a:Int; final b:String; var ?c:Int; var d(get, set):Int;})",
+			"(x:{public var a:Int; private function f(a:Int, ?b:String):Void;})",
+			"(x:{function g<T:Iterable<Int>>(t:T):T; function k<A, B>(a:A, b:B):A;})",
+			"(x:{a:Int, ?b:String})"
+		];
+		sys.FileSystem.createDirectory(".tmp");
+		for (text in code) {
+			sys.io.File.saveContent(file, text);
+			roundTrip(file, HxParser.parseExprText(text));
+		}
+		final p:Position = {file: file, min: 0, max: 0};
+		requireFailure("structure method body", "", "has a body", () -> {
+			new MacroSyntaxImport(new MacroSyntaxPositions(file)).result({
+				expr: ECheckType({expr: EConst(CIdent("x")), pos: p}, TAnonymous([
+					{
+						name: "f",
+						kind: FFun({args: [], ret: null, expr: {expr: EConst(CInt("1")), pos: p}}),
+						pos: p
+					}
+				])),
+				pos: p
+			});
+		});
+	}
+
 	static function main():Void {
+		anonymousMethodFields();
 		integerConstantImport();
 		identityShape();
 		whileShape();

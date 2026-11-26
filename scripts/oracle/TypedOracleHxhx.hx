@@ -82,7 +82,7 @@ class TypedOracleHxhx {
 		return null;
 	}
 
-	static function signature(fn:TypedFunction):String {
+	public static function signature(fn:TypedFunction):String {
 		final declaration = fn.getDeclaration();
 		if (declaration == null)
 			throw "typed function has no declaration";
