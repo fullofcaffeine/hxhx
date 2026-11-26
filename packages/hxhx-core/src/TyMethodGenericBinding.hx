@@ -77,8 +77,10 @@ class TyMethodGenericBinding {
 		final found = bindings(signature, arguments.types, arguments.types.length, inferableTypeParameters(declaration), index);
 		// Conflicting evidence binds nothing; each bound then depends on its own arguments.
 		final inferred:haxe.ds.StringMap<TyType> = found == null ? new haxe.ds.StringMap<TyType>() : found;
-		if (found != null)
+		if (found != null) {
 			closeFromDependentBounds(declaration, signature, arguments, applyBound, inferred, index);
+			closeUnreached(declaration, signature, arguments, applyBound, inferred);
+		}
 		final nullOpen = parameters.filter(parameter -> !inferred.exists(parameter.getCanonicalKey())
 			&& evidence(signature, arguments, parameter).match(NullOnly));
 		final wildcards = new haxe.ds.StringMap<TyType>();
@@ -92,7 +94,8 @@ class TyMethodGenericBinding {
 				if (bound.hasUnknownComponent() || bound.isUnresolved())
 					return failure(signature, parameter);
 				if (supplied == null) {
-					if (evidence(signature, arguments, parameter).match(Constraining))
+					if (evidence(signature, arguments, parameter).match(Constraining)
+						&& !reachesOnlyOpenPositions(signature, arguments, parameter))
 						return failure(signature, parameter);
 					continue;
 				}
@@ -183,6 +186,134 @@ class TyMethodGenericBinding {
 		return actual;
 	}
 
+	/**
+		Give each unreached parameter its bound once the bound is known, in place.
+
+		Upstream types a constrained parameter that no argument mentions as a monomorph carrying
+		its bounds (TestConstrainedMonomorphs), so `merge<A:{}, B:{}, C:A & B>(a, b):C` returns a
+		value with A's and B's fields. hxhx uses the bound itself: a single bound as written, and an
+		intersection of structures as one structure with every field. A bound that still names an
+		unbound parameter, or an intersection hxhx cannot represent (nominal parts, or one field
+		with two types), leaves the parameter open. The narrowing that upstream's monomorph still
+		allows is haxe_ocaml-2darh. Repeat while a newly closed parameter closes another (`D:C`).
+	**/
+	static function closeUnreached(declaration:TyDeclarationInfo, signature:TyFunSig, arguments:TyBoundArguments, applyBound:TyType->TyType,
+			inferred:haxe.ds.StringMap<TyType>):Void {
+		final constraints = declaration.getResolvedTypeParameterConstraints();
+		final parameters = declaration.getTypeParameterIds();
+		var changed = true;
+		while (changed) {
+			changed = false;
+			for (parameter in parameters) {
+				final key = parameter.getCanonicalKey();
+				final bounds = constraints.get(key);
+				if (inferred.exists(key)
+					|| bounds == null
+					|| bounds.length == 0
+					|| !evidence(signature, arguments, parameter).match(Unreached))
+					continue;
+				final known = new Array<TyType>();
+				for (constraint in bounds) {
+					final bound = applyBound(constraint);
+					if (bound.isUnresolved() || hasUnbound(bound, parameters, inferred))
+						break;
+					known.push(substitute(bound, parameters, inferred));
+				}
+				final closed = known.length == bounds.length ? boundIntersection(known) : null;
+				if (closed != null) {
+					inferred.set(key, closed);
+					changed = true;
+				}
+			}
+		}
+	}
+
+	/** One bound as written; several structural bounds as one structure; otherwise null. **/
+	static function boundIntersection(bounds:Array<TyType>):Null<TyType> {
+		if (bounds.length == 1)
+			return bounds[0].hasUnknownComponent() ? null : bounds[0];
+		final fields = new Array<TyAnonymousField>();
+		for (bound in bounds) {
+			final structure = TyAliasExpansion.reveal(bound);
+			if (!structure.isAnonymous() || structure.hasUnknownComponent())
+				return null;
+			for (field in structure.getAnonymousFields()) {
+				final existing = Lambda.find(fields, other -> other.name == field.name);
+				if (existing == null)
+					fields.push(field);
+				else if (existing.type.getSemanticKey() != field.type.getSemanticKey())
+					return null;
+			}
+		}
+		return TyType.declaredAnonymous(fields);
+	}
+
+	/**
+		Whether every argument position that names `parameter` holds an open type, such as the
+		untyped parameter of a lambda (`foo<T:{}>(cb:T->Void)` called with `function(res) ...`).
+		Upstream binds the parameter to that open type, which its bound accepts later; it fixes no
+		type here.
+	**/
+	static function reachesOnlyOpenPositions(signature:TyFunSig, arguments:TyBoundArguments, parameter:TyTypeParameterId):Bool {
+		var reached = false;
+		var concrete = false;
+		function visit(expected:TyType, actual:TyType):Void {
+			if (expected == null || actual == null || concrete)
+				return;
+			final identity = expected.getTypeParameterIdentity();
+			if (identity != null && identity.equals(parameter)) {
+				reached = true;
+				if (!actual.isUnknown())
+					concrete = true;
+				return;
+			}
+			if (expected.isNullable() || actual.isNullable()) {
+				visit(expected.unwrapNull(), actual.unwrapNull());
+				return;
+			}
+			if (expected.isFunction() && actual.isFunction()) {
+				final expectedArguments = expected.getFunctionArguments();
+				final actualArguments = actual.getFunctionArguments();
+				if (expectedArguments.length != actualArguments.length) {
+					concrete = true;
+					return;
+				}
+				for (slot in 0...expectedArguments.length)
+					visit(expectedArguments[slot], actualArguments[slot]);
+				visit(expected.getFunctionReturn(), actual.getFunctionReturn());
+				return;
+			}
+			final expectedArguments = expected.getTypeArguments();
+			final actualArguments = actual.getTypeArguments();
+			if (expectedArguments.length > 0
+				&& expectedArguments.length == actualArguments.length
+				&& sameTypeConstructor(expected, actual)) {
+				for (slot in 0...expectedArguments.length)
+					visit(expectedArguments[slot], actualArguments[slot]);
+				return;
+			}
+			if (hasParameter(expected, parameter))
+				concrete = true;
+		}
+		final expected = signature.getArgs();
+		for (slot in 0...arguments.types.length)
+			if (slot < expected.length)
+				visit(expected[slot], arguments.types[slot]);
+		return reached && !concrete;
+	}
+
+	static function hasParameter(type:TyType, parameter:TyTypeParameterId):Bool {
+		final identity = type.getTypeParameterIdentity();
+		if (identity != null && identity.equals(parameter))
+			return true;
+		if (type.isNullable())
+			return hasParameter(type.unwrapNull(), parameter);
+		for (child in type.getTypeArguments().concat(type.getFunctionArguments()).concat(type.getAnonymousFieldTypes()))
+			if (hasParameter(child, parameter))
+				return true;
+		return type.isFunction() && hasParameter(type.getFunctionReturn(), parameter);
+	}
+
 	static function failure(signature:TyFunSig, parameter:TyTypeParameterId):String
 		return "Constraint check failure for " + signature.getName() + "." + parameter.getName();
 
@@ -202,7 +333,7 @@ class TyMethodGenericBinding {
 		while (changed) {
 			changed = false;
 			final open = parameters.filter(parameter -> !inferred.exists(parameter.getCanonicalKey())
-				&& evidence(signature, arguments, parameter).match(DynamicOnly));
+				&& evidence(signature, arguments, parameter).match(DynamicOnly | Unreached));
 			if (open.length == 0)
 				return;
 			for (parameter in parameters) {
@@ -258,7 +389,7 @@ class TyMethodGenericBinding {
 					return Constraining;
 				found = true;
 			}
-		return !found ? Constraining : sawNull ? NullOnly : DynamicOnly;
+		return !found ? Unreached : sawNull ? NullOnly : DynamicOnly;
 	}
 
 	/** Whether this exact semantic type is one of the inferable method parameters. **/
@@ -535,6 +666,7 @@ class TyMethodGenericBinding {
 		final inferred = bindings(signature, actual, actual.length, inferableTypeParameters(declaration), index);
 		if (inferred == null)
 			throw "selected generic call has inconsistent arguments";
+		closeUnreached(declaration, signature, resultArguments(actual), bound -> bound, inferred);
 		// A preview such as Array<Unknown> is not a concrete binding. Preserve
 		// this method binder so direct-call inference links it to the argument's
 		// existing variables instead of freezing Unknown inside a copied type.
@@ -562,10 +694,16 @@ class TyMethodGenericBinding {
 		final inferred = bindings(signature, argTypes, argTypes.length, inferableTypeParameters(declaration), index);
 		if (inferred != null && hasUnbound(signature.getReturnType(), methodTypeParameters, inferred))
 			closeWithDynamicEvidence(signature, argTypes, methodTypeParameters, inferred);
+		if (inferred != null && hasUnbound(signature.getReturnType(), methodTypeParameters, inferred))
+			closeUnreached(declaration, signature, resultArguments(argTypes), bound -> bound, inferred);
 		if (inferred == null || hasUnbound(signature.getReturnType(), methodTypeParameters, inferred))
 			return TyType.unknown();
 		return substitute(signature.getReturnType(), methodTypeParameters, inferred);
 	}
+
+	/** Result specialization reads the same argument evidence as the bound check. **/
+	static function resultArguments(argTypes:Array<TyType>):TyBoundArguments
+		return new TyBoundArguments(argTypes, [for (type in argTypes) type.isOpenMethodParameter()]);
 
 	/**
 		Dynamic arguments are not binding evidence, so `make<T>(e:Enum<T>, ...)` called with
@@ -637,8 +775,15 @@ private class TyBoundArguments {
 
 /** What the arguments that reach one unbound method parameter say about its type. **/
 private enum TyParameterEvidence {
-	/** A concrete, unresolved, or missing argument: the parameter must be bound to pass its bounds. **/
+	/** A concrete or unresolved argument: the parameter must be bound to pass its bounds. **/
 	Constraining;
+
+	/**
+		No argument mentions it: it appears only in the result or in another parameter's bound.
+		Upstream keeps it as a monomorph carrying its bounds; `closeUnreached` gives it those
+		bounds where they are known (haxe_ocaml-lizyw).
+	**/
+	Unreached;
 
 	/** Only Dynamic or open slots reach it: a dependent bound may close it. **/
 	DynamicOnly;
