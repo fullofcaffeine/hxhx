@@ -342,6 +342,36 @@ compile_app anon_methods "$ANON_METHODS_DIR/src" Main --hxhx-macro-cache "$CACHE
 require_line anon_methods '^expr_macros_expanded=6$'
 echo "PROJECT_MACRO_MODULE_ANON_METHODS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# Text formatted by a macro with MacroStringTools.formatString (upstream's format_string, which
+# unit.HelperMacros.pipeMarkupLiteral uses): the program prints upstream's values and part ranges.
+# An empty `${ }` and an unclosed `${` fail with upstream's message at upstream's position.
+FORMAT_DIR="$ROOT/test/fixtures/project-macro-format-string"
+(
+  cd "$FORMAT_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/format.oracle.stdout" 2>"$ARTIFACT_DIR/format.oracle.stderr"
+diff -u "$FORMAT_DIR/expected.stdout" "$ARTIFACT_DIR/format.oracle.stdout"
+for format_case in empty unclosed; do
+  set +e
+  (
+    cd "$FORMAT_DIR"
+    haxe "oracle-$format_case.hxml"
+  ) >"$ARTIFACT_DIR/format_$format_case.oracle.stdout" 2>"$ARTIFACT_DIR/format_$format_case.oracle.stderr"
+  set -e
+  diff -u "$FORMAT_DIR/expected-$format_case.stderr" "$ARTIFACT_DIR/format_$format_case.oracle.stderr"
+done
+compile_app format "$FORMAT_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line format '^expr_macros_expanded=20$'
+"$WORK_DIR/app-format/out.exe" >"$ARTIFACT_DIR/format.stdout" 2>"$ARTIFACT_DIR/format.stderr"
+diff -u "$FORMAT_DIR/expected.stdout" "$ARTIFACT_DIR/format.stdout"
+expect_failure format_empty "$FORMAT_DIR/src" EmptyMain "$(cat "$FORMAT_DIR/expected-empty.stderr")" \
+  --hxhx-macro-cache "$CACHE_DIR"
+diff -u "$FORMAT_DIR/expected-empty.stderr" "$ARTIFACT_DIR/format_empty.compile.stderr"
+expect_failure format_unclosed "$FORMAT_DIR/src" UnclosedMain "$(cat "$FORMAT_DIR/expected-unclosed.stderr")" \
+  --hxhx-macro-cache "$CACHE_DIR"
+diff -u "$FORMAT_DIR/expected-unclosed.stderr" "$ARTIFACT_DIR/format_unclosed.compile.stderr"
+echo "PROJECT_MACRO_MODULE_FORMAT_STRING:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
 # A macro whose body is written with reification (`macro { ... }`, `$v{}`, `$b{}`, `$a{}`, `$e{}`,
 # field splices, `@:pos`) builds as a plugin and the program prints what upstream prints.
 REIFICATION_DIR="$ROOT/test/fixtures/project-macro-reification"
