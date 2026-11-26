@@ -39,6 +39,7 @@ haxe test/m14_cast_pattern_syntax_test.hxml
 haxe test/m14_char_code_pattern_syntax_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
 haxe test/m14_compiler_json_value_integration_test.hxml
+haxe test/m14_conditional_operands_test.hxml
 haxe test/m14_discarded_control_test.hxml
 haxe test/m14_dynamic_generic_evidence_test.hxml
 haxe test/m14_dynamic_join_transparent_test.hxml

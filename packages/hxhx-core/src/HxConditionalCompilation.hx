@@ -870,6 +870,9 @@ private class ExprParser {
 	final observedAccessByName:Null<haxe.ds.StringMap<CompilerConditionalDefineAccess>>;
 	var cur:Token;
 
+	/** Above zero while an operand that cannot change the result is read. */
+	var skipDepth = 0;
+
 	public function new(expr:String, defines:haxe.ds.StringMap<String>, ?observedAccessByName:haxe.ds.StringMap<CompilerConditionalDefineAccess>) {
 		this.lex = new ExprLexer(expr);
 		this.defines = defines == null ? new haxe.ds.StringMap<String>() : defines;
@@ -891,7 +894,15 @@ private class ExprParser {
 			switch (cur) {
 				case TOr:
 					bump();
-					left = left || parseAnd();
+					// Read the right operand even when the left side decides the result, so its
+					// tokens are consumed. As in upstream's evaluation, a decided operand observes no define.
+					if (left) {
+						skipDepth++;
+						parseAnd();
+						skipDepth--;
+					} else {
+						left = parseAnd();
+					}
 				case _:
 					return left;
 			}
@@ -904,7 +915,13 @@ private class ExprParser {
 			switch (cur) {
 				case TAnd:
 					bump();
-					left = left && parseUnary();
+					if (left) {
+						left = parseUnary();
+					} else {
+						skipDepth++;
+						parseUnary();
+						skipDepth--;
+					}
 				case _:
 					return left;
 			}
@@ -997,7 +1014,7 @@ private class ExprParser {
 	}
 
 	inline function observe(name:String, access:CompilerConditionalDefineAccess):Void {
-		if (observedAccessByName == null || name == null || name.length == 0)
+		if (skipDepth > 0 || observedAccessByName == null || name == null || name.length == 0)
 			return;
 		final previous = observedAccessByName.get(name);
 		if (previous == null || access == CompilerConditionalDefineAccess.Value)
