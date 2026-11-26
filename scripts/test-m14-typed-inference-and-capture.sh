@@ -42,6 +42,7 @@ haxe test/m14_class_argument_bounds_test.hxml
 haxe test/m14_compiler_json_value_integration_test.hxml
 haxe test/m14_conditional_mid_line_block_test.hxml
 haxe test/m14_constrained_result_test.hxml
+haxe test/m14_constraint_open_parts_test.hxml
 haxe test/m14_discarded_control_test.hxml
 haxe test/m14_dynamic_generic_evidence_test.hxml
 haxe test/m14_dynamic_join_transparent_test.hxml
