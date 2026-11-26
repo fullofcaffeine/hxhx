@@ -1,0 +1,10 @@
+{
+	"plain": "{\n\treturn (TPath({ pack : [], name : \"Int\", params : [] }) : haxe.macro.Expr.ComplexType);\n}",
+	"nullable": "return (TPath({ pack : [], name : \"Null\", params : [TPType(t)] }) : haxe.macro.Expr.ComplexType)",
+	"spliced": "{\n\treturn (t : haxe.macro.Expr.ComplexType);\n}",
+	"nested": "{\n\treturn (TPath({ pack : [], name : \"Array\", params : [TPType(TPath({ pack : [], name : \"Map\", params : [TPType(TPath({ pack : [], name : \"String\", params : [] })), TPType(TPath({ pack : [], name : \"Int\", params : [] }))] }))] }) : haxe.macro.Expr.ComplexType);\n}",
+	"subType": "{\n\treturn (TPath({ pack : [\"haxe\", \"macro\"], name : \"Expr\", params : [], sub : \"ComplexType\" }) : haxe.macro.Expr.ComplexType);\n}",
+	"replaced": "{\n\treturn (TPath({ pack : tp.pack, name : tp.name, sub : tp.sub, params : [TPType(TPath({ pack : [], name : \"Bool\", params : [] }))] }) : haxe.macro.Expr.ComplexType);\n}",
+	"functions": "{\n\treturn [(TFunction([TPath({ pack : [], name : \"Int\", params : [] })], TPath({ pack : [], name : \"String\", params : [] })) : haxe.macro.Expr.ComplexType), (TFunction([TPath({ pack : [], name : \"Int\", params : [] }), TOptional(TPath({ pack : [], name : \"String\", params : [] }))], TPath({ pack : [], name : \"Void\", params : [] })) : haxe.macro.Expr.ComplexType), (TFunction([TNamed(\"a\", TPath({ pack : [], name : \"Int\", params : [] })), TNamed(\"b\", TPath({ pack : [], name : \"Float\", params : [] }))], TPath({ pack : [], name : \"Bool\", params : [] })) : haxe.macro.Expr.ComplexType), (TFunction([TParent(TOptional(TPath({ pack : [], name : \"Int\", params : [] })))], TPath({ pack : [], name : \"Void\", params : [] })) : haxe.macro.Expr.ComplexType)];\n}",
+	"others": "{\n\treturn [(TParent(TPath({ pack : [], name : \"Int\", params : [] })) : haxe.macro.Expr.ComplexType), (TIntersection([TPath({ pack : [], name : \"Main\", params : [] }), TPath({ pack : [], name : \"Printer\", params : [] })]) : haxe.macro.Expr.ComplexType)];\n}"
+}

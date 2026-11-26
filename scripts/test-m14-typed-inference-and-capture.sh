@@ -73,6 +73,7 @@ haxe test/m14_structural_field_over_extension_test.hxml
 haxe test/m14_target_macro_body_skip_test.hxml
 haxe test/m14_try_assignment_value_test.hxml
 haxe test/m14_type_parameter_bounds_test.hxml
+haxe test/m14_type_quotation_syntax_test.hxml
 haxe test/m14_typed_backend_capture_catalog_test.hxml
 haxe test/m14_typed_capture_lowering_test.hxml
 haxe test/m14_typed_capture_plan_test.hxml
