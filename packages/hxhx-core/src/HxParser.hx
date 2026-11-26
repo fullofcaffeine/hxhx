@@ -628,8 +628,9 @@ class HxParser {
 				EMacroExpr(offsetFunctionBodyExprColumns(inner, delta), wrappers);
 			case ELambda(arguments, body, signature):
 				ELambda(arguments, offsetFunctionBodyExprColumns(body, delta), signature);
-			case ESwitch(scrutinee, patterns, expressions):
-				ESwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, [for (branch in expressions) offsetFunctionBodyExprColumns(branch, delta)]);
+			case ESwitch(scrutinee, patterns, expressions, defaultArm):
+				ESwitch(offsetFunctionBodyExprColumns(scrutinee, delta), patterns, [for (branch in expressions) offsetFunctionBodyExprColumns(branch, delta)],
+					defaultArm);
 			case ENew(typePath, arguments):
 				ENew(typePath, [for (argument in arguments) offsetFunctionBodyExprColumns(argument, delta)]);
 			case EUnop(op, fixity, inner):
@@ -908,7 +909,8 @@ class HxParser {
 				ors = [first];
 			ors.push(parseSwitchPatternOr());
 		}
-		return ors == null ? first : POr(ors);
+		// Upstream keeps `case A, B:` as two case values; the flag keeps that spelling for macros.
+		return ors == null ? first : POr(ors, true);
 	}
 
 	function parseSwitchPatternOr():HxSwitchPattern {
@@ -3570,11 +3572,14 @@ class HxParser {
 
 		final patterns = new Array<HxSwitchPattern>();
 		final exprs = new Array<HxExpr>();
+		var defaultArm:Null<Int> = null;
 		while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
 			final pat:HxSwitchPattern = if (acceptKeyword(KCase)) {
 				parseSwitchPattern();
 			} else if (acceptKeyword(KDefault)) {
-				// Haxe: `default:` (no pattern). Bring-up: treat as wildcard.
+				// Haxe: `default:` (no pattern). It matches like a wildcard; upstream keeps it as the
+				// switch's separate default, so the arm index is kept for macros.
+				defaultArm = patterns.length;
 				PWildcard;
 			} else {
 				fail("Expected switch case or default");
@@ -3603,7 +3608,7 @@ class HxParser {
 			exprs.push(ESourceGroup(armExpressions, armPosition));
 		}
 		expect(TRBrace, "'}' after switch arms");
-		return ESwitch(scrutinee, patterns, exprs);
+		return ESwitch(scrutinee, patterns, exprs, defaultArm);
 	}
 
 	function blockExprFromStmts(stmts:Array<HxStmt>):HxExpr {

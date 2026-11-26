@@ -207,8 +207,10 @@ class MacroSyntaxExport {
 				EBreak;
 			case EContinue(_):
 				EContinue;
-			case ESwitch(_, _, _) | ESwitchRaw(_):
-				throw failure("switch expressions are not exported yet; their patterns have no public macro form here");
+			case ESwitch(subject, patterns, bodies, defaultArm):
+				switchDefinition(subject, patterns, bodies, defaultArm, position);
+			case ESwitchRaw(_):
+				throw failure("an unparsed switch has no public macro form");
 			case EArrayComprehension(_, _, _, _):
 				throw failure("array comprehensions are not exported yet (haxe_ocaml-20jan)");
 			case ETryCatchRaw(_) | EUnsupported(_):
@@ -219,6 +221,104 @@ class MacroSyntaxExport {
 			case EMacroExpr(_, _):
 				throw failure("macro reification inside a macro argument is not exported yet");
 		};
+	}
+
+	/**
+		`switch e { case p1, p2 if (g): body; default: d }` as upstream parses it: one case per arm with
+		its pattern expressions (a comma list gives several), its guard, and its body as a block, or
+		null when the arm is empty; the arm written `default:` is the separate default. Every pattern
+		node receives the position of its arm's body, which lets an empty arm come back with its
+		position when the syntax is imported.
+	**/
+	function switchDefinition(subject:HxExpr, patterns:Array<HxSwitchPattern>, bodies:Array<HxExpr>, defaultArm:Null<Int>, position:Position):ExprDef {
+		if (patterns.length != bodies.length)
+			throw failure("switch patterns and bodies differ in length");
+		final cases = new Array<Case>();
+		var otherwise:Null<Expr> = null;
+		for (index in 0...patterns.length) {
+			final body = bodies[index];
+			final armPosition = switch body {
+				case ESourceGroup(_, own) if (MacroSyntaxPositions.isKnown(own)): positions.export(own);
+				case _: position;
+			};
+			final empty = body.match(ESourceGroup([], _));
+			if (defaultArm != null && index == defaultArm) {
+				// Upstream's macro view of an empty `default:` is a null default, as for no default.
+				otherwise = empty ? null : child(body, armPosition);
+				continue;
+			}
+			var pattern = patterns[index];
+			var guard:Null<Expr> = null;
+			switch pattern {
+				case PGuard(inner, condition):
+					pattern = inner;
+					guard = child(condition, armPosition);
+				case _:
+			}
+			final values = switch pattern {
+				case POr(alternatives, true): [for (alternative in alternatives) patternExpr(alternative, armPosition)];
+				case _: [patternExpr(pattern, armPosition)];
+			};
+			cases.push({values: values, guard: guard, expr: empty ? null : child(body, armPosition)});
+		}
+		return ESwitch(child(subject, position), cases, otherwise);
+	}
+
+	/** One case pattern as the expression upstream parses. */
+	function patternExpr(pattern:HxSwitchPattern, position:Position):Expr {
+		inline function make(definition:ExprDef):Expr
+			return {expr: definition, pos: position};
+		function path(name:String):Expr {
+			final parts = name.split(".");
+			var result = make(EConst(CIdent(parts[0])));
+			for (index in 1...parts.length)
+				result = make(EField(result, parts[index], Normal));
+			return result;
+		}
+		final definition:ExprDef = switch pattern {
+			case PNull: EConst(CIdent("null"));
+			case PWildcard: EConst(CIdent("_"));
+			case PBool(value): EConst(CIdent(value ? "true" : "false"));
+			case PString(value): EConst(CString(value, DoubleQuotes));
+			case PInt(_, text) if (text != null): EField(make(EConst(CString(text, DoubleQuotes))), "code", Normal);
+			case PInt(value, _): EConst(CInt(Std.string(value), null));
+			case PFloat(text): EConst(CFloat(text, null));
+			case PEnumValue(name, _) if (StringTools.startsWith(name, "macro:")):
+				throw failure("a `macro :T` case pattern is not exported yet");
+			case PEnumValue(name, true): ECast(path(name), null);
+			case PEnumValue(name, _): path(name).expr;
+			case PEnumExtract(name, arguments, _): ECall(path(name), [for (argument in arguments) patternExpr(argument, position)]);
+			// Upstream parses `{}` as an empty block, not an empty object.
+			case PObject([], []): EBlock([]);
+			case PObject(names, fields):
+				if (names.length != fields.length)
+					throw failure("object pattern names and patterns differ in length");
+				EObjectDecl([
+					for (index in 0...names.length)
+						{field: names[index], expr: patternExpr(fields[index], position), quotes: Unquoted}
+				]);
+			// `case var x:` and `case x = _:` read the same; upstream's spelling is `var x`.
+			case PCapture(name, PWildcard): EVars([{name: name, type: null, expr: null}]);
+			case PCapture(name, inner): EBinop(OpAssign, make(EConst(CIdent(name))), patternExpr(inner, position));
+			case PArray(items): EArrayDecl([for (item in items) patternExpr(item, position)]);
+			case PBind(name): EConst(CIdent(name));
+			case POr(alternatives, _):
+				if (alternatives.length == 0)
+					throw failure("an empty or-pattern");
+				function alternative(item:HxSwitchPattern):Expr {
+					final exported = patternExpr(item, position);
+					// The parser drops written parentheses but keeps their grouping as a nested or-pattern.
+					return item.match(POr(_, _)) ? make(EParenthesis(exported)) : exported;
+				}
+				var combined = alternative(alternatives[0]);
+				for (index in 1...alternatives.length)
+					combined = make(EBinop(OpOr, combined, alternative(alternatives[index])));
+				combined.expr;
+			case PGuard(_, _): throw failure("a guard nested inside a pattern");
+			case PExtractor(_, _): throw failure("extractor patterns are not exported to macros yet");
+			case PUnsupportedPattern(_): throw failure("the parser did not understand this pattern");
+		};
+		return make(definition);
 	}
 
 	function variable(declaration:HxExpr, inherited:Position):Var {

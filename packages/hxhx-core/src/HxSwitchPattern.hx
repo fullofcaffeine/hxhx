@@ -64,5 +64,9 @@ enum HxSwitchPattern {
 		  support harness-style code like:
 		  `case 'Linux' | 'Windows': ...`
 	**/
-	POr(patterns:Array<HxSwitchPattern>);
+	/**
+		`caseList` is true for a comma-separated case list (`case A, B:`), which upstream keeps as
+		several case values, and null for `A | B`. Both match the same values.
+	**/
+	POr(patterns:Array<HxSwitchPattern>, ?caseList:Bool);
 }

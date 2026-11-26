@@ -229,8 +229,10 @@ enum HxExpr {
 		  OCaml bootstrap module cycle (`HxStmt` already references `HxExpr`).
 		- Full Haxe switch semantics are deferred; see `HxSwitchPattern` docs for the
 		  supported subset.
+		- `defaultArm` is the index of the arm written as `default:`, which matches like `case _:`
+		  but which upstream keeps as the switch's separate default; null when there is none.
 	**/
-	ESwitch(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>);
+	ESwitch(scrutinee:HxExpr, patterns:Array<HxSwitchPattern>, exprs:Array<HxExpr>, ?defaultArm:Int);
 
 	/**
 		Constructor call: `new TypePath(args...)`.
