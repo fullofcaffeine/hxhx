@@ -164,11 +164,17 @@ class ParserStage {
 				if (name != null && name.length > 0)
 					existingFns.set(name, true);
 			}
+			// Add each scanned function whose name the parsed declaration lacks. Authored parsing
+			// keeps every same-name overload, as upstream does (`haxe.ds.Vector` declares two
+			// `extern overload` constructors). The compile path keeps the first one only: the frozen
+			// Stage3 OCaml backend rejects an abstract with two constructor bodies
+			// (`Stage3OcamlAbstractConstructors`, haxe_ocaml-95co6).
+			final appended:Map<String, Bool> = new Map();
 			for (fn in HxClassDecl.getFunctions(scanned)) {
 				final name = HxFunctionDecl.getName(fn);
-				if (name != null && name.length > 0 && !existingFns.exists(name)) {
+				if (name != null && name.length > 0 && !existingFns.exists(name) && (authoredSyntax || !appended.exists(name))) {
 					patchedFns.push(fn);
-					existingFns.set(name, true);
+					appended.set(name, true);
 					overlayChanged = true;
 				}
 			}

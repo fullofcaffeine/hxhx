@@ -330,6 +330,22 @@ class HxConditionalCompilation {
 	}
 
 	/**
+		Whether `prefix` holds only opening brackets (`{`, `(`, `[`) and whitespace (line breaks included),
+		with at least one bracket. Callers pass everything before a directive, so any other text fails.
+	**/
+	private static function followsOpeningBrackets(prefix:String):Bool {
+		var brackets = 0;
+		for (index in 0...prefix.length) {
+			final c = prefix.charCodeAt(index);
+			if (c == "{".code || c == "(".code || c == "[".code)
+				brackets++;
+			else if (!isLineWs(c))
+				return false;
+		}
+		return brackets > 0;
+	}
+
+	/**
 		Select the first inline conditional that begins on the first physical line.
 
 		The selected payload and all source outside the conditional keep their original
@@ -362,7 +378,14 @@ class HxConditionalCompilation {
 				continue;
 			final linePayload = stripLineCommentOutsideStrings(source.substr(condEnd, firstLineEnd - condEnd));
 			final hasSameLineDirective = i + 1 < tokens.length && tokens[i + 1].start < firstLineEnd;
-			if (StringTools.trim(linePayload).length == 0 && !hasSameLineDirective)
+			// A block opener preceded only by opening brackets from the start of the text
+			// (`{#if target.unicode`, as upstream's test builder parses `"{" + file`) is not a line-start
+			// directive, so the block pass never sees it; select it here, across lines, as upstream's
+			// token-based lexer does. The rule is deliberately this narrow: this line-based scan cannot
+			// tell that text lies inside a block comment (a doc comment that mentions `#if !macro`
+			// mid-line must stay text), and a mid-file `{ #if` keeps its existing handling.
+			final followsBracket = followsOpeningBrackets(source.substr(0, token.start));
+			if (StringTools.trim(linePayload).length == 0 && !hasSameLineDirective && !followsBracket)
 				continue;
 			openerIndex = i;
 			openerCondStart = condStart;

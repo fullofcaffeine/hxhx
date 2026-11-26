@@ -184,6 +184,7 @@
       "immutable_fields": [],
       "request_reset_fields": [
         "final:defines",
+        "var:compilationDefines",
         "final:ocamlModules",
         "final:classPaths",
         "final:includedModules",

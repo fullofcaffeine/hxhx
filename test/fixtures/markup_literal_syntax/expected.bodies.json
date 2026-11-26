@@ -1,0 +1,7 @@
+{
+	"forms": "{\n\treturn [Markup.text(@:markup \"<p></p>\"), Markup.text(@:markup \"<p class=\\\"a\\\"> text </p>\"), Markup.text(@:markup \"<div><div></div></div>\"), Markup.text(@:markup \"<div><span></div>\"), Markup.text(@:markup \"<br/>\"), Markup.text(@:markup \"<img src=\\\"x\\\" />\"), Markup.text(@:markup \"<ul><li /></ul>\"), Markup.text(@:markup \"<my-tag></my-tag>\"), Markup.text(@:markup \"<svg:rect></svg:rect>\"), Markup.text(@:markup \"<a.B_c-1:d></a.B_c-1:d>\"), Markup.text(@:markup \"<:x></:x>\"), Markup.text(@:markup \"<></>\"), Markup.text(@:markup \"<>fragment</>\"), Markup.text(@:markup \"<Upper></Upper>\"), Markup.text(@:markup \"<$name>$value ${1 + 2}</$name>\")];\n}",
+	"unbalanced": "{\n\treturn [Markup.text(@:markup \"<q title=\\\" </q>\"), Markup.text(@:markup \"<q title=\\' </q>\"), Markup.text(@:markup \"<q a=// </q>\"), Markup.text(@:markup \"<q a=/* </q>\"), Markup.text(@:markup \"<q a=~/ </q>\")];\n}",
+	"multiline": "{\n\treturn Markup.text(@:markup \"<pre>\\n  first line\\n  second line\\n</pre>\");\n}",
+	"block": "{\n\treturn Markup.text({\n\t\t@:markup \"<A></A>\";\n\t\t@:markup \"<b />\";\n\t});\n}",
+	"blockWithSemicolons": "{\n\treturn Markup.text({\n\t\t@:markup \"<A></A>\";\n\t\t@:markup \"<b />\";\n\t});\n}"
+}
