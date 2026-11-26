@@ -914,7 +914,8 @@ class TyFunctionInference {
 		alias body may place them anywhere in the target, so each binder becomes one
 		variable shared by all of its occurrences in this constructor term.
 	 */
-	public function construct(expression:HxExpr, type:TyType, arity:Int, ?omittedAliasParameters:Array<TyTypeParameterId>):TyType {
+	public function construct(expression:HxExpr, type:TyType, arity:Int, ?omittedAliasParameters:Array<TyTypeParameterId>,
+			?argumentBounds:Array<Null<TyType>>):TyType {
 		final omittedAlias = omittedAliasParameters != null && omittedAliasParameters.length > 0;
 		if (!omittedAlias && (arity == 0 || type.getTypeArguments().length > 0 || type.getNominalIdentity() == null))
 			return type;
@@ -922,8 +923,10 @@ class TyFunctionInference {
 		if (term == null) {
 			if (solver.isSealed())
 				throw "constructor occurrence is absent from sealed inference";
-			term = omittedAlias ? instantiate(type, omittedAliasParameters,
-				_ -> solver.fresh()) : Nominal(type.getNominalIdentity(), [for (_ in 0...arity) solver.fresh()]);
+			term = omittedAlias ? instantiate(type, omittedAliasParameters, _ -> solver.freshConstructorArgument(null)) : Nominal(type.getNominalIdentity(), [
+				for (slot in 0...arity)
+					solver.freshConstructorArgument(argumentBounds != null && slot < argumentBounds.length ? argumentBounds[slot] : null)
+			]);
 			occurrences.push({expression: expression, term: term});
 		}
 		return solver.isSealed() ? solver.requireSolved(term) : solver.preview(term);

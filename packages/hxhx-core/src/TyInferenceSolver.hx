@@ -15,6 +15,10 @@ class TyInferenceSolver {
 	var variables:Array<TyInferenceVariable> = [];
 	var solutions:Array<Null<TyInferenceTerm>> = [];
 	var dynamicUses:Array<Bool> = [];
+
+	/** A constructor type argument's declared bound, used at seal only while the argument is still unsolved. */
+	var boundDefaults:Array<Null<TyType>> = [];
+
 	var fieldRequirements:Array<Array<{final name:String; final term:TyInferenceTerm;}>> = [];
 	var parent:Null<TyInferenceSolver> = null;
 	var baseRevision:Int = 0;
@@ -83,6 +87,24 @@ class TyInferenceSolver {
 		// The empty literal supplies no element evidence. Reuse the deferred
 		// fallback mechanism so an unused array can still have a concrete carrier.
 		visitDynamicUse(term, false);
+		return term;
+	}
+
+	/**
+		A constructed class's omitted type argument (`new Foo()`). Any constraint from the body binds it;
+		only an argument still unsolved at seal takes its declared bound, or Dynamic without one, where
+		upstream Haxe 4.3.7 keeps a monomorph (haxe_ocaml-6a7w5).
+	**/
+	public function freshConstructorArgument(bound:Null<TyType>):TyInferenceTerm {
+		final term = allocate(null);
+		switch term {
+			case Variable(identity):
+				if (bound == null)
+					visitDynamicUse(term, false);
+				else
+					boundDefaults[identity.ordinal] = bound;
+			case _:
+		}
 		return term;
 	}
 
@@ -174,6 +196,7 @@ class TyInferenceSolver {
 		variables.push(identity);
 		solutions.push(null);
 		dynamicUses.push(false);
+		boundDefaults.push(null);
 		fieldRequirements.push([]);
 		revision++;
 		return Variable(identity);
@@ -198,6 +221,7 @@ class TyInferenceSolver {
 		candidate.followsNull = followsNull;
 		candidate.variables = variables.copy();
 		candidate.dynamicUses = dynamicUses.copy();
+		candidate.boundDefaults = boundDefaults.copy();
 		candidate.solutions = [for (solution in solutions) solution == null ? null : copyTerm(solution)];
 		candidate.fieldRequirements = [for (fields in fieldRequirements) fields.copy()];
 		candidate.parent = this;
@@ -210,6 +234,7 @@ class TyInferenceSolver {
 		validateCandidate(candidate);
 		variables = candidate.variables.copy();
 		dynamicUses = candidate.dynamicUses.copy();
+		boundDefaults = candidate.boundDefaults.copy();
 		solutions = [
 			for (solution in candidate.solutions)
 				solution == null ? null : copyTerm(solution)
@@ -348,11 +373,26 @@ class TyInferenceSolver {
 		if (sealed)
 			return published(term);
 		final candidate = fork();
+		candidate.applyBoundDefaults();
 		candidate.applyDynamicUses();
 		return candidate.preview(term);
 	}
 
 	/** Use the same deferred defaults for speculative observation and final publication. */
+	/** Close each constructor argument that no constraint solved to its declared bound. */
+	function applyBoundDefaults():Void {
+		for (index in 0...boundDefaults.length) {
+			final bound = boundDefaults[index];
+			if (bound == null)
+				continue;
+			switch follow(Variable(variables[index])) {
+				case Variable(root) if (fieldRequirements[root.ordinal].length == 0):
+					solutions[root.ordinal] = Known(bound);
+				case _:
+			}
+		}
+	}
+
 	function applyDynamicUses():Void {
 		for (index in 0...dynamicUses.length)
 			if (dynamicUses[index])
@@ -642,6 +682,7 @@ class TyInferenceSolver {
 	public function seal():Void {
 		requireMutable();
 		final candidate = fork();
+		candidate.applyBoundDefaults();
 		candidate.applyDynamicUses();
 		candidate.publishOpenMethods();
 		for (variable in candidate.variables)
