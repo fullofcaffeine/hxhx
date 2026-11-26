@@ -1819,7 +1819,7 @@ class M14HihExprTextParserIntegrationTest {
 		switch (macroExprSpliceReceiverStmts[0]) {
 			case SExpr(ECall(EField(EIdent("exprs"), "push"), [
 				EMacroExpr(ECall(EIdent("__hxhx_expr_meta"), [
-					EString("pos"),
+					EString(":pos"),
 					EString("pos"),
 					ECall(EField(ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent("eThis")]), "addCase"),
 						[ECall(EIdent("__hxhx_macro_expr_splice"), [EIdent("testCase")])])

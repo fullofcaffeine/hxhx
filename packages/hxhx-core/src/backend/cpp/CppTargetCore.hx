@@ -9992,7 +9992,7 @@ class CppTargetCore {
 			return null;
 		return switch (args[0]) {
 			case ECall(EIdent("__hxhx_expr_meta"), [EString(name), EString(rawArgs), _]):
-				[name, rawArgs];
+				[HxExprMetadataName.plain(name), rawArgs];
 			case _:
 				null;
 		};

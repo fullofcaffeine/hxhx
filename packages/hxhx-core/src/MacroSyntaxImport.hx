@@ -14,7 +14,7 @@ import HxLambdaSignature.HxLambdaParameter;
 	with the parser's exact body fingerprint.
 
 	Totality: every `ExprDef` constructor is handled. Constructors with no faithful parser form
-	yet (`ESwitch`, `EDisplay`, `EIs`, metadata other than `@:privateAccess`, local functions with
+	yet (`ESwitch`, `EDisplay`, `EIs`, expression metadata with arguments, local functions with
 	type parameters, typed constants with suffixes) are rejected with a message that starts with
 	`macro syntax import:`. The caller turns it into a compile error at the macro call.
 
@@ -159,9 +159,11 @@ class MacroSyntaxImport {
 			case ECheckType(inner, type):
 				ECheckType(convert(inner, false), typeText(type));
 			case EMeta(entry, inner):
-				if (entry.name != ":privateAccess" || (entry.params != null && entry.params.length != 0))
-					throw failure("metadata `@" + entry.name + "` on an expression is not imported yet; only `@:privateAccess` is kept by the parser");
-				EPrivateAccess(convert(inner, false), position(expression));
+				if (entry.params != null && entry.params.length != 0)
+					throw failure("metadata `@" + entry.name + "` with arguments on an expression is not imported yet");
+				// The parser keeps the written name, colon included (haxe_ocaml-1d2zn).
+				entry.name == ":privateAccess" ? EPrivateAccess(convert(inner, false),
+					position(expression)) : ECall(EIdent("__hxhx_expr_meta"), [EString(entry.name), EString(""), convert(inner, false)]);
 			case EIs(_, _):
 				throw failure("the `is` operator is not imported yet");
 		};

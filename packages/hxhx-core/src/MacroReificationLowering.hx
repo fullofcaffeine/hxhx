@@ -65,8 +65,11 @@ enum MacroReificationHole {
 	  as macro call arguments (`MacroSyntaxPositions`); exact ranges are owned by
 	  `haxe_ocaml-9sj5p.2`. `@:pos(p)` replaces every position inside with `p`, as upstream does.
 
-	Not lowered yet (explicit errors): `$p{}`, metadata other than `@:pos` and `@:privateAccess`,
-	the syntax `MacroSyntaxExport` cannot export (switch), and `macro class` in a macro module;
+	Expression metadata keeps its written name (`@:meta` against `@meta`) and becomes
+	`EMeta({name, params, pos}, e)`; `@:pos(p)` sets the positions instead.
+
+	Not lowered yet (explicit errors): `$p{}`, the syntax `MacroSyntaxExport` cannot export
+	(switch), and `macro class` in a macro module;
 	outside one, `macro class` keeps the parser's placeholder object for bring-up code.
 **/
 class MacroReificationLowering {
@@ -223,8 +226,10 @@ class MacroReificationLowering {
 						EIf(child(arguments[0]), child(arguments[1]), whenFalse);
 					case _: throw failure("unsupported splice `" + marker + "`");
 				}
-			case ECall(EIdent("__hxhx_expr_meta"), [EString(name), EString(argumentText), inner]):
-				metadata(name, argumentText, inner, child);
+			// Other expression metadata keeps its written name and becomes `EMeta` through the exporter,
+			// its arguments reified like any quoted syntax (haxe_ocaml-1d2zn).
+			case ECall(EIdent("__hxhx_expr_meta"), [EString(":pos"), EString(argumentText), inner]):
+				positionMetadata(argumentText, inner, child);
 			case EIdent("__hxhx_macro_missing_else"):
 				throw failure("a quoted `if` branch is missing");
 			case ENew(typePath, arguments) if (StringTools.startsWith(typePath, TYPE_PATH_SPLICE_PREFIX)):
@@ -246,10 +251,8 @@ class MacroReificationLowering {
 		return arguments[0];
 	}
 
-	/** `@:pos(p) e` is the only expression metadata with a lowering; others wait on a parser form that keeps their spelling. */
-	function metadata(name:String, argumentText:String, inner:HxExpr, child:HxExpr->Expr):ExprDef {
-		if (name != "pos")
-			throw failure("metadata `@" + name + "` inside a quotation is not lowered yet; only @:pos and @:privateAccess are");
+	/** `@:pos(p) e`: every position inside `e` becomes `p`, as upstream's reification does. */
+	function positionMetadata(argumentText:String, inner:HxExpr, child:HxExpr->Expr):ExprDef {
 		final text = StringTools.trim(argumentText);
 		if (text.length == 0)
 			throw failure("@:pos requires a position expression");

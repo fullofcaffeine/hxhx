@@ -20,3 +20,11 @@ macro [1, 2]
   => ({ expr : EArrayDecl([{ expr : EConst(CInt("1", null)), pos : { file : "Probe.txt", min : 7, max : 8 } }, { expr : EConst(CInt("2", null)), pos : { file : "Probe.txt", min : 10, max : 11 } }]), pos : { file : "Probe.txt", min : 6, max : 12 } } : haxe.macro.Expr)
 macro new String("s")
   => ({ expr : ENew({ pack : [], name : "String", params : [] }, [{ expr : EConst(CString("s", DoubleQuotes)), pos : { file : "Probe.txt", min : 17, max : 20 } }]), pos : { file : "Probe.txt", min : 6, max : 21 } } : haxe.macro.Expr)
+macro @myMeta 1
+  => ({ expr : EMeta({ name : "myMeta", params : [], pos : { file : "Probe.txt", min : 6, max : 13 } }, { expr : EConst(CInt("1", null)), pos : { file : "Probe.txt", min : 14, max : 15 } }), pos : { file : "Probe.txt", min : 6, max : 15 } } : haxe.macro.Expr)
+macro @:meta null
+  => ({ expr : EMeta({ name : ":meta", params : [], pos : { file : "Probe.txt", min : 6, max : 12 } }, { expr : EConst(CIdent("null")), pos : { file : "Probe.txt", min : 13, max : 17 } }), pos : { file : "Probe.txt", min : 6, max : 17 } } : haxe.macro.Expr)
+macro @myMeta(1, "a") x
+  => ({ expr : EMeta({ name : "myMeta", params : [{ expr : EConst(CInt("1", null)), pos : { file : "Probe.txt", min : 14, max : 15 } }, { expr : EConst(CString("a", DoubleQuotes)), pos : { file : "Probe.txt", min : 17, max : 20 } }], pos : { file : "Probe.txt", min : 6, max : 13 } }, { expr : EConst(CIdent("x")), pos : { file : "Probe.txt", min : 22, max : 23 } }), pos : { file : "Probe.txt", min : 6, max : 23 } } : haxe.macro.Expr)
+macro @:pos(p) 1
+  => ({ expr : EConst(CInt("1", null)), pos : p } : haxe.macro.Expr)

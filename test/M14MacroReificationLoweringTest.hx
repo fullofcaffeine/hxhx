@@ -298,7 +298,15 @@ class M14MacroReificationLoweringTest {
 
 		// Explicit failures.
 		expectFailure("path splice", "macro $p{parts}", "`$p{}` is not lowered yet");
-		expectFailure("other metadata", "macro @:keep 1", "metadata `@keep` inside a quotation is not lowered yet");
+		// Expression metadata keeps its written name, colon or not (haxe_ocaml-1d2zn).
+		expect("expression metadata", "macro @:keep 1",
+			'{expr: ExprDef.EMeta({name: ":keep", params: [], pos: @P}, ' + constant('CInt("1", null)') + "), pos: @P}");
+		expect("colon-less metadata", "macro @probe(1) x",
+			'{expr: ExprDef.EMeta({name: "probe", params: ['
+			+ constant('CInt("1", null)')
+			+ '], pos: @P}, '
+			+ constant('CIdent("x")')
+			+ "), pos: @P}");
 		expectFailure("value of a structure", "macro $v{obj}", "this payload has type {a:Int}");
 		expectFailure("value of unknown type", "macro $v{mystery}", "requires a payload whose type is known");
 		expectFailure("switch", "macro switch x { case 1: 2; }", "switch expressions are not exported yet");

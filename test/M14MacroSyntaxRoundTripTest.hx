@@ -181,8 +181,9 @@ class M14MacroSyntaxRoundTripTest {
 			expr: ESwitch({expr: EConst(CIdent("x")), pos: created}, [], null),
 			pos: created
 		}));
+		// Expression metadata with arguments is not imported yet; without arguments it is (expressionMetadata).
 		requireFailure("metadata", "macro syntax import:", "@:keep", () -> importer.result({
-			expr: EMeta({name: ":keep", params: [], pos: created}, {expr: EConst(CIdent("x")), pos: created}),
+			expr: EMeta({name: ":keep", params: [{expr: EConst(CInt("1")), pos: created}], pos: created}, {expr: EConst(CIdent("x")), pos: created}),
 			pos: created
 		}));
 		final ident = (name:String) -> ({expr: EConst(CIdent(name)), pos: created} : Expr);
@@ -491,7 +492,32 @@ class M14MacroSyntaxRoundTripTest {
 		});
 	}
 
+	/**
+		Expression metadata keeps its written name in ordinary parsing, colon included
+		(haxe_ocaml-1d2zn), as upstream's `EMeta` does, so it round-trips with the exact parser
+		fingerprint. Metadata with arguments is not imported yet.
+	**/
+	static function expressionMetadata():Void {
+		final file = ".tmp/m14_expression_metadata.hx";
+		sys.FileSystem.createDirectory(".tmp");
+		for (text in ["(@myMeta x)", "(@:keep x)", "(@:keep @probe x)", "(@:privateAccess x)"]) {
+			sys.io.File.saveContent(file, text);
+			roundTrip(file, HxParser.parseExprText(text));
+		}
+		final colon = HxParser.parseExprText("@:keep x");
+		final plain = HxParser.parseExprText("@keep x");
+		require(Std.string(colon) != Std.string(plain), "ordinary parsing must keep the colon of `@:keep`: " + Std.string(colon));
+		final p:Position = {file: file, min: 0, max: 0};
+		requireFailure("metadata arguments", "", "with arguments on an expression is not imported yet", () -> {
+			new MacroSyntaxImport(new MacroSyntaxPositions(file)).result({
+				expr: EMeta({name: ":nullSafety", params: [{expr: EConst(CIdent("Off")), pos: p}], pos: p}, {expr: EConst(CIdent("x")), pos: p}),
+				pos: p
+			});
+		});
+	}
+
 	static function main():Void {
+		expressionMetadata();
 		anonymousMethodFields();
 		integerConstantImport();
 		identityShape();

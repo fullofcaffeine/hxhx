@@ -808,7 +808,7 @@ class TypedBodyBuilder {
 		}
 		final value = switch (expression) {
 			case ECall(EIdent("__hxhx_expr_meta"), [EString(name), EString(arguments), inner]):
-				TypedExpr.metadata(name, arguments,
+				TypedExpr.metadata(HxExprMetadataName.plain(name), arguments,
 					buildExpr(inner, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver, expected, selectedCallType), position);
 			case ERegexLiteral(_, _):
 				// Only authored-mode parsing (the parse oracle) keeps the literal; ordinary

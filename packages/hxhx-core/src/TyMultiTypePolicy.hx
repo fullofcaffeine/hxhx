@@ -33,8 +33,11 @@ class TyMultiTypePolicy {
 			for (expression in expressions) {
 				final parameter = switch expression {
 					case EIdent(name) | EEnumValue(name): {name: name, follow: false};
-					case ECall(EIdent("__hxhx_expr_meta"),
-						[EString("followWithAbstracts"), EString(""), (EIdent(name) | EEnumValue(name))]): {name: name, follow: true};
+					case ECall(EIdent("__hxhx_expr_meta"), [EString(meta), EString(""), (EIdent(name) | EEnumValue(name))])
+						if (HxExprMetadataName.plain(meta) == "followWithAbstracts"): {
+							name: name,
+							follow: true
+						};
 					case _: throw "unsupported multi-type parameter metadata";
 				};
 				for (binder in binders)

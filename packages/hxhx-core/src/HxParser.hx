@@ -2964,12 +2964,13 @@ class HxParser {
 				var i = metadata.length - 1;
 				while (i >= 0) {
 					final entry = metadata[i];
-					// Authored parsing keeps the full name (`:nullSafety` against `nullSafety`) for the
-					// export; ordinary consumers read `__hxhx_expr_meta` (haxe_ocaml-ac5i9.4).
+					// Both forms keep the name as written (`:nullSafety` against `nullSafety`), so a macro
+					// receives the exact spelling (haxe_ocaml-1d2zn). Typing and the backends read the
+					// name without its colon (`HxExprMetadataName.plain`), as before.
+					final writtenName = (entry.compiler ? ":" : "") + entry.name;
 					inner = entry.privateAccess ? EPrivateAccess(inner,
-						entry.position) : authoredSyntax ? ECall(EIdent(HxAuthoredSyntax.META),
-							[EString((entry.compiler ? ":" : "") + entry.name), EString(entry.args), inner]) : ECall(EIdent("__hxhx_expr_meta"),
-							[EString(entry.name), EString(entry.args), inner]);
+						entry.position) : ECall(EIdent(authoredSyntax ? HxAuthoredSyntax.META : "__hxhx_expr_meta"),
+							[EString(writtenName), EString(entry.args), inner]);
 					i--;
 				}
 				inner;

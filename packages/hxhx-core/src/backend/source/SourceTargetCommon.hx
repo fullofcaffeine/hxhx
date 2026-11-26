@@ -6044,7 +6044,10 @@ class SourceTargetCommon {
 			return null;
 		return switch (args[0]) {
 			case ECall(EIdent("__hxhx_expr_meta"), [EString(name), EString(rawArgs), _]):
-				anonExpr(target, ["name", "args"], [EString(name), EArrayDecl(helperMetadataArgExprs(rawArgs))]);
+				anonExpr(target, ["name", "args"], [
+					EString(HxExprMetadataName.plain(name)),
+					EArrayDecl(helperMetadataArgExprs(rawArgs))
+				]);
 			case _:
 				null;
 		};

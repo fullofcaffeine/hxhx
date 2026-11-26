@@ -17,7 +17,11 @@ class Probe {
 		"macro macro 1",
 		"macro { var a = 1; a; }",
 		"macro [1, 2]",
-		"macro new String(\"s\")"
+		"macro new String(\"s\")",
+		"macro @myMeta 1",
+		"macro @:meta null",
+		"macro @myMeta(1, \"a\") x",
+		"macro @:pos(p) 1"
 	];
 
 	static function main() {
