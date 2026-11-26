@@ -11,6 +11,7 @@ class TyDeclarationInfo {
 	final identity:TyDeclarationId;
 	final owner:TyNominalTypeId;
 	final signature:TyFunSig;
+	final macroSignature:Null<TyFunSig>;
 	final metadata:Array<String>;
 	final nativeName:TyNativeName;
 	final sourceDeclaration:HxFunctionDecl;
@@ -26,10 +27,11 @@ class TyDeclarationInfo {
 
 	public function new(identity:TyDeclarationId, owner:TyNominalTypeId, signature:TyFunSig, metadata:Array<String>, sourceDeclaration:HxFunctionDecl,
 			position:HxPos, isInline:Bool, isPublic:Bool, modulePath:String, resolvedConstraints:haxe.ds.StringMap<Array<TyType>>,
-			isEnumConstructor:Bool = false, ?typeParameters:Array<TyTypeParameterId>, ?implementation:TyDeclarationInfo) {
+			isEnumConstructor:Bool = false, ?typeParameters:Array<TyTypeParameterId>, ?implementation:TyDeclarationInfo, ?macroSignature:TyFunSig) {
 		this.identity = identity;
 		this.owner = owner;
 		this.signature = signature;
+		this.macroSignature = macroSignature;
 		this.metadata = metadata == null ? [] : metadata.copy();
 		this.nativeName = new TyNativeName(this.metadata);
 		this.sourceDeclaration = sourceDeclaration;
@@ -60,8 +62,21 @@ class TyDeclarationInfo {
 	public function getOwner():TyNominalTypeId
 		return owner;
 
+	/** The signature this compile types and selects the declaration by; see `getMacroSignature()` for a macro function. */
 	public function getSignature():TyFunSig
 		return signature;
+
+	/**
+		The written signature of a macro function, which its call sites satisfy (`TyMacroCallSignature`).
+		In a target compile, `getSignature()` is instead the macro function's target view
+		(`TyMacroTargetView`). For every other declaration both are the same object.
+	**/
+	public function getMacroSignature():TyFunSig
+		return macroSignature == null ? signature : macroSignature;
+
+	/** Whether this is a macro function that this compile sees through its target view, without its body. */
+	public function hasMacroTargetView():Bool
+		return macroSignature != null;
 
 	public function getMetadata():Array<String>
 		return metadata.copy();

@@ -283,9 +283,9 @@ macro function's body only in its macro context; the program sees the function w
 (`typeloadFields.ml`, lines 1298-1345). hxhx's macro context is the project-macro plugin build.
 - `MacroCompilationContext.typesMacroBodies` is true only in a compilation with a macro
   classpath, and only for a macro module. Everywhere else, `TyperStage` types a macro function
-  from a copy of its declaration with an empty body and its arguments. The typed function keeps
-  the declaration as written (`TypedFunction.getAuthoredDeclaration`), which the declaration
-  index and the expression macro pass use.
+  as its bodyless target view (PR B, below). The typed function keeps the declaration as written
+  (`TypedFunction.getAuthoredDeclaration`), which the declaration index and the expression macro
+  pass use.
 - An omitted body proves no result, and the semantic facts accept the flagged function.
   `TypedBodySource.classProjection` and `HxhxOcamlTargetFunctionAdapter.fromFunction` drop it,
   so no backend emits it.
@@ -297,8 +297,16 @@ macro function's body only in its macro context; the program sees the function w
   module into the target compile. The resolver's qualified-name scan
   (`HxImplicitDependencies.qualifiedTypePaths`) reads the whole source, and every resolved
   module is typed and emitted, where upstream's DCE drops unused types.
-- PR B gives callers upstream's target-view signature (`ExprOf<T>` becomes `T`, other
-  arguments and the result `Dynamic`).
+- PR B: the target view (`TyMacroTargetView`, `typeloadFields.ml` lines 1298-1336). An instance
+  macro loses its first argument, `ExprOf<T>` becomes `T`, every other written or missing type
+  becomes `Dynamic`, defaults are dropped, and a written `haxe.PosInfos` is an error. The index
+  gives this view to a declaration when the request's `MacroCompilationContext` does not type the
+  module's macro bodies; it is then `TyDeclarationInfo.getSignature()`. Call sites keep the
+  written signature (`getMacroSignature()`, through `TyMacroCallSignature.written`), because a
+  call passes syntax to the macro. Test: `test/M14MacroTargetSignatureTest.hx`.
+- Known gap: upstream also types an uncalled macro function's body in its macro context, so a
+  broken body fails the compile. hxhx accepts it, because a target compile does not type it and
+  no plugin build runs for an uncalled macro (`haxe_ocaml-8gzfg`).
 
 `Stage3Compiler` invokes `ExprMacroExpander` before shared typing. However,
 expansion requires an explicit list of exact expression strings.
