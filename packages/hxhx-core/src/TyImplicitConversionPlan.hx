@@ -75,8 +75,33 @@ class TyImplicitConversionPlan {
 		return TyTypeSubstitution.bind(info.getTypeParameterIds(), applied.getTypeArguments(), info.getIdentity().getCanonicalName());
 	}
 
+	static inline final MAX_FROM_CHAIN = 3;
+
+	/**
+		A `from` type that is itself an abstract may accept the value through its own `from` types:
+		`EitherType<A, EitherType<B, C>>` accepts a B (haxe_ocaml-c6wur). Haxe 4.3.7's do_check_cast
+		recurses into each `from` type of the destination (abstractCast.ml). Only a chain whose every
+		step keeps the storage is accepted here, so the single cast the outer plan emits is exact.
+		Exactly one `from` type may accept the value.
+	**/
+	static function nestedFrom(index:TyperIndex, fromTypes:Array<TyType>, actual:TyType, depth:Int):Null<TyType> {
+		var selected:Null<TyType> = null;
+		for (type in fromTypes) {
+			final identity = type.getNominalIdentity();
+			if (identity == null || index == null || index.getAbstractByFullName(identity.getCanonicalName()) == null)
+				continue;
+			final inner = select(index, type, actual, depth + 1);
+			if (inner == null || !(inner.kind == EXACT || inner.isRepresentationPreservingAbstractConversion()))
+				continue;
+			if (selected != null && selected.getSemanticKey() != type.getSemanticKey())
+				return null;
+			selected = type;
+		}
+		return selected;
+	}
+
 	/** Choose one bounded implicit conversion, or return null when none is proven. **/
-	public static function select(index:TyperIndex, expected:TyType, actual:TyType):Null<TyImplicitConversionPlan> {
+	public static function select(index:TyperIndex, expected:TyType, actual:TyType, depth:Int = 0):Null<TyImplicitConversionPlan> {
 		if (expected == null || actual == null || expected.isUnknown() || actual.isUnknown())
 			return null;
 		if (expected.getSemanticKey() == actual.getSemanticKey())
@@ -103,10 +128,13 @@ class TyImplicitConversionPlan {
 			|| index == null ? null : index.getAbstractByFullName(expectedIdentity.getCanonicalName());
 		final expectedBindings = abstractBindings(expectedAbstract, expected);
 		if (expectedBindings != null) {
-			final via = uniqueCompatible([
+			final fromTypes = [
 				for (type in expectedAbstract.getImplicitFromTypes())
 					TyTypeSubstitution.apply(type, expectedBindings)
-			], actual, true);
+			];
+			var via = uniqueCompatible(fromTypes, actual, true);
+			if (via == null && depth < MAX_FROM_CHAIN)
+				via = nestedFrom(index, fromTypes, actual, depth);
 			if (via != null)
 				return new TyImplicitConversionPlan(ABSTRACT_FROM, actual, expected, via, via.isDynamic() ? 1 : 2,
 					TyTypeSubstitution.apply(expectedAbstract.getUnderlyingType(), expectedBindings), expectedAbstract.isCoreType());
