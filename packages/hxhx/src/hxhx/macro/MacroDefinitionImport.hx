@@ -29,7 +29,7 @@ class MacroDefinitionError {
 
 	What
 	- `TDClass` becomes an `HxClassDecl`: the superclass, interfaces (or extended interfaces for an
-	  interface), `isExtern`, and metadata without parameters.
+	  interface), `isExtern`, and metadata, with parameters written as source.
 	- `FFun` becomes an `HxFunctionDecl`. Its body is the imported expression as one statement, as
 	  the parser stores `function f() <expr>`. `FVar` and `FProp` become an `HxFieldDecl`.
 	- Access: `APublic` and `APrivate` set the visibility (private by default, as upstream);
@@ -38,7 +38,8 @@ class MacroDefinitionError {
 	  dropped, as the parser drops it.
 	- Imports and usings become module directives (`INormal`, `IAsName`, `IAll`, `using`).
 	- Not yet, each as `unsupported`: other kinds (`TDEnum`, `TDStructure`, `TDAlias`,
-	  `TDAbstract`, `TDField`), type parameters, abstract classes, and metadata with parameters.
+	  `TDAbstract`, `TDField`), type parameters, abstract classes, and metadata parameters that are not
+	  a constant, path, call, array, or object literal.
 	  Types whose package differs from the module path are `invalid`.
 	- Positions: syntax the macro built keeps no source position yet (`haxe_ocaml-9sj5p.2`).
 **/
@@ -165,16 +166,74 @@ class MacroDefinitionImport {
 		}
 	}
 
-	/** Metadata entries without parameters, in the parser's `@name` text form. */
+	/**
+		Metadata entries in the parser's text form: `@name`, or `@name(a, b)` with each parameter
+		written as source. The parser keeps a metadata entry as its source text
+		(`HxParser.parseMetadataText`); upstream decodes each parameter as an expression
+		(`decode_meta_entry`, `src/macro/macroApi.ml` lines 792-795).
+	**/
 	static function metadataOf(meta:Null<Metadata>, label:String):Array<String> {
 		final out = new Array<String>();
 		if (meta != null)
 			for (entry in meta) {
-				if (entry.params != null && entry.params.length > 0)
-					throw unsupported("metadata `@" + entry.name + "` with parameters on " + label);
-				out.push("@" + entry.name);
+				if (entry.params == null || entry.params.length == 0) {
+					out.push("@" + entry.name);
+					continue;
+				}
+				final what = "a parameter of metadata `@" + entry.name + "` on " + label;
+				out.push("@" + entry.name + "(" + [for (param in entry.params) metadataParameter(param, what)].join(", ") + ")");
 			}
 		return out;
+	}
+
+	/**
+		A metadata parameter as source text, for the expressions metadata uses: constants,
+		identifiers and field paths, calls (`@:build(Macro.build())`), arrays, objects, negation, and
+		parentheses. Any other expression is `unsupported`.
+	**/
+	static function metadataParameter(param:Null<Expr>, what:String):String {
+		if (param == null || param.expr == null)
+			throw unsupported(what + " is empty");
+		final text = (value:Expr) -> metadataParameter(value, what);
+		return switch param.expr {
+			case EConst(CInt(value, suffix)) if (suffix == null): value;
+			case EConst(CFloat(value, suffix)) if (suffix == null): value;
+			case EConst(CString(value, SingleQuotes)) if (value.indexOf("$") >= 0):
+				throw unsupported(what + " is a single-quoted string with interpolation");
+			case EConst(CString(value, SingleQuotes)): "'" + escapeString(value, "'") + "'";
+			case EConst(CString(value, _)): "\"" + escapeString(value, "\"") + "\"";
+			case EConst(CIdent(name)): name;
+			case EConst(CRegexp(pattern, options)): "~/" + pattern + "/" + options;
+			case EField(owner, field, kind): text(owner) + (kind == Safe ? "?." : ".") + field;
+			case ECall(callee, arguments): text(callee) + "(" + [for (argument in arguments) text(argument)].join(", ") + ")";
+			case EArrayDecl(values): "[" + [for (value in values) text(value)].join(", ") + "]";
+			case EObjectDecl(fields):
+				"{" + [
+					for (field in fields)
+						(field.quotes == Quoted ? "\"" + escapeString(field.field, "\"") + "\"" : field.field) + ": " + text(field.expr)
+				].join(", ") + "}";
+			case EUnop(OpNeg, false, value): "-" + text(value);
+			case EUnop(OpNot, false, value): "!" + text(value);
+			case EParenthesis(value): "(" + text(value) + ")";
+			case _: throw unsupported(what + " is not a constant, path, call, array, or object literal");
+		};
+	}
+
+	/** `value` as the text between `quote` characters, with Haxe's string escapes. */
+	static function escapeString(value:String, quote:String):String {
+		final out = new StringBuf();
+		for (index in 0...value.length) {
+			final c = value.charAt(index);
+			out.add(switch c {
+				case "\\": "\\\\";
+				case "\n": "\\n";
+				case "\r": "\\r";
+				case "\t": "\\t";
+				case _ if (c == quote): "\\" + c;
+				case _: c;
+			});
+		}
+		return out.toString();
 	}
 
 	static function directiveOf(entry:ImportExpr):HxModuleDirective {
