@@ -28,6 +28,7 @@ haxe test/m14_callback_field_requirement_input_test.hxml
 
 # Sorted section: add new tests here, in alphabetical order.
 haxe test/m14_abstract_field_operator_test.hxml
+haxe test/m14_abstract_overload_syntax_test.hxml
 haxe test/m14_anonymous_argument_variance_test.hxml
 haxe test/m14_array_literal_switch_test.hxml
 haxe test/m14_array_null_argument_test.hxml
@@ -48,12 +49,15 @@ haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
 haxe test/m14_extractor_pattern_syntax_test.hxml
 haxe test/m14_extractor_pattern_type_test.hxml
+haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_inherited_constructor_signature_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
 haxe test/m14_literal_term_inference_test.hxml
+haxe test/m14_macro_block_syntax_test.hxml
 haxe test/m14_macro_context_wire_test.hxml
 haxe test/m14_macro_source_positions_test.hxml
 haxe test/m14_macro_target_signature_test.hxml
+haxe test/m14_markup_literal_syntax_test.hxml
 haxe test/m14_method_local_construction_test.hxml
 haxe test/m14_named_pattern_projection_test.hxml
 haxe test/m14_native_class_storage_test.hxml
@@ -77,6 +81,7 @@ haxe test/m14_structural_field_over_extension_test.hxml
 haxe test/m14_target_macro_body_skip_test.hxml
 haxe test/m14_try_assignment_value_test.hxml
 haxe test/m14_type_parameter_bounds_test.hxml
+haxe test/m14_type_quotation_syntax_test.hxml
 haxe test/m14_typed_backend_capture_catalog_test.hxml
 haxe test/m14_typed_capture_lowering_test.hxml
 haxe test/m14_typed_capture_plan_test.hxml

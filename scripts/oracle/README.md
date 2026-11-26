@@ -15,12 +15,16 @@ npm run test:oracle:parse       # the same, and fail if the numbers fall below t
 The output line looks like this:
 
 ```
-PARSE_ORACLE: fields=1850 match=1687 (91.2%) ... files=138 fully_matching=78 (56.5%)
+PARSE_ORACLE: fields=1850 match=1687 (91.2%) ... files=138 fully_matching=78 (56.5%) ... hxhx_only=0 hxhx_only_lowering=258
 ```
 
 - `fields`: the number of function bodies and field initializers that upstream parsed.
 - `match`: the bodies that print the same after both parsers.
 - `fully_matching`: the files in which every body matches.
+- `hxhx_only` and `hxhx_only_lowering`: bodies that only `hxhx` has. They are for information
+  only and count toward no other number or the baseline. `hxhx_only_lowering` counts the members
+  that `hxhx`'s enum lowering adds to a parsed enum (`__hx_is_enum`, `__hx_enum_ctors`, and one
+  member per constructor). `hxhx_only` counts all other extras.
 
 `.tmp/parse-oracle/mismatches.txt` shows each differing body from both sides.
 `report.json` has the counts, the export errors, and the files that `hxhx` could not parse.
@@ -35,6 +39,10 @@ PARSE_ORACLE: fields=1850 match=1687 (91.2%) ... files=138 fully_matching=78 (56
    `MacroBodyExport`.
 3. Both sides print bodies with `haxe.macro.Printer`, after the same normalization
    (`shared/ParseOracleNormalize.hx`).
+4. Bodies are paired by key (`module.Type.field`). Overloads share a key: `haxe.ds.Vector` has two
+   constructors. Each side numbers its second and later records with one key (`key#2`) in
+   record order, which is declaration order on both sides. A pair matches only when its bodies
+   print the same.
 
 The normalization removes only spellings that cannot change meaning: quote style (but not
 interpolated strings), number spelling, `default:` against `case _:`, `case A, B:` against
@@ -48,6 +56,18 @@ removes exactly that wrapper and records the authored statements under `new`; an
 shape stays `_new` and counts as missing. The wrapper loses the authored bracing, so the `hxhx`
 side prints an abstract's `new` as a block. The oracle therefore does not compare the bracing of a
 single-statement abstract constructor (`function new(i) this = i;`).
+
+## Authored-only parity where the compile path is not equivalent
+
+The oracle reads `hxhx`'s authored parse (`ParserStage.parseAuthored`). Usually the compile path
+differs from it only in lowered forms that mean the same thing. These cases are different: the
+authored parse matches upstream, but the compile path does not yet behave the same.
+
+- Same-name overloads of an abstract (`haxe.ds.Vector`'s two `extern overload` constructors).
+  Authored parsing keeps every overload. The compile path keeps only the first, because the
+  frozen Stage3 OCaml backend rejects an abstract with two constructor bodies
+  (`Stage3OcamlAbstractConstructors.hx`). So a call to a
+  later overload does not type there. Tracked by `haxe_ocaml-95co6`.
 
 ## Corpus and baseline
 

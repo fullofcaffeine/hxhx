@@ -1809,6 +1809,8 @@ class HxParser {
 
 	function parsePrimaryExpr():HxExpr {
 		return switch (cur.kind) {
+			case TOther(c) if (c == "<".code && isMarkupLiteralStart()):
+				parseMarkupLiteral();
 			case TLParen:
 				// The parentheses own `(expr : Type)`. Parse the complete value first,
 				// so a trailing annotation applies to an arrow or conditional as a whole.
@@ -2563,6 +2565,9 @@ class HxParser {
 		if (!cur.kind.match(TLBrace))
 			return false;
 		return switch (peekKind()) {
+			// `macro` is a keyword upstream, so `{ macro : T; }` is a block holding a type quotation.
+			case TIdent("macro"):
+				false;
 			case TIdent(_) | TString(_, _):
 				peekKind2().match(TColon);
 			case _:
@@ -2618,7 +2623,9 @@ class HxParser {
 	function parseBraceExpr():HxExpr {
 		final position = cur.getPos();
 		expect(TLBrace, "'{'");
+		// `macro` is a keyword upstream, so `{ macro : T; }` is a block holding a type quotation.
 		final isAnonLiteral = switch (cur.kind) {
+			case TIdent("macro"): false;
 			case TIdent(_) | TString(_, _): peekKind().match(TColon);
 			case _: false;
 		}
@@ -2628,6 +2635,13 @@ class HxParser {
 		while (!cur.kind.match(TRBrace) && !cur.kind.match(TEof)) {
 			if (cur.kind.match(TSemicolon)) {
 				bump();
+				continue;
+			}
+			if (isMarkupLiteralStart()) {
+				// A markup literal statement needs no semicolon (Haxe 4.3.7 `parse_block_elt`).
+				children.push(parseMarkupLiteral());
+				if (cur.kind.match(TSemicolon))
+					bump();
 				continue;
 			}
 			final start = currentIndex();
@@ -2642,6 +2656,40 @@ class HxParser {
 		}
 		expect(TRBrace, "'}' after source group");
 		return ESourceGroup(children, position);
+	}
+
+	/**
+		Whether `cur` starts an inline markup literal. Upstream reads a markup literal wherever an
+		expression or a block statement starts with the `<` operator; `<=`, `<<` and `<<=` are other
+		operators there.
+	**/
+	function isMarkupLiteralStart():Bool {
+		if (!cur.kind.match(TOther("<".code)))
+			return false;
+		final next = currentIndex() + 1;
+		final code = next < source.length ? StringTools.fastCodeAt(source, next) : -1;
+		return code != "<".code && code != "=".code;
+	}
+
+	/**
+		An inline markup literal (`<p>text</p>`), as Haxe 4.3.7's parser gives it: the string of its
+		source text with `@:markup` metadata (`parser.ml` `handle_xml_literal`). The lexer reads the
+		text (`HxLexer.readMarkupLiteral`); tokens already read past `<` are dropped.
+
+		The metadata name keeps its colon in ordinary parsing too. Hand-written expression metadata
+		drops it there (`__hxhx_expr_meta`, haxe_ocaml-ac5i9.4), but this name is the parser's own,
+		so it is exact and a macro can receive it unchanged (`MacroSyntaxExport`).
+	**/
+	function parseMarkupLiteral():HxExpr {
+		final text = lex.readMarkupLiteral(currentIndex());
+		peeked1 = null;
+		peeked2 = null;
+		peeked3 = null;
+		consumedSemicolon = false;
+		consumedRBrace = false;
+		cur = lex.next();
+		final marker = authoredSyntax ? HxAuthoredSyntax.META : "__hxhx_expr_meta";
+		return ECall(EIdent(marker), [EString(":markup"), EString(""), EString(text)]);
 	}
 
 	/** Preserve a named function's declaration placement when it appears as a body entry. */
@@ -4019,6 +4067,12 @@ class HxParser {
 					expect(TRBrace, "'}'");
 					SBlock(ss, pos);
 				}
+			case TOther(c) if (c == "<".code && isMarkupLiteralStart()):
+				// A markup literal statement needs no semicolon (Haxe 4.3.7 `parse_block_elt`).
+				final expr = parseMarkupLiteral();
+				if (cur.kind.match(TSemicolon))
+					bump();
+				SExpr(expr, pos);
 			case TOther("@".code) if (peekKind().match(TColon) && peekKind2().match(TIdent("privateAccess"))):
 				// Use the expression grammar so annotated declarations retain their
 				// surrounding scope and assignment permission includes its RHS.
@@ -4825,6 +4879,9 @@ class HxParser {
 			return true;
 		return switch (expr) {
 			case ESwitch(_, _, _) | ESwitchRaw(_) | ETryCatchRaw(_):
+				true;
+			// `var x = <a></a>`: a markup literal initializer needs no `;` (Haxe 4.3.7 `parse_var_field_assignment`).
+			case ECall(EIdent(_), [EString(":markup"), EString(""), EString(_)]) if (StringTools.startsWith(text, "<")):
 				true;
 			case _:
 				false;
