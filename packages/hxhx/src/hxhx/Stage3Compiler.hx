@@ -482,6 +482,8 @@ class Stage3Compiler {
 			closeMacroSession();
 			return error(e);
 		}
+		// Project macros see these defines through haxe.macro.Context (defined, parse).
+		hxhx.macro.MacroState.setCompilationDefines(definesMap);
 
 		// A project-macro plugin build compiles the classes that declare its listed macros.
 		final roots = roots0.concat(hxhx.macro.MacroState.listIncludedModules())
