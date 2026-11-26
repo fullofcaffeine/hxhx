@@ -491,7 +491,48 @@ class M14MacroSyntaxRoundTripTest {
 		});
 	}
 
+	/**
+		Inline markup literals in the shapes of upstream's `tests/unit/src/unitstd/InlineXml.unit.hx`
+		(haxe_ocaml-i16a0). The parser keeps a literal as `@:markup` on its source text (Haxe 4.3.7
+		`parser.ml` `handle_xml_literal`); the import must give back that exact parser form.
+	**/
+	static function markupLiterals():Void {
+		final file = ".tmp/m14_markup_literals.hx";
+		final code = [
+			"(unit.HelperMacros.pipeMarkupLiteral(<xml></xml>) == \"<xml></xml>\")",
+			"(unit.HelperMacros.pipeMarkupLiteral(<xml a=\" </xml>) == \"<xml a=\\\" </xml>\")",
+			"(unit.HelperMacros.pipeMarkupLiteral(<xml>$count + <xml>$count</xml> = ${count*2}</xml>) == \"x\")",
+			"(unit.HelperMacros.pipeMarkupLiteral({ <Xml></Xml><yml /> }) == \"<Xml></Xml><yml />\")",
+			"(unit.HelperMacros.pipeMarkupLiteral(<>abc</>) == \"<>abc</>\")",
+			"(unit.HelperMacros.pipeMarkupLiteral(<xml abc />) == \"<xml abc />\")",
+			"(unit.HelperMacros.pipeMarkupLiteralUnprocessed(<$xml></$xml>) == \"<$xml></$xml>\")"
+		];
+		sys.FileSystem.createDirectory(".tmp");
+		for (text in code) {
+			sys.io.File.saveContent(file, text);
+			roundTrip(file, HxParser.parseExprText(text));
+		}
+		final p:Position = {file: file, min: 0, max: 0};
+		final markup = (params:Array<Expr>, inner:Expr) -> new MacroSyntaxImport(new MacroSyntaxPositions(file)).result({
+			expr: EMeta({name: ":markup", params: params, pos: p}, inner),
+			pos: p
+		});
+		requireFailure("markup with arguments", "", "`@:markup` with arguments", () -> {
+			markup([{expr: EConst(CInt("1")), pos: p}], {expr: EConst(CString("<a></a>", DoubleQuotes)), pos: p});
+		});
+		requireFailure("markup on a non-string", "", "`@:markup` on an expression that is not a string", () -> {
+			markup([], {expr: EConst(CIdent("x")), pos: p});
+		});
+		requireFailure("other expression metadata", "", "metadata `@:other` on an expression is not imported yet", () -> {
+			new MacroSyntaxImport(new MacroSyntaxPositions(file)).result({
+				expr: EMeta({name: ":other", params: [], pos: p}, {expr: EConst(CString("x", DoubleQuotes)), pos: p}),
+				pos: p
+			});
+		});
+	}
+
 	static function main():Void {
+		markupLiterals();
 		anonymousMethodFields();
 		integerConstantImport();
 		identityShape();
