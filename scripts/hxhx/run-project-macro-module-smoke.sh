@@ -372,6 +372,21 @@ expect_failure format_unclosed "$FORMAT_DIR/src" UnclosedMain "$(cat "$FORMAT_DI
 diff -u "$FORMAT_DIR/expected-unclosed.stderr" "$ARTIFACT_DIR/format_unclosed.compile.stderr"
 echo "PROJECT_MACRO_MODULE_FORMAT_STRING:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# Upstream's HelperMacros markup macros: `case macro @:markup $v{(s:String)}` and `case macro $b{el}`
+# bind typed values, which the macro uses with $v{}, formatString, and $a{}. The program prints
+# what upstream prints.
+QUOTE_PATTERNS_DIR="$ROOT/test/fixtures/project-macro-quote-patterns"
+(
+  cd "$QUOTE_PATTERNS_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/quote_patterns.oracle.stdout" 2>"$ARTIFACT_DIR/quote_patterns.oracle.stderr"
+diff -u "$QUOTE_PATTERNS_DIR/expected.stdout" "$ARTIFACT_DIR/quote_patterns.oracle.stdout"
+compile_app quote_patterns "$QUOTE_PATTERNS_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line quote_patterns '^expr_macros_expanded=4$'
+"$WORK_DIR/app-quote_patterns/out.exe" >"$ARTIFACT_DIR/quote_patterns.stdout" 2>"$ARTIFACT_DIR/quote_patterns.stderr"
+diff -u "$QUOTE_PATTERNS_DIR/expected.stdout" "$ARTIFACT_DIR/quote_patterns.stdout"
+echo "PROJECT_MACRO_MODULE_QUOTE_PATTERNS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
 # A macro whose body is written with reification (`macro { ... }`, `$v{}`, `$b{}`, `$a{}`, `$e{}`,
 # field splices, `@:pos`) builds as a plugin and the program prints what upstream prints.
 REIFICATION_DIR="$ROOT/test/fixtures/project-macro-reification"

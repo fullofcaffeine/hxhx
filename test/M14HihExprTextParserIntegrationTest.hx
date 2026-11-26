@@ -561,12 +561,32 @@ class M14HihExprTextParserIntegrationTest {
 			case SSwitch(_, patterns, bodies, _):
 				assertTrue(patterns.length == 6, "expected all macro expression switch patterns to parse");
 				assertTrue(bodies.length == 6, "expected all macro expression switch bodies to parse");
-				for (i in 0...5) {
-					switch (patterns[i]) {
-						case PUnsupportedPattern(PWildcard):
-						case other:
-							fail("expected macro expression pattern to be consumed as unsupported guarded wildcard, got " + other);
-					}
+				// `case macro` patterns are reified as upstream's matcher sees them (haxe_ocaml-ikf1n);
+				// `var $name:$ct` is not exported yet and keeps the opaque pattern.
+				switch (patterns[0]) {
+					case PObject(["expr"], [PEnumExtract("EMeta", [PObject(["name", "params"], _), PObject(["expr"], _)], _)]):
+					case other:
+						fail("expected the markup pattern to bind its string, got " + other);
+				}
+				switch (patterns[1]) {
+					case PObject(["expr"], [PEnumExtract("EBlock", [PBind("el")], _)]):
+					case other:
+						fail("expected the block pattern to bind its expressions, got " + other);
+				}
+				switch (patterns[2]) {
+					case PObject(["expr"], [PEnumExtract("EConst", [PEnumExtract("CIdent", [PBind("dependency")], _)], _)]):
+					case other:
+						fail("expected the identifier pattern to bind its name, got " + other);
+				}
+				switch (patterns[3]) {
+					case PObject(["expr"], [PEnumExtract("ECall", [PObject(["expr"], _), PBind("args")], _)]):
+					case other:
+						fail("expected the call pattern to bind its arguments, got " + other);
+				}
+				switch (patterns[4]) {
+					case PUnsupportedPattern(PWildcard):
+					case other:
+						fail("expected the var pattern to stay opaque until it is exported, got " + other);
 				}
 				switch (patterns[5]) {
 					case PWildcard:

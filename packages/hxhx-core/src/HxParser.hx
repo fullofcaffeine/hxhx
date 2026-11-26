@@ -1141,10 +1141,12 @@ class HxParser {
 	}
 
 	function parseMacroExprSwitchPattern():HxSwitchPattern {
-		// `case macro <expr>:` is a Haxe macro-pattern quote. Full macro-pattern
-		// matching is larger than the Stage3 switch subset, but the parser must
-		// consume the quote as one case pattern so metadata like `@:markup` and
-		// splice forms like `$v{...}` do not make the case separator look missing.
+		// `case macro <expr>:` is a reified pattern: upstream reifies the quote like any other
+		// (`reify_expr`, `src/syntax/grammar.mly` lines 1275-1294) and its matcher reads the
+		// construction as a pattern, so splices bind typed values (`MacroPatternLowering`,
+		// haxe_ocaml-ikf1n). The tokens are consumed exactly as before, so `@:markup` and splice
+		// forms like `$v{...}` do not make the case separator look missing; the consumed text is
+		// then read as a quotation on its own.
 		switch (cur.kind) {
 			case TIdent("macro"):
 				bump();
@@ -1152,6 +1154,7 @@ class HxParser {
 				return PUnsupportedPattern(PWildcard);
 		}
 
+		final start = currentIndex();
 		var parenDepth = 0;
 		var bracketDepth = 0;
 		var braceDepth = 0;
@@ -1184,6 +1187,23 @@ class HxParser {
 			}
 			bump();
 			previousTokenWasAt = currentWasAt;
+		}
+		// The quote is matched on the call's own result: the native backend does not match
+		// constructors of a nullable value that a `try` expression produced.
+		final text = sliceSource(start, currentIndex());
+		try {
+			switch HxParser.parseCompleteExprText("macro " + text) {
+				case EMacroExpr(inner, wrappers):
+					return MacroPatternLowering.pattern(inner, wrappers);
+				case _:
+			}
+		} catch (_:HxParseError) {
+			// A quote this parser cannot read on its own (`$a => $b`) keeps the opaque pattern.
+		} catch (error:String) {
+			// Upstream rejects such a pattern too ("Unrecognized pattern"). Syntax the export
+			// cannot write yet keeps the opaque pattern it had before.
+			if (StringTools.startsWith(error, "Unrecognized pattern"))
+				fail(error);
 		}
 		return PUnsupportedPattern(PWildcard);
 	}
