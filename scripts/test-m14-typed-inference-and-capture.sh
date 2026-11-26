@@ -65,6 +65,7 @@ haxe test/m14_macro_source_positions_test.hxml
 haxe test/m14_macro_target_signature_test.hxml
 haxe test/m14_markup_literal_syntax_test.hxml
 haxe test/m14_method_local_construction_test.hxml
+haxe test/m14_module_macro_function_test.hxml
 haxe test/m14_named_pattern_projection_test.hxml
 haxe test/m14_native_class_storage_test.hxml
 haxe test/m14_native_stored_callback_views_test.hxml
