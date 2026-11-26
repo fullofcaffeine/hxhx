@@ -65,8 +65,26 @@ class TypedRuntimeTypeResolver {
 		The same lexical and member shadowing rules still apply to their qualifiers.
 	 */
 	public static function resolveQualifier(expression:HxExpr, environment:TyFunctionEnv, context:TyperContext):Null<TyNominalInfo> {
+		final alias = staticsAlias(expression, environment);
+		if (alias != null)
+			return alias;
 		final name = visiblePath(expression, environment, context, ValueExpression);
 		return name == null ? null : context.resolveType(name);
+	}
+
+	/**
+		The class whose statics a local holds (`TySymbol.getStaticsOwner`): `var s = Something;`
+		makes `s.f` a static access of `Something`, as Haxe 4.3.7 types such a local as the class's
+		statics. Only a plain local qualifies, so dropping the receiver never skips a computation.
+	**/
+	public static function staticsAlias(expression:HxExpr, environment:TyFunctionEnv):Null<TyNominalInfo> {
+		return switch expression {
+			case EParenthesized(inner, _): staticsAlias(inner, environment);
+			case EIdent(name):
+				final symbol = environment == null ? null : environment.resolveSymbol(name);
+				symbol == null ? null : symbol.getStaticsOwner();
+			case _: null;
+		};
 	}
 
 	/** Returns no class fallback when ordinary value lookup already owns the name. */

@@ -472,6 +472,10 @@ class TyFunctionEnv {
 			if (existing != null)
 				return existing;
 			final copied = new TySymbol(symbol.getName(), symbol.getType(), symbol.getIdentity(), symbol.getKind());
+			// A copy is the same declaration, so it keeps the class statics the local holds.
+			final staticsOwner = symbol.getStaticsOwner();
+			if (staticsOwner != null)
+				copied.markStaticsOwner(staticsOwner);
 			copies.set(key, copied);
 			return copied;
 		}
