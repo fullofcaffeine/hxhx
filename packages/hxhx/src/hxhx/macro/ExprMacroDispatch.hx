@@ -31,15 +31,21 @@ class ExprMacroDispatchRequest {
 	final arguments:Array<HxExpr>;
 	final filePath:String;
 	final modulePath:String;
+	final typer:Null<MacroCallTyper>;
 
-	public function new(declaration:TyDeclarationInfo, arguments:Array<HxExpr>, filePath:String, modulePath:String) {
+	/** `typer` types code at the call site's module and class (`Context.typeof`); null when the pass has none. */
+	public function new(declaration:TyDeclarationInfo, arguments:Array<HxExpr>, filePath:String, modulePath:String, ?typer:MacroCallTyper) {
 		if (declaration == null)
 			throw "macro dispatch request requires a selected declaration";
 		this.declaration = declaration;
 		this.arguments = arguments == null ? [] : arguments.copy();
 		this.filePath = filePath == null ? "<unknown>" : filePath;
 		this.modulePath = modulePath == null ? "" : modulePath;
+		this.typer = typer;
 	}
+
+	public function getTyper():Null<MacroCallTyper>
+		return typer;
 
 	public function getDeclaration():TyDeclarationInfo
 		return declaration;

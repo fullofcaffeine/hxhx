@@ -116,7 +116,7 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType
 		case "dynamic": "Obj.t";
 		case _ if (isEnumBox != null && isEnumBox(result)): "Obj.t";
 		case _ if (referenceCarrier != null && referenceCarrier(result) != null): referenceCarrier(result);
-		case _: throw "OCaml block function requires a supported concrete return carrier";
+		case _: throw "OCaml block function requires a supported concrete return carrier: " + result.getDisplay();
 	};
 	for (type in facts.getReturnTypes())
 		Stage3OcamlCallableConversion.validateReturn(type, result);

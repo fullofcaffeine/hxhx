@@ -342,6 +342,36 @@ compile_app anon_methods "$ANON_METHODS_DIR/src" Main --hxhx-macro-cache "$CACHE
 require_line anon_methods '^expr_macros_expanded=6$'
 echo "PROJECT_MACRO_MODULE_ANON_METHODS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
+# Text formatted by a macro with MacroStringTools.formatString (upstream's format_string, which
+# unit.HelperMacros.pipeMarkupLiteral uses): the program prints upstream's values and part ranges.
+# An empty `${ }` and an unclosed `${` fail with upstream's message at upstream's position.
+FORMAT_DIR="$ROOT/test/fixtures/project-macro-format-string"
+(
+  cd "$FORMAT_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/format.oracle.stdout" 2>"$ARTIFACT_DIR/format.oracle.stderr"
+diff -u "$FORMAT_DIR/expected.stdout" "$ARTIFACT_DIR/format.oracle.stdout"
+for format_case in empty unclosed; do
+  set +e
+  (
+    cd "$FORMAT_DIR"
+    haxe "oracle-$format_case.hxml"
+  ) >"$ARTIFACT_DIR/format_$format_case.oracle.stdout" 2>"$ARTIFACT_DIR/format_$format_case.oracle.stderr"
+  set -e
+  diff -u "$FORMAT_DIR/expected-$format_case.stderr" "$ARTIFACT_DIR/format_$format_case.oracle.stderr"
+done
+compile_app format "$FORMAT_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line format '^expr_macros_expanded=20$'
+"$WORK_DIR/app-format/out.exe" >"$ARTIFACT_DIR/format.stdout" 2>"$ARTIFACT_DIR/format.stderr"
+diff -u "$FORMAT_DIR/expected.stdout" "$ARTIFACT_DIR/format.stdout"
+expect_failure format_empty "$FORMAT_DIR/src" EmptyMain "$(cat "$FORMAT_DIR/expected-empty.stderr")" \
+  --hxhx-macro-cache "$CACHE_DIR"
+diff -u "$FORMAT_DIR/expected-empty.stderr" "$ARTIFACT_DIR/format_empty.compile.stderr"
+expect_failure format_unclosed "$FORMAT_DIR/src" UnclosedMain "$(cat "$FORMAT_DIR/expected-unclosed.stderr")" \
+  --hxhx-macro-cache "$CACHE_DIR"
+diff -u "$FORMAT_DIR/expected-unclosed.stderr" "$ARTIFACT_DIR/format_unclosed.compile.stderr"
+echo "PROJECT_MACRO_MODULE_FORMAT_STRING:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
 # A macro whose body is written with reification (`macro { ... }`, `$v{}`, `$b{}`, `$a{}`, `$e{}`,
 # field splices, `@:pos`) builds as a plugin and the program prints what upstream prints.
 REIFICATION_DIR="$ROOT/test/fixtures/project-macro-reification"
@@ -409,6 +439,36 @@ expect_failure context_error "$CONTEXT_DIR/src" ErrorMain "src/ErrorMain.hx:4: c
   --hxhx-macro-cache "$CACHE_DIR"
 diff -u "$CONTEXT_DIR/expected-error.stderr" "$ARTIFACT_DIR/context_error.compile.stderr"
 echo "PROJECT_MACRO_MODULE_CONTEXT:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# Macros that read the compiler's types (Context.typeof, Context.follow, Ref.get), in the shape of
+# upstream's unit test builder, print what upstream prints. No Context answer is unsupported.
+TYPEOF_DIR="$ROOT/test/fixtures/project-macro-typeof"
+(
+  cd "$TYPEOF_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/typeof.oracle.stdout" 2>"$ARTIFACT_DIR/typeof.oracle.stderr"
+diff -u "$TYPEOF_DIR/expected.stdout" "$ARTIFACT_DIR/typeof.oracle.stdout"
+compile_app typeof "$TYPEOF_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line typeof '^expr_macros_expanded=16$'
+if grep -q '^macro_context_unsupported=' "$ARTIFACT_DIR/typeof.compile.stdout"; then
+  echo "Project macro typeof step: a Context answer was unsupported" >&2
+  exit 1
+fi
+"$WORK_DIR/app-typeof/out.exe" >"$ARTIFACT_DIR/typeof.stdout" 2>"$ARTIFACT_DIR/typeof.stderr"
+diff -u "$TYPEOF_DIR/expected.stdout" "$ARTIFACT_DIR/typeof.stdout"
+echo "PROJECT_MACRO_MODULE_TYPEOF:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+
+# A macro that builds TLazy itself runs upstream (expected.stdout), but hxhx has no native form for
+# its function payload: the plugin build fails at that constructor with the emitter's message.
+LAZY_DIR="$ROOT/test/fixtures/project-macro-lazy"
+(
+  cd "$LAZY_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/lazy.oracle.stdout" 2>"$ARTIFACT_DIR/lazy.oracle.stderr"
+diff -u "$LAZY_DIR/expected.stdout" "$ARTIFACT_DIR/lazy.oracle.stdout"
+expect_failure lazy "$LAZY_DIR/src" Main "OCaml enum payload representation is not implemented: haxe.macro.Type#static:TLazy" \
+  --hxhx-macro-cache "$CACHE_DIR"
+echo "PROJECT_MACRO_MODULE_LAZY:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 # Macros that define modules (Context.defineModule, Context.defineType) in the shape of upstream's
 # UnitBuilder: the compile types the defined classes and the program prints what upstream prints.

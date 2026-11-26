@@ -102,7 +102,8 @@ class ExprMacroExpander {
 			final selected = registered != null
 				|| selection == null ? null : selectDeclaration(original, context, scope, selection, typerContexts);
 			if (selected != null) {
-				switch dispatchSelected(selected, context, session, trace) {
+				switch dispatchSelected(selected, context, session, trace,
+					{context: typerContextFor(context, selection, typerContexts), loader: selection.loader}) {
 					case Expanded(expression):
 						count++;
 						return Consume(expression);
@@ -196,9 +197,10 @@ class ExprMacroExpander {
 	}
 
 	/** Send the selected call as one typed request; syntax or an explicit reason comes back, never null syntax. */
-	static function dispatchSelected(selected:SelectedExprMacroCall, context:ExprMacroSourceContext, session:MacroRuntimeSession,
-			trace:Bool):ExprMacroDispatchResult {
-		final request = new ExprMacroDispatchRequest(selected.getDeclaration(), selected.getArguments(), context.filePath, context.modulePath);
+	static function dispatchSelected(selected:SelectedExprMacroCall, context:ExprMacroSourceContext, session:MacroRuntimeSession, trace:Bool,
+			typer:hxhx.macro.MacroCallTyper):ExprMacroDispatchResult {
+		// The call site's typer answers the macro's `Context.typeof`.
+		final request = new ExprMacroDispatchRequest(selected.getDeclaration(), selected.getArguments(), context.filePath, context.modulePath, typer);
 		if (trace)
 			Sys.println("expr_macro_dispatch declaration=" + request.describe() + " args=" + request.getArguments().length);
 		final result = session.expandSelected(request);

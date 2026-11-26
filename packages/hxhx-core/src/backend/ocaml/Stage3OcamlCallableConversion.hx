@@ -60,9 +60,13 @@ function lambdaResult(facts:TypedBackendLambdaOccurrence, value:String, names:St
 	return returnValue(facts.bodyType, expected, value, names);
 }
 
-/** Both expression bodies and exact block returns use the same checked conversion. */
+/**
+	Both expression bodies and exact block returns use the same checked conversion.
+	A type and its alias-equivalent form (a recursive typedef unfolded to another depth, such as
+	`haxe.macro.Type.ClassField` inside its own `overloads`) are one storage type: no conversion.
+**/
 function returnValue(actual:TyType, expected:TyType, value:String, names:Stage3OcamlLocalNames):String {
-	if (actual.getSemanticKey() == expected.getSemanticKey())
+	if (actual.getSemanticKey() == expected.getSemanticKey() || TyAliasEquivalence.equivalentTypes(actual, expected))
 		return value;
 	if (expected.isVoid())
 		return "ignore (" + value + ")";
@@ -79,7 +83,8 @@ function validateReturn(actual:TyType, expected:TyType):Void {
 		throw "OCaml lambda return conversion requires complete types";
 	if (actual.getSemanticKey() == expected.getSemanticKey()
 		|| expected.isVoid()
-		|| Stage3OcamlNumericWidening.needsPromotion(actual, expected))
+		|| Stage3OcamlNumericWidening.needsPromotion(actual, expected)
+		|| TyAliasEquivalence.equivalentTypes(actual, expected))
 		return;
 	if (TyAssignmentCompatibility.classify(expected, actual, Unchecked) != Compatible)
 		throw "OCaml lambda body does not satisfy its return contract";
@@ -90,5 +95,5 @@ function validateReturn(actual:TyType, expected:TyType):Void {
 	final scalar = actual.isDynamic() ? expected : actual;
 	if (!(actual.isDynamic() || expected.isDynamic())
 		|| !["primitive:Bool", "primitive:Int", "primitive:String"].contains(scalar.getSemanticKey()))
-		throw "unsupported OCaml block return representation conversion";
+		throw "unsupported OCaml block return representation conversion: " + actual.getDisplay() + " to " + expected.getDisplay();
 }

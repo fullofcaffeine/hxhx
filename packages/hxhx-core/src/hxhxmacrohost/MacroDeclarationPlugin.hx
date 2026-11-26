@@ -44,6 +44,9 @@ class MacroDeclarationPlugin {
 		} catch (abort:MacroContextAbort) {
 			// `Context.error` (or a Context request the compiler rejected): report at its position.
 			return MacroSyntaxWire.encodeFailure(abort.message, abort.position);
+		} catch (error:haxe.macro.Expr.Error) {
+			// A typing error the macro did not catch (`Context.typeof`): upstream reports it at its position.
+			return MacroSyntaxWire.encodeFailure(error.message, error.pos);
 		} catch (error:String) {
 			return MacroSyntaxWire.encodeFailure(error);
 		} catch (error:haxe.Exception) {
