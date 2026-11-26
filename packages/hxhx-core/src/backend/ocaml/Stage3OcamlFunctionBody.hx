@@ -31,11 +31,19 @@ typedef FunctionRenderInput = {
 		Array loop has a native adapter here (`HxBootArray.iter`); see `validate`.
 	**/
 	final ?iterableType:HxExpr->Null<TyType>;
+
+	/**
+		The exact collection operation of an append in this body, from the projection that owns the
+		closure. An inlined `Array.map` or `filter` appends to its result inside a loop. The statement
+		emitter renders that append from the same projection, so a body without this lookup keeps
+		appends unsupported.
+	**/
+	final ?collectionControl:HxExpr->TypedBackendCollectionControl;
 }
 
 /** Each closure owns a return exception; the nearest invocation catches its own exit. */
 function render(input:FunctionRenderInput):String {
-	final selected = plan(input.facts, input.body, input.isEnumBox, input.referenceCarrier, input.iterableType);
+	final selected = plan(input.facts, input.body, input.isEnumBox, input.referenceCarrier, input.iterableType, input.collectionControl);
 	if (input.names == null)
 		throw "OCaml block function requires its local naming owner";
 	final arguments = switch input.facts.expression {
@@ -96,7 +104,7 @@ function render(input:FunctionRenderInput):String {
 	A reference result uses the carrier `referenceCarrier` selects for it.
  */
 function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType->Bool, ?referenceCarrier:TyType->Null<String>,
-		?iterableType:HxExpr->Null<TyType>):FunctionStatements {
+		?iterableType:HxExpr->Null<TyType>, ?collectionControl:HxExpr->TypedBackendCollectionControl):FunctionStatements {
 	if (facts == null)
 		throw "OCaml block function requires its exact lambda facts";
 	switch facts.expression {
@@ -121,7 +129,8 @@ function plan(facts:TypedBackendLambdaOccurrence, body:HxExpr, ?isEnumBox:TyType
 	for (type in facts.getReturnTypes())
 		Stage3OcamlCallableConversion.validateReturn(type, result);
 	final mapped:Array<{statement:HxStmt, fact:TypedBackendReturnOccurrence}> = [];
-	final statements = TypedControlStatements.functionBody(body, null, null, (expression, statement) -> {
+	final onArrayAppend = collectionControl == null ? null : (append:HxExpr) -> Stage3OcamlCollectionControl.validate(append, collectionControl);
+	final statements = TypedControlStatements.functionBody(body, null, onArrayAppend, (expression, statement) -> {
 		mapped.push({statement: statement, fact: facts.requireReturn(expression)});
 	});
 	var returns = 0;

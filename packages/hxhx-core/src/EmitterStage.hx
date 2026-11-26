@@ -3840,6 +3840,7 @@ class EmitterStage {
 					isEnumBox: type -> currentEnums != null && currentEnums.runtimeName(type) != null,
 					referenceCarrier: type -> backend.ocaml.Stage3OcamlReferenceCarrier.select(type, currentClassStorage, ocamlTypeFromTy),
 					iterableType: stage3ExactExprType,
+					collectionControl: currentTypedInitializer != null ? currentTypedInitializer.requireCollectionControl : currentTypedFunction.requireCollectionControl,
 					renderStatements: (statements,
 						renderReturn) -> stmtListToOcaml(statements, allowed, "HxBlockReturn", arityByIdent, hints, staticImportByIdent, currentPackagePath,
 							moduleNameByPkgAndClass, callSigByCallee, hints, new Map(), null, arguments, renderReturn)
