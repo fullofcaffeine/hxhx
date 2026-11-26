@@ -1208,7 +1208,7 @@ class TyperStage {
 				fieldReplay.assertReplayComplete();
 			}
 			final authoredFunctions = HxClassDecl.getFunctions(classDeclaration);
-			// A macro function of a target compile is typed from a copy without its body
+			// A macro function of a target compile is typed as its bodyless target view
 			// (`omitsMacroBody`); the arrays below stay aligned with the authored functions.
 			final sourceFunctions = new Array<HxFunctionDecl>();
 			final omittedBodies = new Array<Bool>();
@@ -1218,7 +1218,7 @@ class TyperStage {
 				final authoredFunction = authoredFunctions[functionIndex];
 				final semanticDeclaration = semanticInfo == null ? null : semanticInfo.declarationForSource(authoredFunction);
 				final omitted = omitsMacroBody(authoredFunction, semanticDeclaration, className, context);
-				final sourceFunction = omitted ? withoutBody(authoredFunction) : authoredFunction;
+				final sourceFunction = omitted ? TyMacroTargetView.declaration(authoredFunction) : authoredFunction;
 				final functionIdentity = TypedFunction.stableIdentityFor(className, functionIndex, sourceFunction, semanticDeclaration);
 				final functionEnvironment = typeFunction(sourceFunction, context, functionIdentity, semanticDeclaration);
 				sourceFunctions.push(sourceFunction);
@@ -1296,21 +1296,14 @@ class TyperStage {
 	/**
 		Whether `fn` is a macro function whose body this compile does not type: a target compile
 		(`TyperContext.omitsMacroBodies`). Upstream types a macro body only in its macro context,
-		which for hxhx is the project-macro plugin build. hxhx's own bundled-sources macro keeps its
-		body (`MacroCompilationContext.isBundledSourcesMacro`).
+		which for hxhx is the project-macro plugin build. The index decides this once per
+		declaration, when it gives the function its target view (`TyMacroTargetView`); the rule
+		below is for a function without an indexed declaration.
 	**/
 	static function omitsMacroBody(fn:HxFunctionDecl, declaration:Null<TyDeclarationInfo>, className:String, context:TyperContext):Bool {
-		final isMacro = declaration != null ? TyMacroCallSignature.isMacro(declaration) : HxFunctionDecl.getMetadata(fn).indexOf("macro") >= 0;
-		if (!isMacro || !HxFunctionDecl.getHasBody(fn) || !context.omitsMacroBodies())
-			return false;
-		return !MacroCompilationContext.isBundledSourcesMacro(className + "." + HxFunctionDecl.getName(fn), context.getFilePath());
-	}
-
-	/** `fn` with an empty body and everything else as written, so its signature and defaults are still typed. */
-	static function withoutBody(fn:HxFunctionDecl):HxFunctionDecl {
-		return new HxFunctionDecl(HxFunctionDecl.getName(fn), HxFunctionDecl.getVisibility(fn), HxFunctionDecl.getIsStatic(fn), HxFunctionDecl.getArgs(fn),
-			HxFunctionDecl.getReturnTypeHint(fn), [], "", HxFunctionDecl.getMetadata(fn), HxFunctionDecl.getPos(fn), HxFunctionDecl.getEndPos(fn), "", true,
-			HxFunctionDecl.getIsModuleLevel(fn), true);
+		if (declaration != null)
+			return declaration.hasMacroTargetView();
+		return context.omitsMacroBodies() && TyMacroTargetView.applies(fn, className, context.getFilePath());
 	}
 
 	/**
@@ -2313,9 +2306,10 @@ class TyperStage {
 
 	/** Resolve receiver applications once at the shared call boundary, including inherited and implicit receivers. */
 	static function appliedCallSignature(declaration:TyDeclarationInfo, callee:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):TyFunSig {
-		final signature = declaration.getSignature();
+		final signature = TyMacroCallSignature.written(declaration, declaration.getSignature());
 		if (declaration.getIsStatic())
-			return macroCallSignature(declaration, ctx.getIndex().getMethodBodyResults().signature(declaration), ctx, scope, pos);
+			return macroCallSignature(declaration, TyMacroCallSignature.written(declaration, ctx.getIndex().getMethodBodyResults().signature(declaration)),
+				ctx, scope, pos);
 		final receiverType = callReceiverType(declaration, callee, scope, ctx, pos);
 		final owner = ctx.getIndex().getByFullName(declaration.getOwner().getCanonicalName());
 		return macroCallSignature(declaration, owner == null ? signature : TyNominalApplication.signature(ctx.getIndex(), owner, receiverType, signature),
@@ -2760,9 +2754,11 @@ class TyperStage {
 		}
 		// Selection scores the contract callers satisfy. A macro receives syntax at
 		// its Expr positions; every other declaration keeps its resolved signature.
-		function callable(candidate:TyFunSig, receiverType:Null<TyType>):TyFunSig
-			return macroCallSignature(c.declarationForSignature(candidate), TyNominalApplication.signature(ctx.getIndex(), c, receiverType, candidate), ctx,
-				scope, pos);
+		function callable(candidate:TyFunSig, receiverType:Null<TyType>):TyFunSig {
+			final declaration = c.declarationForSignature(candidate);
+			return macroCallSignature(declaration,
+				TyNominalApplication.signature(ctx.getIndex(), c, receiverType, TyMacroCallSignature.written(declaration, candidate)), ctx, scope, pos);
+		}
 		function inputTrial(declaration:TyDeclarationInfo, signature:TyFunSig, actual:Array<TyType>):Null<TyMethodInputState.TyMethodInputTrial> {
 			// Positional evidence is unambiguous only after every fixed slot is supplied.
 			// Optional/rest alignment retains its ordinary call-policy owner.

@@ -67,7 +67,23 @@ function quote(value) {
   return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
 }
 
-function compare(upstream, hxhx) {
+/**
+ * Give the second and later records with one key an ordinal suffix (`key#2`), in record order.
+ * Overloads share a name (haxe.ds.Vector declares two constructors); both sides record them in
+ * declaration order, so the suffix pairs them. A pair still matches only when the bodies are equal.
+ */
+function withOrdinals(records) {
+  const seen = new Map()
+  return records.map(record => {
+    const count = (seen.get(record.key) || 0) + 1
+    seen.set(record.key, count)
+    return count === 1 ? record : { ...record, key: `${record.key}#${count}` }
+  })
+}
+
+function compare(upstreamDump, hxhxDump) {
+  const upstream = { ...upstreamDump, records: withOrdinals(upstreamDump.records) }
+  const hxhx = { ...hxhxDump, records: withOrdinals(hxhxDump.records) }
   const byKey = new Map(hxhx.records.map(record => [record.key, record]))
   const counts = { match: 0, mismatch: 0, missingInHxhx: 0, hxhxExportError: 0, upstreamError: 0 }
   const files = new Map()
@@ -98,8 +114,14 @@ function compare(upstream, hxhx) {
   const compared = upstream.records.length - counts.upstreamError
   const fileList = [...files.values()].filter(file => file.total > 0)
   const fullFiles = fileList.filter(file => file.match === file.total).length
+  // Bodies only hxhx has. Informational: they count toward no field, match, file or baseline number.
+  // `lowering` marks members that hxhx's enum lowering adds (see ParseOracleHxhx.loweredMembers).
+  const upstreamKeys = new Set(upstream.records.map(record => record.key))
+  const extras = hxhx.records.filter(record => !upstreamKeys.has(record.key))
   return {
     counts,
+    hxhxOnly: extras.filter(record => !record.lowering).map(record => record.key),
+    hxhxOnlyLowering: extras.filter(record => record.lowering).map(record => record.key),
     comparedFields: compared,
     fieldMatchPercent: compared === 0 ? 0 : (100 * counts.match) / compared,
     files: fileList.length,
@@ -131,7 +153,8 @@ function main() {
   console.log(
     `PARSE_ORACLE: fields=${report.comparedFields} match=${c.match} (${report.fieldMatchPercent.toFixed(1)}%) mismatch=${c.mismatch} ` +
       `missing=${c.missingInHxhx} export_error=${c.hxhxExportError} files=${report.files} fully_matching=${report.fullyMatchingFiles} ` +
-      `(${report.fileMatchPercent.toFixed(1)}%) hxhx_file_parse_errors=${report.hxhxFileParseErrors.length}`
+      `(${report.fileMatchPercent.toFixed(1)}%) hxhx_file_parse_errors=${report.hxhxFileParseErrors.length} ` +
+      `hxhx_only=${report.hxhxOnly.length} hxhx_only_lowering=${report.hxhxOnlyLowering.length}`
   )
   console.log(`[parse-oracle] report: ${path.relative(root, path.join(options.out, 'report.json'))}`)
   if (options.checkBaseline) checkBaseline(report)

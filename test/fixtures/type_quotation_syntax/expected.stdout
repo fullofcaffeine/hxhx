@@ -1,0 +1,11 @@
+Int
+Null<Int>
+Array<Map<String, Int>>
+haxe.macro.Expr.ComplexType
+haxe.ds.Option<Bool>
+Int -> String
+(Int, ?String) -> Void
+(a:Int, b:Float) -> Bool
+(?Int) -> Void
+(Int)
+Main & Printer
