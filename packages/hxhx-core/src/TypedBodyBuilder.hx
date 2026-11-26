@@ -1012,7 +1012,7 @@ class TypedBodyBuilder {
 			case ECall(callee, arguments):
 				if (typeResolver != null && TyTraceCall.isLanguageCall(expression))
 					return TypedExpr.traceCall(buildExpressions(arguments, diagnosticPosition, environment, typeResolver, callResolver, memberResolver),
-						position);
+						TyTraceCall.position(expression, position));
 				switch (callee) {
 					case ESuper:
 						final receiver = buildExpr(callee, null, diagnosticPosition, environment, typeResolver, callResolver, memberResolver);

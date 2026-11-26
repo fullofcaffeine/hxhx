@@ -1,0 +1,4 @@
+test/fixtures/trace_arrow_result/Known.hx:11: 1
+test/fixtures/trace_arrow_result/Known.hx:11: 2
+test/fixtures/trace_arrow_result/Known.hx:13: 3
+test/fixtures/trace_arrow_result/Known.hx:14: 10
