@@ -4799,7 +4799,8 @@ class TyperStage {
 						inferExprType(args[index], scope, ctx, pos, contexts[index]);
 					}
 				];
-				final constructed = scope.getInference().construct(expr, written, arity, path.omittedAliasParameters);
+				final constructed = scope.getInference()
+					.construct(expr, written, arity, path.omittedAliasParameters, TyConstructorArgumentDefaults.bounds(ctx.getIndex(), owner));
 				if (!scope.getInference().constrainConstructor({
 					expression: expr,
 					provider: owner,

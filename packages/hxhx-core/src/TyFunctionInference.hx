@@ -914,7 +914,8 @@ class TyFunctionInference {
 		alias body may place them anywhere in the target, so each binder becomes one
 		variable shared by all of its occurrences in this constructor term.
 	 */
-	public function construct(expression:HxExpr, type:TyType, arity:Int, ?omittedAliasParameters:Array<TyTypeParameterId>):TyType {
+	public function construct(expression:HxExpr, type:TyType, arity:Int, ?omittedAliasParameters:Array<TyTypeParameterId>,
+			?argumentBounds:Array<Null<TyType>>):TyType {
 		final omittedAlias = omittedAliasParameters != null && omittedAliasParameters.length > 0;
 		if (!omittedAlias && (arity == 0 || type.getTypeArguments().length > 0 || type.getNominalIdentity() == null))
 			return type;
@@ -922,8 +923,10 @@ class TyFunctionInference {
 		if (term == null) {
 			if (solver.isSealed())
 				throw "constructor occurrence is absent from sealed inference";
-			term = omittedAlias ? instantiate(type, omittedAliasParameters,
-				_ -> solver.fresh()) : Nominal(type.getNominalIdentity(), [for (_ in 0...arity) solver.fresh()]);
+			term = omittedAlias ? instantiate(type, omittedAliasParameters, _ -> solver.freshConstructorArgument(null)) : Nominal(type.getNominalIdentity(), [
+				for (slot in 0...arity)
+					solver.freshConstructorArgument(argumentBounds != null && slot < argumentBounds.length ? argumentBounds[slot] : null)
+			]);
 			occurrences.push({expression: expression, term: term});
 		}
 		return solver.isSealed() ? solver.requireSolved(term) : solver.preview(term);
@@ -1306,7 +1309,21 @@ class TyFunctionInference {
 		final term = occurrence(input.expression);
 		if (solver.isSealed() || term == null || input.provider == null)
 			return true;
-		final candidates = input.provider.instanceMethodCandidates("new");
+		// A class without its own constructor uses the nearest inherited one, whose parameters name
+		// the ancestor's type arguments as the class applies them (`SC2<T> extends C2<Array<T>>`).
+		// Upstream applies the parent's arguments to the inherited constructor
+		// (typeloadFunction.ml:183-232), so those parameters infer the class's own arguments.
+		var owner = input.provider;
+		var ownerArguments:Null<Array<TyInferenceTerm>> = null;
+		if (owner.instanceMethodCandidates("new").length == 0) {
+			final inherited = inheritedConstructorOwner(input.provider, term, input.index);
+			if (inherited == null)
+				return true;
+			owner = inherited.owner;
+			ownerArguments = inherited.arguments;
+		}
+		final ownerTerm = ownerArguments == null ? term : Nominal(owner.getIdentity(), ownerArguments);
+		final candidates = owner.instanceMethodCandidates("new");
 		if (candidates.length == 0)
 			return true;
 		var best:Null<TyFunctionInference> = null;
@@ -1314,16 +1331,17 @@ class TyFunctionInference {
 		var bestScore = -1;
 		var tied = false;
 		for (signature in candidates) {
-			final declaration = input.provider.declarationForSignature(signature);
-			if (declaration == null || declaration.getIsStatic() || !declaration.getOwner().equals(input.provider.getIdentity()))
+			final declaration = owner.declarationForSignature(signature);
+			if (declaration == null || declaration.getIsStatic() || !declaration.getOwner().equals(owner.getIdentity()))
 				continue;
 			// Omitted constructor annotations can still expose owner binders through
 			// checked field assignments. Use those facts before solving the allocation.
 			final checkedSignature = input.index.getMethodBodyResults().signature(declaration);
 			final candidate = fork();
-			if (!candidate.constrainMember(input.expression, input.provider, checkedSignature, input.argumentTypes, input.environment, input.index))
+			if (!candidate.constrainMember(input.expression, owner, checkedSignature, input.argumentTypes, input.environment, input.index, null,
+				ownerArguments))
 				continue;
-			final applied = TyNominalApplication.signature(input.index, input.provider, candidate.solver.preview(term), signature);
+			final applied = TyNominalApplication.signature(input.index, owner, candidate.solver.preview(ownerTerm), signature);
 			final score = input.score(applied, TyMethodGenericBinding.inferableTypeParameters(declaration));
 			if (score < 0)
 				continue;
@@ -1341,6 +1359,32 @@ class TyFunctionInference {
 			return false;
 		solver.commit(best.solver);
 		return true;
+	}
+
+	/** The nearest ancestor with a constructor, and its type arguments as terms over `term`'s own arguments. */
+	function inheritedConstructorOwner(provider:TyNominalInfo, term:TyInferenceTerm,
+			index:TyperIndex):Null<{owner:TyNominalInfo, arguments:Array<TyInferenceTerm>}> {
+		final arguments = switch solver.follow(term) {
+			case Nominal(identity, arguments) if (identity.equals(provider.getIdentity())): arguments;
+			case _: return null;
+		};
+		final parameters = TyNominalApplication.parameterIds(provider);
+		if (parameters.length != arguments.length)
+			return null;
+		final path = TypedConstructorPath.select(index,
+			TyType.nominal(provider.getIdentity(), [for (parameter in parameters) TyType.typeParameter(parameter)]));
+		if (path == null || path.getOwner() == provider)
+			return null;
+		final bindings = new StringMap<TyInferenceTerm>();
+		for (slot in 0...parameters.length)
+			bindings.set(parameters[slot].getCanonicalKey(), arguments[slot]);
+		return {
+			owner: path.getOwner(),
+			arguments: [
+				for (type in path.getOwnerType().getTypeArguments())
+					TyInferenceSubstitution.apply(type, bindings)
+			]
+		};
 	}
 
 	/** Find an unannotated lexical parameter; explicit Dynamic and unresolved written names are not inference holes. */
@@ -1520,17 +1564,20 @@ class TyFunctionInference {
 		owner and repeats the successful constraint only for its selected declaration.
 	 */
 	public function constrainMember(receiver:HxExpr, provider:TyNominalInfo, signature:TyFunSig, actual:Array<TyType>, environment:TyFunctionEnv,
-			index:TyperIndex, ?supplied:MemberInputSources):Bool {
+			index:TyperIndex, ?supplied:MemberInputSources, ?providerArguments:Array<TyInferenceTerm>):Bool {
 		if (solver.isSealed())
 			return true;
-		final receiverTerm = sourceTerm(receiver, environment);
-		if (receiverTerm == null)
-			return true;
-		// An inferred input can reach its container through a solved variable (`?path`
-		// followed by `path = new Array()`), so follow it on both sides of the wrapper.
-		final arguments = switch solver.follow(nonNullableReceiver(solver.follow(receiverTerm))) {
-			case Nominal(identity, arguments) if (identity.equals(provider.getIdentity())): arguments;
-			case _: return true;
+		// An inherited constructor names its owner's arguments, already projected from the allocated class.
+		final arguments = if (providerArguments != null) providerArguments else {
+			final receiverTerm = sourceTerm(receiver, environment);
+			if (receiverTerm == null)
+				return true;
+			// An inferred input can reach its container through a solved variable (`?path`
+			// followed by `path = new Array()`), so follow it on both sides of the wrapper.
+			switch solver.follow(nonNullableReceiver(solver.follow(receiverTerm))) {
+				case Nominal(identity, arguments) if (identity.equals(provider.getIdentity())): arguments;
+				case _: return true;
+			}
 		};
 		final parameters = TyNominalApplication.parameterIds(provider);
 		if (parameters.length != arguments.length)
