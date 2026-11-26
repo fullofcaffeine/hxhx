@@ -1,0 +1,22 @@
+macro 1
+  => ({ expr : EConst(CInt("1", null)), pos : { file : "Probe.txt", min : 6, max : 7 } } : haxe.macro.Expr)
+macro "text"
+  => ({ expr : EConst(CString("text", DoubleQuotes)), pos : { file : "Probe.txt", min : 6, max : 12 } } : haxe.macro.Expr)
+macro foo(1, "a")
+  => ({ expr : ECall({ expr : EConst(CIdent("foo")), pos : { file : "Probe.txt", min : 6, max : 9 } }, [{ expr : EConst(CInt("1", null)), pos : { file : "Probe.txt", min : 10, max : 11 } }, { expr : EConst(CString("a", DoubleQuotes)), pos : { file : "Probe.txt", min : 13, max : 16 } }]), pos : { file : "Probe.txt", min : 6, max : 17 } } : haxe.macro.Expr)
+macro a.b
+  => ({ expr : EField({ expr : EConst(CIdent("a")), pos : { file : "Probe.txt", min : 6, max : 7 } }, "b", Normal), pos : { file : "Probe.txt", min : 6, max : 9 } } : haxe.macro.Expr)
+macro $v{x}
+  => (haxe.macro.Context.makeExpr(x, haxe.macro.Context.makePosition({ file : "Probe.txt", min : 9, max : 10 })) : haxe.macro.Expr)
+macro $i{name}
+  => ({ expr : EConst(CIdent(name)), pos : { file : "Probe.txt", min : 8, max : 14 } } : haxe.macro.Expr)
+macro $e{e}
+  => (e : haxe.macro.Expr)
+macro macro 1
+  => ({ expr : ECheckType({ expr : EObjectDecl([{ field : "expr", expr : { expr : ECall({ expr : EConst(CIdent("EConst")), pos : { file : "Probe.txt", min : 12, max : 12 } }, [{ expr : ECall({ expr : EConst(CIdent("CInt")), pos : { file : "Probe.txt", min : 12, max : 12 } }, [{ expr : EConst(CString("1", DoubleQuotes)), pos : { file : "Probe.txt", min : 12, max : 13 } }, { expr : EConst(CIdent("null")), pos : { file : "Probe.txt", min : 12, max : 13 } }]), pos : { file : "Probe.txt", min : 12, max : 12 } }]), pos : { file : "Probe.txt", min : 12, max : 12 } }, quotes : Unquoted }, { field : "pos", expr : { expr : EObjectDecl([{ field : "file", expr : { expr : EConst(CString("Probe.txt", DoubleQuotes)), pos : { file : "Probe.txt", min : 12, max : 13 } }, quotes : Unquoted }, { field : "min", expr : { expr : EConst(CInt("12", null)), pos : { file : "Probe.txt", min : 12, max : 13 } }, quotes : Unquoted }, { field : "max", expr : { expr : EConst(CInt("13", null)), pos : { file : "Probe.txt", min : 12, max : 13 } }, quotes : Unquoted }]), pos : { file : "Probe.txt", min : 12, max : 13 } }, quotes : Unquoted }]), pos : { file : "Probe.txt", min : 12, max : 13 } }, TPath({ pack : ["haxe", "macro"], name : "Expr", params : [] })), pos : { file : "Probe.txt", min : 12, max : 13 } } : haxe.macro.Expr)
+macro { var a = 1; a; }
+  => ({ expr : EBlock([{ expr : EVars([{ name : "a", namePos : { file : "Probe.txt", min : 12, max : 13 }, type : null, expr : { expr : EConst(CInt("1", null)), pos : { file : "Probe.txt", min : 16, max : 17 } }, isFinal : false, isStatic : false, meta : [] }]), pos : { file : "Probe.txt", min : 8, max : 18 } }, { expr : EConst(CIdent("a")), pos : { file : "Probe.txt", min : 19, max : 20 } }]), pos : { file : "Probe.txt", min : 6, max : 23 } } : haxe.macro.Expr)
+macro [1, 2]
+  => ({ expr : EArrayDecl([{ expr : EConst(CInt("1", null)), pos : { file : "Probe.txt", min : 7, max : 8 } }, { expr : EConst(CInt("2", null)), pos : { file : "Probe.txt", min : 10, max : 11 } }]), pos : { file : "Probe.txt", min : 6, max : 12 } } : haxe.macro.Expr)
+macro new String("s")
+  => ({ expr : ENew({ pack : [], name : "String", params : [] }, [{ expr : EConst(CString("s", DoubleQuotes)), pos : { file : "Probe.txt", min : 17, max : 20 } }]), pos : { file : "Probe.txt", min : 6, max : 21 } } : haxe.macro.Expr)

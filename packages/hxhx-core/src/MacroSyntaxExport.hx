@@ -216,8 +216,10 @@ class MacroSyntaxExport {
 			case EMacroType(typeText):
 				// Upstream turns `macro : T` into construction syntax while it parses.
 				MacroTypeQuotation.expression(typeText, position).expr;
-			case EMacroExpr(_, _):
-				throw failure("macro reification inside a macro argument is not exported yet");
+			case EMacroExpr(quoted, wrappers):
+				// Upstream reifies a quotation while it parses (`reify_expr`, `src/syntax/grammar.mly`
+				// lines 1275-1294), so a macro receives the syntax that builds the quoted `Expr`.
+				child(MacroReificationLowering.exportQuotation(quoted, wrappers, positions, position), position).expr;
 		};
 	}
 

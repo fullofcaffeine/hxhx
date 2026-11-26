@@ -54,6 +54,7 @@ haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
 haxe test/m14_macro_block_syntax_test.hxml
 haxe test/m14_macro_context_wire_test.hxml
+haxe test/m14_macro_quotation_export_test.hxml
 haxe test/m14_macro_source_positions_test.hxml
 haxe test/m14_macro_target_signature_test.hxml
 haxe test/m14_markup_literal_syntax_test.hxml
