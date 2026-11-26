@@ -17,13 +17,13 @@ import haxe.macro.Expr;
 	  expression, as upstream Haxe parses it.
 	- `fieldInitializer` converts the initializer of a variable or property field.
 	- Switches export with their patterns. A wildcard or `default` case becomes `case _:`, so both
-	  spellings compare equal; they mean the same thing.
+	  spellings compare equal; they mean the same thing. An extractor (`_.get() => v`) becomes the
+	  `=>` operation upstream parses.
 
 	Failure policy
-	- Syntax without an exact public form here (typed switch plans, target scopes, extractor
-	  patterns kept as text, unsupported patterns, metadata on locals) throws a message that
-	  starts with `macro syntax export:`. It is never approximated, so the oracle never reports a
-	  false match.
+	- Syntax without an exact public form here (typed switch plans, target scopes, unsupported
+	  patterns, metadata on locals) throws a message that starts with `macro syntax export:`. It
+	  is never approximated, so the oracle never reports a false match.
 **/
 class MacroBodyExport {
 	final positions:MacroSyntaxPositions;
@@ -181,10 +181,38 @@ class MacroBodyExport {
 					combined = binop(OpOr, combined, patternExpr(alternatives[index], position), position);
 				combined.expr;
 			case PGuard(_, _): throw failure("a guard nested inside a pattern");
-			case PExtractor(_, _): throw failure("extractor patterns are kept as text and are not exported yet");
+			case PExtractor(text, result): EBinop(OpArrow, extractor(text, position), patternExpr(result, position));
 			case PUnsupportedPattern(_): throw failure("the parser did not understand this pattern");
 		};
 		return {expr: definition, pos: position};
+	}
+
+	/**
+		The left side of an extractor pattern, such as `_.get()` in `_.get() => v`. Upstream parses
+		a pattern as an expression, so the extractor is an ordinary expression. The parser keeps it
+		as source text; read it again with the authored parser. Offsets in that text are not
+		offsets in the file, so every node receives the pattern's position, as every other
+		pattern node does.
+	**/
+	function extractor(text:String, position:Position):Expr {
+		final parsed = try {
+			HxParser.parseCompleteExprText(text, true);
+		} catch (error:HxParseError) {
+			throw failure("extractor `" + text + "` could not be read: " + error.message);
+		}
+		final exporter = new MacroSyntaxExport(new MacroSyntaxPositions(positions.getFile()), (expression, child) -> splice(expression, child));
+		return placed(exporter.quotation(parsed, position), position);
+	}
+
+	static function placed(value:Expr, position:Position):Expr {
+		final mapped = haxe.macro.ExprTools.map(value, child -> placed(child, position));
+		return switch mapped.expr {
+			case EMeta(entry, inner):
+				final params = entry.params == null ? null : [for (param in entry.params) placed(param, position)];
+				{expr: EMeta({name: entry.name, params: params, pos: position}, inner), pos: position};
+			case definition:
+				{expr: definition, pos: position};
+		};
 	}
 
 	static function ident(name:String, position:Position):Expr
