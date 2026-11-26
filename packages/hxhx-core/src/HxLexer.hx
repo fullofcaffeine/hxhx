@@ -478,6 +478,111 @@ class HxLexer {
 		throw new HxParseError("Unterminated regex literal", startPos);
 	}
 
+	/**
+		Read the inline markup literal whose `<` is at `start`, move past it, and return its source
+		text from `<` to the end of the literal.
+
+		Haxe 4.3.7 reads the literal in its lexer (`lexer.ml` `lex_xml` and `not_xml`):
+		- the tag name follows `<` directly and may be empty, which starts a fragment (`<>...</>`);
+		- an opening tag with the same name nests; `</name>` closes one level and ends the literal at
+		  the outermost level;
+		- `/>` closes the opening tag that was read last when it has the literal's name, so `<br/>`
+		  and `<a><a /></a>` end where upstream ends them; a fragment cannot close itself this way;
+		- everything else, including quotes, `//`, `/*` and line breaks, is plain text.
+		Non-ASCII characters count as name characters; upstream accepts most of them.
+	**/
+	public function readMarkupLiteral(start:Int):String {
+		moveTo(start);
+		final startPos = pos();
+		bump(); // `<`
+		final name = markupName();
+		final openTag = "<" + name;
+		final closeTag = "</" + name + ">";
+		var depth = 0;
+		var inOpenTag = name.length > 0;
+		while (true) {
+			if (eof())
+				throw new HxParseError("Unterminated markup literal", startPos);
+			final c = peek(0);
+			if (c == "<".code) {
+				final closing = markupClosingTagAt();
+				if (closing != null) {
+					for (_ in 0...closing.length)
+						bump();
+					if (closing == closeTag) {
+						if (depth == 0)
+							return src.substring(start, index);
+						depth--;
+					}
+					inOpenTag = false;
+				} else {
+					bump();
+					final tag = "<" + markupName();
+					inOpenTag = tag == openTag;
+					if (inOpenTag)
+						depth++;
+				}
+			} else if (c == "/".code && peek(1) == ">".code) {
+				bump();
+				bump();
+				if (inOpenTag)
+					depth--;
+				if (depth < 0)
+					return src.substring(start, index);
+				inOpenTag = false;
+			} else {
+				bump();
+			}
+		}
+	}
+
+	/** Move the cursor to `target`, keeping line and column right. */
+	function moveTo(target:Int):Void {
+		if (target < index) {
+			index = 0;
+			line = 1;
+			column = 1;
+		}
+		while (index < target && !eof())
+			bump();
+	}
+
+	static inline function isMarkupNameStart(c:Int):Bool {
+		return isIdentStart(c) || c == "$".code || c == ":".code || c >= 0x80;
+	}
+
+	static inline function isMarkupNameChar(c:Int):Bool {
+		return isMarkupNameStart(c) || isDigit(c) || c == "-".code || c == ".".code;
+	}
+
+	/** Length of the markup name at `offset` from the cursor; zero when no name starts there. */
+	function markupNameLength(offset:Int):Int {
+		if (!isMarkupNameStart(peek(offset)))
+			return 0;
+		var length = 1;
+		while (isMarkupNameChar(peek(offset + length)))
+			length++;
+		return length;
+	}
+
+	function markupName():String {
+		final length = markupNameLength(0);
+		final name = src.substr(index, length);
+		for (_ in 0...length)
+			bump();
+		return name;
+	}
+
+	/** `</name>` at the cursor, or null. */
+	function markupClosingTagAt():Null<String> {
+		if (peek(1) != "/".code)
+			return null;
+		final length = markupNameLength(2);
+		if (peek(2 + length) != ">".code)
+			return null;
+		return src.substr(index, length + 3);
+	}
+
 	public function next():HxToken {
 		skipWhitespaceAndComments();
 		final p = pos();

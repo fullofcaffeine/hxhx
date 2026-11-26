@@ -1,0 +1,27 @@
+<p></p>
+<p class="a"> text </p>
+<div><div></div></div>
+<div><span></div>
+<br/>
+<img src="x" />
+<ul><li /></ul>
+<my-tag></my-tag>
+<svg:rect></svg:rect>
+<a.B_c-1:d></a.B_c-1:d>
+<:x></:x>
+<></>
+<>fragment</>
+<Upper></Upper>
+<$name>$value ${1 + 2}</$name>
+<q title=" </q>
+<q title=' </q>
+<q a=// </q>
+<q a=/* </q>
+<q a=~/ </q>
+<pre>
+  first line
+  second line
+</pre>
+<A></A>|<b />
+<A></A>|<b />
+<field kind="static"></field> <after/>
