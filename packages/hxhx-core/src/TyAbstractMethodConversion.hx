@@ -16,11 +16,19 @@ class TyAbstractMethodConversion {
 	final callable:TyType;
 	final index:TyperIndex;
 
-	function new(declaration:TyDeclarationInfo, actual:TyType, callable:TyType, index:TyperIndex) {
+	/**
+		A static `@:to` method of a `@:multiType` abstract (Map's `toStringMap`) is a plain cast:
+		upstream marks it MultiType (typeloadFields.ml:1105-1107) and casts the value instead of
+		calling the method (abstractCast.ml:48-49). The method itself builds a new, empty map.
+	**/
+	final castOnly:Bool;
+
+	function new(declaration:TyDeclarationInfo, actual:TyType, callable:TyType, index:TyperIndex, castOnly:Bool = false) {
 		this.declaration = declaration;
 		this.actual = actual;
 		this.callable = callable;
 		this.index = index;
+		this.castOnly = castOnly;
 	}
 
 	public function getDeclaration():TyDeclarationInfo
@@ -37,9 +45,15 @@ class TyAbstractMethodConversion {
 		if (expression.getType().getSemanticKey() != actual.getSemanticKey())
 			throw "abstract method conversion received a different source type";
 		final position = expression.getPosition();
+		if (castOnly)
+			return TypedExpr.castValue(expression, getResultType().getDisplay(), getResultType(), position, true);
 		// Conversion selection already solved the callable. Publish its exact
 		// argument proof so inline expansion never has to guess generic inputs.
-		final values = declaration.getIsStatic() ? [expression] : [];
+		// A static `@:to` method reads the abstract's underlying value; that view keeps the storage.
+		final input = declaration.getIsStatic()
+			&& hasConversion(declaration.getMetadata(),
+				"to") ? TypedExpr.castValue(expression, getInputType().getDisplay(), getInputType(), position, true) : expression;
+		final values = declaration.getIsStatic() ? [input] : [];
 		final binding = new TypedNamedCallBinding(declaration, null,
 			TyCallbackArgumentContext.publish(TyCallableSignature.fromFunctionValue(callable), values.map(TypedSourceSyntax.expression),
 				values.map(value -> value.getType()), index));
@@ -48,7 +62,7 @@ class TyAbstractMethodConversion {
 			return TypedExpr.call(receiver, [], declaration, getResultType(), position).withNamedArguments(binding);
 		}
 		final callee = TypedExpr.staticMethodRead(declaration.getSignature().getName(), declaration, callable, position, true);
-		return TypedExpr.call(callee, [expression], declaration, getResultType(), position, true).withNamedArguments(binding);
+		return TypedExpr.call(callee, values, declaration, getResultType(), position, true).withNamedArguments(binding);
 	}
 
 	/** Select an already concrete conversion without borrowing any caller inference variables. */
@@ -97,11 +111,13 @@ class TyAbstractMethodConversion {
 		}
 		final ownerBindings = TyTypeSubstitution.bind(owner.getTypeParameterIds(), ownerType.getTypeArguments(), identity.getCanonicalName());
 		for (declaration in owner.getDeclarations()) {
-			final signature = TyCallableSignature.fromDeclaration(declaration).getFunctionType();
+			final signature = effectiveCallable(index, declaration);
 			final parameters = signature.getFunctionParameters();
-			if (output ? declaration.getIsStatic()
-				|| !hasConversion(declaration.getMetadata(), "to")
-				|| parameters.length != 0 : !declaration.getIsStatic()
+			// A static `@:to` method takes the underlying value as its only argument, as
+			// Map's `@:to static function toStringMap<K:String, V>(t:IMap<K, V>):StringMap<V>`.
+			final staticOutput = output && declaration.getIsStatic();
+			if (output ? !hasConversion(declaration.getMetadata(), "to")
+				|| (staticOutput ? parameters.length != 1 || parameters[0].isOptional || parameters[0].isRest : parameters.length != 0) : !declaration.getIsStatic()
 				|| !hasConversion(declaration.getMetadata(), "from")
 				|| parameters.length != 1
 				|| parameters[0].isOptional
@@ -126,6 +142,12 @@ class TyAbstractMethodConversion {
 				return term(TyTypeSubstitution.apply(type, ownerBindings), variables);
 			if (!candidate.constrain(applied(signature.getFunctionReturn()), TyInferenceSolver.fromType(expected)))
 				continue;
+			if (staticOutput) {
+				// The static method reads the source's underlying value, with the owner's arguments applied.
+				final underlying = TyTypeSubstitution.apply(owner.getUnderlyingType(), ownerBindings);
+				if (!candidate.constrain(applied(parameters[0].type), TyInferenceSolver.fromType(underlying)))
+					continue;
+			}
 			final input = output ? TyInferenceSolver.fromType(sourceType) : applied(parameters[0].type);
 			final projected = TyInferenceNominalContext.view(index, actual, candidate.preview(input));
 			if (projected == null || !candidate.constrain(input, projected)) {
@@ -159,11 +181,26 @@ class TyAbstractMethodConversion {
 			if (!valid)
 				continue;
 			final callable = candidate.requireSolved(applied(signature));
-			final plan = new TyAbstractMethodConversion(declaration, candidate.requireSolved(actual), callable, index);
+			final plan = new TyAbstractMethodConversion(declaration, candidate.requireSolved(actual), callable, index, staticOutput && Std.isOfType(owner,
+				TyAbstractInfo) && (cast owner : TyAbstractInfo).getMultiTypePolicy() != null);
 			solver.commit(candidate);
 			return plan;
 		}
 		return null;
+	}
+
+	/**
+		A cast method without a written return type, such as
+		`@:from static function ofString(s:String) return new B(s.length)`, returns what its body
+		infers, as in Haxe 4.3.7; the declared signature alone leaves that result unknown
+		(haxe_ocaml-eonvh).
+	**/
+	static function effectiveCallable(index:TyperIndex, declaration:TyDeclarationInfo):TyType {
+		final callable = TyCallableSignature.fromDeclaration(declaration).getFunctionType();
+		if (!callable.getFunctionReturn().hasUnknownComponent())
+			return callable;
+		final inferred = index.getMethodBodyResults().signature(declaration).getReturnType();
+		return inferred.hasUnknownComponent() ? callable : callable.withFunctionTypes(callable.getFunctionArguments(), inferred);
 	}
 
 	/** Bounds require semantic proof; equal display names and an abstract's backing storage are insufficient. */
