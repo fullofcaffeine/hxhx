@@ -9,12 +9,9 @@ set -euo pipefail
 # writes a receipt into its plugin cache, loads the plugin in-process, and runs the macro. The
 # native program must print what upstream Haxe 4.3.7 prints.
 #
-# Later steps compile five more fixtures the same way and compare each program with upstream:
-# project-macro-reification (quoted syntax), project-macro-constant-args (String, Int, Float, and
-# Bool parameters, an inferred result), expr_macro_pass_driver/suite (the upstream unit-suite
-# TestMain shape), project-macro-context (haxe.macro.Context services and Context.error), and
-# project-macro-define (Context.defineModule and Context.defineType).
-# Before them, project-macro-runtime-type checks a macro whose module holds a runtime type test.
+# Each later step compiles one more fixture from test/fixtures the same way, compares the program
+# with upstream, and prints a PROJECT_MACRO_MODULE_<NAME>:PASS marker. The steps below are the
+# list. This comment does not repeat it, so a new step does not need to edit it.
 #
 # The hxhx binary must contain the current compiler sources. Until the committed bootstrap
 # snapshot includes the plugin build driver, pass HXHX_BIN (and HXHX_MACRO_HOST_EXE) built from
@@ -331,6 +328,20 @@ require_line runtime_type '^expr_macros_expanded=1$'
 "$WORK_DIR/app-runtime_type/out.exe" >"$ARTIFACT_DIR/runtime_type.stdout" 2>"$ARTIFACT_DIR/runtime_type.stderr"
 diff -u "$RUNTIME_TYPE_DIR/expected.stdout" "$ARTIFACT_DIR/runtime_type.stdout"
 echo "PROJECT_MACRO_MODULE_RUNTIME_TYPE:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
+# Spec text with structure types that declare methods (upstream's AnonFieldAccess.unit.hx), parsed
+# by a macro, imported back, and typed. Upstream prints expected.stdout. hxhx does not run the
+# program: Stage3 cannot call a method of a runtime-provided value (an Array) through a structure
+# type. The generic `map<T>` line is left out, because the typer cannot check `Array<Int>` against
+# `{function map<T>(s:Int->T):Array<T>;}` yet; M14MacroSyntaxRoundTripTest imports that shape.
+ANON_METHODS_DIR="$ROOT/test/fixtures/project-macro-anon-methods"
+(
+  cd "$ANON_METHODS_DIR"
+  haxe oracle.hxml
+) >"$ARTIFACT_DIR/anon_methods.oracle.stdout" 2>"$ARTIFACT_DIR/anon_methods.oracle.stderr"
+diff -u "$ANON_METHODS_DIR/expected.stdout" "$ARTIFACT_DIR/anon_methods.oracle.stdout"
+compile_app anon_methods "$ANON_METHODS_DIR/src" Main --hxhx-macro-cache "$CACHE_DIR"
+require_line anon_methods '^expr_macros_expanded=6$'
+echo "PROJECT_MACRO_MODULE_ANON_METHODS:PASS" | tee -a "$ARTIFACT_DIR/markers.txt"
 
 # A macro whose body is written with reification (`macro { ... }`, `$v{}`, `$b{}`, `$a{}`, `$e{}`,
 # field splices, `@:pos`) builds as a plugin and the program prints what upstream prints.

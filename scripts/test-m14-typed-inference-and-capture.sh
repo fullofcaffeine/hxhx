@@ -46,6 +46,7 @@ haxe test/m14_enum_arg_open_literal_test.hxml
 haxe test/m14_expression_metadata_syntax_test.hxml
 haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
+haxe test/m14_extractor_pattern_syntax_test.hxml
 haxe test/m14_extractor_pattern_type_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
 haxe test/m14_macro_context_wire_test.hxml

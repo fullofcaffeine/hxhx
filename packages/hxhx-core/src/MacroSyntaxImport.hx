@@ -445,10 +445,123 @@ class MacroSyntaxImport {
 			case TIntersection(members):
 				[for (member in members) typeText(member)].join("&");
 			case TAnonymous(fields):
-				"{" + [for (field in fields) anonymousField(field)].join(",") + "}";
+				// Haxe has two structure forms, and one structure cannot mix them (`HxTypedefParser`).
+				declarationForm(fields) ? "{" + [for (field in fields) declarationField(field)].join("") + "}" : "{" +
+				[for (field in fields) anonymousField(field)].join(",") + "}";
 			case TExtend(_, _):
 				throw failure("structure extension types are not imported yet");
 		};
+	}
+
+	/**
+		Whether a structure needs the declaration form (`{var x:Int;function f():Void;}`): a method
+		field, a property, or an access keyword (`public`, `private`, `final`) cannot be written in
+		the short form (`{x:Int,?y:String}`). Upstream's parser reads a structure body as class fields
+		(`parse_class_fields true`, `src/syntax/grammar.mly` lines 688-698 in Haxe 4.3.7), so a method
+		field is `FFun` with no body (`parse_function_field`, lines 905-920).
+	**/
+	static function declarationForm(fields:Array<Field>):Bool {
+		for (field in fields) {
+			if (field.access != null && field.access.length != 0)
+				return true;
+			switch field.kind {
+				case FFun(_) | FProp(_, _, _, _):
+					return true;
+				case FVar(_, _):
+			}
+		}
+		return false;
+	}
+
+	/** One declaration-form structure field in the parser's stored form, ending with `;`. */
+	static function declarationField(field:Field):String {
+		var optional = false;
+		final annotations = new Array<String>();
+		if (field.meta != null)
+			for (entry in field.meta) {
+				if (entry.params != null && entry.params.length != 0)
+					throw failure("metadata with arguments on structure field `" + field.name + "` is not imported yet");
+				if (entry.name == ":optional")
+					optional = true;
+				else
+					annotations.push("@" + entry.name);
+			}
+		var visibility = "";
+		var isFinal = false;
+		if (field.access != null)
+			for (access in field.access)
+				switch access {
+					case APublic:
+						visibility = "public";
+					case APrivate:
+						visibility = "private";
+					case AFinal:
+						isFinal = true;
+					case _:
+						throw failure("access modifier " + access + " on structure field `" + field.name + "` is not imported yet");
+				}
+		final prefix = [
+			for (text in annotations.concat(visibility.length == 0 ? [] : [visibility]))
+				text + " "
+		].join("");
+		return prefix + switch field.kind {
+			// An optional field is stored as `var?x:Int;`, the parser's form of `var ?x:Int;`.
+			case FVar(type, null) if (type != null):
+				(isFinal ? "final" : "var") + (optional ? "?" : " ") + field.name + ":" + typeText(type) + ";";
+			case FProp(get, set, type, null) if (type != null && !isFinal):
+				"var"
+				+ (optional ? "?" : " ")
+				+ field.name
+				+ "("
+				+ get
+				+ ","
+				+ set
+				+ "):"
+				+ typeText(type)
+				+ ";";
+			case FFun(fn) if (!isFinal && !optional):
+				if (fn.expr != null)
+					throw failure("structure method `" + field.name + "` has a body");
+				if (fn.ret == null)
+					throw failure("structure method `" + field.name + "` has no return type");
+				"function "
+				+ field.name
+				+ typeParameterText(fn.params, field.name)
+				+ "("
+				+ [for (argument in fn.args) methodArgumentText(argument, field.name)].join(",")
+					+ "):"
+					+ typeText(fn.ret)
+					+ ";";
+			case _:
+				throw failure("structure field `" + field.name + "` is not a typed variable, property, or method declaration");
+		};
+	}
+
+	static function methodArgumentText(argument:FunctionArg, owner:String):String {
+		if (argument.meta != null && argument.meta.length != 0)
+			throw failure("metadata on an argument of structure method `" + owner + "` is not imported yet");
+		if (argument.value != null)
+			throw failure("a default value on an argument of structure method `" + owner + "` is not imported yet");
+		if (argument.type == null)
+			throw failure("an argument of structure method `" + owner + "` has no type");
+		return (argument.opt == true ? "?" : "") + argument.name + ":" + typeText(argument.type);
+	}
+
+	static function typeParameterText(parameters:Null<Array<TypeParamDecl>>, owner:String):String {
+		if (parameters == null || parameters.length == 0)
+			return "";
+		return "<" + [
+			for (parameter in parameters) {
+				if ((parameter.params != null && parameter.params.length != 0)
+					|| (parameter.meta != null && parameter.meta.length != 0)) throw failure("a type parameter of structure method `" + owner
+						+ "` has parameters or metadata, which are not imported yet");
+				final constraints = parameter.constraints == null ? [] : parameter.constraints;
+				parameter.name + (constraints.length == 0 ? "" : ":"
+					+ (constraints.length == 1 ? typeText(constraints[0]) : "("
+						+ [for (constraint in constraints) typeText(constraint)].join("&") + ")")) + (parameter.defaultType == null ? "" : "="
+					+ typeText(parameter.defaultType));
+			}
+		].join(",") + ">";
 	}
 
 	static function anonymousField(field:Field):String {
