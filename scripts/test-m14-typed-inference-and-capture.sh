@@ -36,6 +36,7 @@ haxe test/m14_array_subclass_element_test.hxml
 haxe test/m14_bitwise_parameter_inference_test.hxml
 haxe test/m14_block_ends_expression_test.hxml
 haxe test/m14_bound_input_keeps_type_test.hxml
+haxe test/m14_byte_order_mark_test.hxml
 haxe test/m14_cast_pattern_syntax_test.hxml
 haxe test/m14_char_code_pattern_syntax_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
