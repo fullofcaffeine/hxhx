@@ -29,6 +29,9 @@ typedef MacroContextServices = {
 		definition hxhx cannot build yet or an invalid one.
 	**/
 	final defineModule:(modulePath:String, types:Array<TypeDefinition>, imports:Null<Array<ImportExpr>>, usings:Null<Array<TypePath>>) -> Void;
+
+	/** `typeof`, `follow`, and `Ref.get`, bound to the call site's typer; null when the call has none. */
+	final types:Null<MacroTypeServices>;
 }
 
 /** Invalid code given to `Context.parse` or `Context.parseInlineString`. */
@@ -58,13 +61,25 @@ class MacroContextParseError {
 	- `defineModule` and `defineType` build parser declarations (`MacroDefinitionImport`) and queue
 	  the module for the request (`MacroState.defineModule`); the expression macro pass types it.
 	  `defineType` defines module `pack.name`, as upstream does.
+	- `typeof`, `follow`, and `Ref.get` are `MacroTypeServices`, over the handles of
+	  `MacroTypeHandles`.
 
 	A failure never escapes as an exception: invalid code is an `error` at the given position, a
-	service this version does not provide is `unsupported`, and a malformed request is `invalid`.
+	service this version does not provide is `unsupported`, and a malformed request or a stale type
+	handle is `invalid`. Each `unsupported` answer is counted (`MacroState.noteContextUnsupported`),
+	and the compiler prints the count, so a macro that catches the failure does not hide it.
 **/
 class MacroContextHostServices {
 	/** Answer one encoded request with one encoded response. */
 	public static function handle(services:MacroContextServices, request:String):String {
+		final response = answer(services, request);
+		final failure = MacroContextWire.failureOf(response);
+		if (failure.failed && failure.kind == MacroContextWire.UNSUPPORTED)
+			MacroState.noteContextUnsupported();
+		return response;
+	}
+
+	static function answer(services:MacroContextServices, request:String):String {
 		try {
 			final opened = MacroContextWire.openRequest(request);
 			final reader = opened.reader;
@@ -103,6 +118,16 @@ class MacroContextHostServices {
 					reader.finish();
 					final pack = definition.pack == null ? [] : definition.pack;
 					return define(() -> services.defineModule(pack.concat([definition.name]).join("."), [definition], null, null), [definition]);
+				case MacroContextWire.TYPEOF:
+					final expression = reader.expr();
+					reader.finish();
+					return services.types == null ? noTyping(opened.name) : services.types.typeof(expression);
+				case MacroContextWire.FOLLOW:
+					return services.types == null ? noTyping(opened.name) : services.types.follow(reader);
+				case MacroContextWire.REF_GET:
+					final handle = reader.int();
+					reader.finish();
+					return services.types == null ? noTyping(opened.name) : services.types.refGet(handle);
 				case other:
 					return MacroContextWire.respondError(MacroContextWire.UNSUPPORTED, "Context service `" + other + "` is not available in hxhx yet");
 			}
@@ -110,6 +135,9 @@ class MacroContextHostServices {
 			return MacroContextWire.respondError(MacroContextWire.INVALID, error);
 		}
 	}
+
+	static function noTyping(service:String):String
+		return MacroContextWire.respondError(MacroContextWire.UNSUPPORTED, "Context service `" + service + "` has no typing context for this macro call");
 
 	/** Run one definition; its failure is answered at the first type's position. */
 	static function define(run:() -> Void, types:Array<TypeDefinition>):String {
@@ -124,9 +152,11 @@ class MacroContextHostServices {
 
 	/**
 		The services of one selected call: its file, the start of its first argument (when known),
-		the compilation's defines in `MacroState`, and the modules it defines (`MacroState.defineModule`).
+		the compilation's defines in `MacroState`, the modules it defines (`MacroState.defineModule`),
+		and, with `typer`, the types at the call site. Type handles of earlier calls become stale.
 	**/
-	public static function forCall(filePath:String, anchor:Null<HxPos>):MacroContextServices {
+	public static function forCall(filePath:String, anchor:Null<HxPos>, ?typer:MacroCallTyper):MacroContextServices {
+		MacroTypeHandles.beginCall();
 		return {
 			currentPos: () -> {
 				final start = anchor == null || !MacroSyntaxPositions.isKnown(anchor) ? 0 : anchor.getIndex();
@@ -165,7 +195,8 @@ class MacroContextHostServices {
 				} catch (error:String) {
 					throw new MacroDefinitionError(MacroContextWire.INVALID, error);
 				}
-			}
+			},
+			types: typer == null ? null : new MacroTypeServices(typer.context, typer.loader, filePath)
 		};
 	}
 

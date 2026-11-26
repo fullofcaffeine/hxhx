@@ -1,0 +1,16 @@
+isFloat 1.5 true
+isFloat 1 false
+isFloat text false
+isFloat typedef true
+isFloat null float true
+isFloat call true
+isFloat sqrt true
+isFloat unknown false
+TInst String name=String module=String pack= params=[] => TInst String name=String module=String pack= params=[] | once TInst String name=String module=String pack= params=[]
+TAbstract Float name=Float module=StdTypes params=[] => TAbstract Float name=Float module=StdTypes params=[] | once TAbstract Float name=Float module=StdTypes params=[]
+TAbstract Null name=Null module=StdTypes params=[TAbstract Int name=Int module=StdTypes params=[]] => TAbstract Int name=Int module=StdTypes params=[] | once TAbstract Null name=Null module=StdTypes params=[TAbstract Int name=Int module=StdTypes params=[]]
+TEnum Color module=Main names=Red,Green params=[] => TEnum Color module=Main names=Red,Green params=[] | once TEnum Color module=Main names=Red,Green params=[]
+TAnonymous x,y => TAnonymous x,y | once TAnonymous x,y
+TDynamic => TDynamic | once TDynamic
+TInst Array name=Array module=Array pack= params=[TInst String name=String module=String pack= params=[]] => TInst Array name=Array module=Array pack= params=[TInst String name=String module=String pack= params=[]] | once TInst Array name=Array module=Array pack= params=[TInst String name=String module=String pack= params=[]]
+TFun(value:TAbstract Float name=Float module=StdTypes params=[], times?:TAbstract Null name=Null module=StdTypes params=[TAbstract Int name=Int module=StdTypes params=[]]) -> TAbstract Float name=Float module=StdTypes params=[] => TFun(value:TAbstract Float name=Float module=StdTypes params=[], times?:TAbstract Null name=Null module=StdTypes params=[TAbstract Int name=Int module=StdTypes params=[]]) -> TAbstract Float name=Float module=StdTypes params=[] | once TFun(value:TAbstract Float name=Float module=StdTypes params=[], times?:TAbstract Null name=Null module=StdTypes params=[TAbstract Int name=Int module=StdTypes params=[]]) -> TAbstract Float name=Float module=StdTypes params=[]

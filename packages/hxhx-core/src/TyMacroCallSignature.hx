@@ -6,6 +6,10 @@
 	  alias of `Expr`), but its callers pass ordinary source expressions. Haxe
 	  hands each such argument to the macro as syntax, so any expression is a
 	  valid operand at that position.
+	- A parameter without a written type is an `Expr` too: in the macro context
+	  Haxe 4.3.7 gives a missing macro argument or result type the type `Expr`
+	  (typeloadFields.ml:1319-1320). Every call may pass it any expression, as
+	  upstream's unit helper `HelperMacros.typeString(e)` relies on.
 	- A trailing `Array<Expr>` parameter collects every remaining argument, so it
 	  is a rest position at the call site (for example
 	  `python.Syntax.arrayAccess(x, rest:Array<Expr>)` accepts `arrayAccess(b, pos)`).
@@ -46,8 +50,9 @@ final class TyMacroCallSignature {
 		Rewrite a resolved macro signature into the contract its callers satisfy.
 
 		`expr` is the resolved `haxe.macro.Expr` type in the caller's index. Syntax
-		positions become `Dynamic`; a trailing `Array<Expr>` becomes a rest position
-		of `Dynamic` elements; the call result becomes `Dynamic`.
+		positions (`Expr`, or no written type) become `Dynamic`; a trailing
+		`Array<Expr>` becomes a rest position of `Dynamic` elements; the call result
+		becomes `Dynamic`.
 	**/
 	public static function callSite(signature:TyFunSig, expr:TyType):TyFunSig {
 		final exprKey = expr.getSemanticKey();
@@ -57,7 +62,7 @@ final class TyMacroCallSignature {
 		for (index in 0...declared.length) {
 			final type = declared[index];
 			final isLast = index == declared.length - 1;
-			if (type.getSemanticKey() == exprKey) {
+			if (type.getSemanticKey() == exprKey || type.isUnknown()) {
 				args.push(TyType.fromHintText("Dynamic"));
 			} else if (isLast && isExprArray(type, exprKey) && !(index < rest.length && rest[index])) {
 				args.push(TyType.fromHintText("Array<Dynamic>"));
