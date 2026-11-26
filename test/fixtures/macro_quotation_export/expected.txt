@@ -28,3 +28,11 @@ macro @myMeta(1, "a") x
   => ({ expr : EMeta({ name : "myMeta", params : [{ expr : EConst(CInt("1", null)), pos : { file : "Probe.txt", min : 14, max : 15 } }, { expr : EConst(CString("a", DoubleQuotes)), pos : { file : "Probe.txt", min : 17, max : 20 } }], pos : { file : "Probe.txt", min : 6, max : 13 } }, { expr : EConst(CIdent("x")), pos : { file : "Probe.txt", min : 22, max : 23 } }), pos : { file : "Probe.txt", min : 6, max : 23 } } : haxe.macro.Expr)
 macro @:pos(p) 1
   => ({ expr : EConst(CInt("1", null)), pos : p } : haxe.macro.Expr)
+macro $v{(s:String)}
+  => ({ expr : EConst(CString(s)), pos : { file : "Probe.txt", min : 8, max : 20 } } : haxe.macro.Expr)
+macro $v{(i:Int)}
+  => ({ expr : EConst(CInt(i)), pos : { file : "Probe.txt", min : 8, max : 17 } } : haxe.macro.Expr)
+macro $v{(f:Float)}
+  => ({ expr : EConst(CFloat(f)), pos : { file : "Probe.txt", min : 8, max : 19 } } : haxe.macro.Expr)
+macro $v{123i64}
+  => ({ expr : EConst(CInt("123", "i64")), pos : { file : "Probe.txt", min : 8, max : 16 } } : haxe.macro.Expr)

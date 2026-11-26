@@ -274,15 +274,41 @@ class MacroReificationLowering {
 
 	/**
 		The constant for a `$v{payload}` whose static type is `type`; `at` is the position syntax.
-		Syntax a macro receives keeps upstream's run-time conversion instead (`exportQuotation`).
+		Syntax a macro receives keeps upstream's spelling instead (`exportQuotation`): a written
+		constant (`writtenConstant`), otherwise the run-time conversion `Context.makeExpr`.
 	**/
 	function value(payload:HxExpr, at:HxExpr):HxExpr {
-		if (exporting)
+		if (exporting) {
+			final written = writtenConstant(payload, at);
+			if (written != null)
+				return written;
 			return ECall(HxRootedPath.expression("haxe.macro.Context.makeExpr", false), [
 				payload,
 				ECall(HxRootedPath.expression("haxe.macro.Context.makePosition", false), [at])
 			]);
+		}
 		return valueOfType(payload, valueType(payload), at);
+	}
+
+	/**
+		Upstream writes a `$v{}` whose type is written as a constant directly
+		(`src/syntax/reification.ml` lines 359-366): `$v{(e : String)}`, `(e : Int)`, and `(e : Float)`
+		become `EConst(CString(e))`, `CInt(e)`, and `CFloat(e)`, and `$v{123i64}` becomes
+		`EConst(CInt("123", "i64"))`. Any other payload keeps `Context.makeExpr`.
+	**/
+	function writtenConstant(payload:HxExpr, at:HxExpr):Null<HxExpr> {
+		return switch payload {
+			case EParenthesized(ECheckType(inner, hint), _):
+				switch StringTools.trim(hint) {
+					case "String": constantExpr("CString", [inner], at);
+					case "Int": constantExpr("CInt", [inner], at);
+					case "Float": constantExpr("CFloat", [inner], at);
+					case _: null;
+				}
+			case ECall(EIdent("__hxhx_int_literal"), [EString(raw), EString("i64")]):
+				constantExpr("CInt", [EString(raw), EString("i64")], at);
+			case _: null;
+		};
 	}
 
 	function valueOfType(payload:HxExpr, type:TyType, at:HxExpr):HxExpr {

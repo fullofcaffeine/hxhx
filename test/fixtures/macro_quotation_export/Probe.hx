@@ -21,7 +21,11 @@ class Probe {
 		"macro @myMeta 1",
 		"macro @:meta null",
 		"macro @myMeta(1, \"a\") x",
-		"macro @:pos(p) 1"
+		"macro @:pos(p) 1",
+		"macro $v{(s:String)}",
+		"macro $v{(i:Int)}",
+		"macro $v{(f:Float)}",
+		"macro $v{123i64}"
 	];
 
 	static function main() {
