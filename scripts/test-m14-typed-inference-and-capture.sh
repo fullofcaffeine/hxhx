@@ -50,6 +50,7 @@ haxe test/m14_dynamic_join_transparent_test.hxml
 haxe test/m14_enum_arg_open_literal_test.hxml
 haxe test/m14_expression_metadata_syntax_test.hxml
 haxe test/m14_extension_constraint_selection_test.hxml
+haxe test/m14_extension_receiver_selection_test.hxml
 haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
 haxe test/m14_extractor_pattern_syntax_test.hxml

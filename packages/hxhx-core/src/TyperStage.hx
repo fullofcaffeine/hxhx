@@ -3039,7 +3039,13 @@ class TyperStage {
 				resolveMethodCall(extension.getDeclaringProvider(), extension.getMemberName(), true, extensionArguments, inferenceScope.copyForInference(),
 					ctx, pos, extension.getCandidates());
 			} catch (error:TyperError) {
-				if (!StringTools.startsWith(error.getMessage(), "Constraint check failure for "))
+				// Upstream also skips a candidate whose first parameter does not accept the receiver;
+				// a candidate that accepts it is selected, and its argument errors are reported
+				// (haxe_ocaml-cd3jc).
+				final skipped = StringTools.startsWith(error.getMessage(), "Constraint check failure for ")
+					|| (StringTools.startsWith(error.getMessage(), "No compatible method signature for ")
+						&& !extensionAcceptsReceiver(extension, receiverType, ctx));
+				if (!skipped)
 					throw error;
 				rejected = true;
 				continue;
@@ -3062,6 +3068,19 @@ class TyperStage {
 		if (rejected)
 			throw new TyperError(ctx.getFilePath(), pos, TyAliasExpansion.revealNonNullable(receiverType).getDisplay() + " has no field " + field);
 		return null;
+	}
+
+	/** Whether some candidate of `extension` takes `receiver` as its first argument. **/
+	static function extensionAcceptsReceiver(extension:TyExtensionMethod, receiver:TyType, ctx:TyperContext):Bool {
+		for (candidate in extension.getCandidates()) {
+			final declaration = extension.getDeclaringProvider().declarationForSignature(candidate);
+			final arguments = candidate.getArgs();
+			if (arguments.length == 0)
+				continue;
+			if (overloadArgScore(arguments[0], receiver, TyMethodGenericBinding.inferableTypeParameters(declaration), ctx.getIndex()) >= 0)
+				return true;
+		}
+		return false;
 	}
 
 	/**
