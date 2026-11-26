@@ -10,7 +10,8 @@ import sys.io.File;
 	- `Std.downcast([1, 2, 3], Array)` (`downcast<T:{}, S:T>`) supplies `Array<Unknown>` from the
 	  class value `Array` for the bound `Array<Int>`; the open part now reads as `Int`. A nested
 	  Dynamic reads the same way, as Haxe unifies `Array<Dynamic>` with `Array<Int>`. With a Dynamic
-	  source, the bound `T` is `Array<Unknown>` too, and the two open parts unify.
+	  source, the bound `T` is `Array<Unknown>` too, and the two open parts unify. The call's result
+	  reads its open parts from the bound as well, so `x` is `Array<Int>` (`same(val, x)`, `x[0] + 1`).
 	- `each<T, I:Iterator<T>>(0...3, function(x) return x)`: T is reached only through the
 	  lambda's untyped parameter, so it now closes from I's bound (`IntIterator` gives Int), in
 	  the check and in the call's parameter and result types.

@@ -12,10 +12,14 @@ class Main {
 	static function each<T, I:Iterator<T>>(itr:I, f:T->T):String
 		return "each";
 
+	static function same<T>(a:T, b:T):Bool
+		return a == b;
+
 	static function main() {
 		final val = [1, 2, 3];
 		final x = Std.downcast(val, Array);
 		Sys.println(x == val);
+		Sys.println(same(val, x) + " " + (x[0] + 1));
 		final dynamicValue:Dynamic = val;
 		Sys.println(Std.downcast(dynamicValue, Array) == val);
 		Sys.println(each(0...3, function(x) return x));

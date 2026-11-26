@@ -821,6 +821,37 @@ class TyMethodGenericBinding {
 		], open);
 		closeFromDependentBounds(declaration, signature, arguments, bound -> bound, inferred, index);
 		closeUnreached(declaration, signature, arguments, bound -> bound, inferred);
+		fillOpenBindings(declaration, inferred);
+	}
+
+	/**
+		Read a binding's open parts from its known bound, as upstream's monomorph unifies with the
+		bound: `Std.downcast([1, 2, 3], Array)` binds S to `Array<Unknown>` under the bound T =
+		`Array<Int>`, so the call returns `Array<Int>` (haxe_ocaml-rhbp9). Only parts whose
+		constructors line up are filled; a binding the bound does not shape keeps its open parts.
+	**/
+	static function fillOpenBindings(declaration:TyDeclarationInfo, inferred:haxe.ds.StringMap<TyType>):Void {
+		final constraints = declaration.getResolvedTypeParameterConstraints();
+		final parameters = declaration.getTypeParameterIds();
+		for (parameter in parameters) {
+			final key = parameter.getCanonicalKey();
+			final supplied = inferred.get(key);
+			final bounds = constraints.get(key);
+			if (supplied == null || !supplied.hasUnknownComponent() || bounds == null)
+				continue;
+			for (constraint in bounds) {
+				if (hasUnbound(constraint, parameters, inferred))
+					continue;
+				final bound = substitute(constraint, parameters, inferred);
+				if (bound.hasUnknownComponent() || !sameTypeConstructor(bound, supplied))
+					continue;
+				final filled = fillOpen(bound, supplied);
+				if (!filled.hasUnknownComponent() && !hasNestedDynamic(filled)) {
+					inferred.set(key, filled);
+					break;
+				}
+			}
+		}
 	}
 
 	/**
