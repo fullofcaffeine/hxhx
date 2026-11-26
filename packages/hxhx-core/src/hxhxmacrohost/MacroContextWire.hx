@@ -44,6 +44,9 @@ class MacroContextWire {
 	public static inline final PARSE_INLINE_STRING:String = "context.parseInlineString";
 	public static inline final DEFINE_MODULE:String = "context.defineModule";
 	public static inline final DEFINE_TYPE:String = "context.defineType";
+	public static inline final TYPEOF:String = "context.typeof";
+	public static inline final FOLLOW:String = "type.follow";
+	public static inline final REF_GET:String = "type.refGet";
 
 	public static inline final ERROR:String = "error";
 	public static inline final UNSUPPORTED:String = "unsupported";
@@ -91,7 +94,8 @@ class MacroContextWire {
 		return writer.toString();
 	}
 
-	static function request(name:String):MacroSyntaxWireWriter {
+	/** A request writer positioned after its message name; `MacroTypeWire` writes its arguments. */
+	public static function request(name:String):MacroSyntaxWireWriter {
 		final writer = new MacroSyntaxWireWriter(VERSION, "C");
 		writer.string(name);
 		return writer;
@@ -139,6 +143,10 @@ class MacroContextWire {
 		return writer.toString();
 	}
 
+	/** A response writer for a value; `MacroTypeExport` writes types and their records. */
+	public static function response():MacroSyntaxWireWriter
+		return new MacroSyntaxWireWriter(VERSION, "R");
+
 	public static function respondError(kind:String, message:String, ?position:Position):String {
 		final writer = new MacroSyntaxWireWriter(VERSION, "E");
 		writer.string(kind);
@@ -181,19 +189,31 @@ class MacroContextWire {
 	}
 
 	/** The reader of an `R` response; an `E` response is thrown (see the class comment). */
-	static function value(payload:String):MacroSyntaxWireReader {
-		if (payload == null || payload.length == 0)
-			throw "macro context: the compiler installed no macro context service for this call";
-		if (StringTools.startsWith(payload, VERSION + "\nE")) {
-			final reader = new MacroSyntaxWireReader(VERSION, payload, "E");
-			final kind = reader.string();
-			final message = reader.string();
-			final position = reader.optionalPosition();
-			reader.finish();
-			if (kind == ERROR && position != null)
-				throw new MacroContextAbort(message, position);
-			throw "macro context: " + kind + ": " + message;
+	public static function value(payload:String):MacroSyntaxWireReader {
+		final failure = failureOf(payload);
+		if (failure.failed) {
+			if (failure.kind == ERROR && failure.position != null)
+				throw new MacroContextAbort(failure.message, failure.position);
+			throw "macro context: " + failure.kind + ": " + failure.message;
 		}
 		return new MacroSyntaxWireReader(VERSION, payload, "R");
+	}
+
+	/**
+		The kind, message, and position of an `E` response; `failed` is false for an `R` response.
+		Always a value, never null: plugin code returns exactly its declared type (the Stage3
+		emitter has no conversion from a record to its nullable form).
+	**/
+	public static function failureOf(payload:String):MacroContextFailure {
+		if (payload == null || payload.length == 0)
+			throw "macro context: the compiler installed no macro context service for this call";
+		if (!StringTools.startsWith(payload, VERSION + "\nE"))
+			return new MacroContextFailure(false, "", "", null);
+		final reader = new MacroSyntaxWireReader(VERSION, payload, "E");
+		final kind = reader.string();
+		final message = reader.string();
+		final position = reader.optionalPosition();
+		reader.finish();
+		return new MacroContextFailure(true, kind, message, position);
 	}
 }

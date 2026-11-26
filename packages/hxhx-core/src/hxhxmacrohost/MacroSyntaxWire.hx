@@ -613,7 +613,7 @@ class MacroSyntaxWireWriter {
 		position(value.pos);
 	}
 
-	function optionalMetadata(values:Null<Metadata>):Void {
+	public function optionalMetadata(values:Null<Metadata>):Void {
 		if (values == null) {
 			absent();
 			return;
@@ -1375,7 +1375,7 @@ class MacroSyntaxWireReader {
 		return {name: name, params: params, pos: pos};
 	}
 
-	function optionalMetadata():Null<Metadata> {
+	public function optionalMetadata():Null<Metadata> {
 		if (absent())
 			return null;
 		final total = count();

@@ -33,6 +33,9 @@ typedef PatternSelection = {
 	final dialect:HihBackendDialect;
 	final quote:String->String;
 	final names:Stage3OcamlLocalNames;
+
+	/** Rejects a constructor pattern whose payloads the request's enums cannot read (`Stage3OcamlEnums.requireBindable`). */
+	final checkConstructor:(TypedNamedPattern, Array<HxSwitchPattern>) -> Void;
 }
 
 /**
@@ -51,7 +54,7 @@ function select(input:PatternSelection):String {
 	var nextTemporary = 0;
 	final rows = [
 		for (i in 0...input.patterns.length)
-			{patterns: [constantPattern(input.patterns[i], input.namedPattern)], branch: input.branches[i], bindings: ""}
+			{patterns: [constantPattern(input.patterns[i], input.namedPattern, input.checkConstructor)], branch: input.branches[i], bindings: ""}
 	];
 	return compileRows(rows, [{value: input.value, bound: true, nonNull: false}], {
 		dialect: input.dialect,
@@ -70,7 +73,8 @@ function select(input:PatternSelection):String {
 	runtime name, so qualified source spelling cannot change matching behavior.
 	Their payload patterns keep the same shape and exact nested selections.
  */
-private function constantPattern(pattern:HxSwitchPattern, lookup:HxSwitchPattern->Null<TypedNamedPattern>):HxSwitchPattern {
+private function constantPattern(pattern:HxSwitchPattern, lookup:HxSwitchPattern->Null<TypedNamedPattern>,
+		check:(TypedNamedPattern, Array<HxSwitchPattern>) -> Void):HxSwitchPattern {
 	function named(arguments:Array<HxSwitchPattern>):HxSwitchPattern {
 		final selected = lookup(pattern);
 		if (selected == null)
@@ -89,9 +93,10 @@ private function constantPattern(pattern:HxSwitchPattern, lookup:HxSwitchPattern
 			case Constructor(_, member, _, arity):
 				if (arity != arguments.length)
 					throw "OCaml constructor pattern arity differs from typing";
+				check(selected, arguments);
 				switch pattern {
 					case PEnumValue(_): PEnumValue(member);
-					case PEnumExtract(_, _, provenance): PEnumExtract(member, [for (child in arguments) constantPattern(child, lookup)], provenance);
+					case PEnumExtract(_, _, provenance): PEnumExtract(member, [for (child in arguments) constantPattern(child, lookup, check)], provenance);
 					case _: pattern;
 				}
 		};
@@ -99,10 +104,10 @@ private function constantPattern(pattern:HxSwitchPattern, lookup:HxSwitchPattern
 	return switch pattern {
 		case PEnumValue(_): named([]);
 		case PEnumExtract(_, arguments): named(arguments);
-		case PArray(items): PArray([for (child in items) constantPattern(child, lookup)]);
-		case PObject(names, items): PObject(names, [for (child in items) constantPattern(child, lookup)]);
-		case POr(items): POr([for (child in items) constantPattern(child, lookup)]);
-		case PCapture(name, inner): PCapture(name, constantPattern(inner, lookup));
+		case PArray(items): PArray([for (child in items) constantPattern(child, lookup, check)]);
+		case PObject(names, items): PObject(names, [for (child in items) constantPattern(child, lookup, check)]);
+		case POr(items): POr([for (child in items) constantPattern(child, lookup, check)]);
+		case PCapture(name, inner): PCapture(name, constantPattern(inner, lookup, check));
 		case _: pattern;
 	};
 }

@@ -43,6 +43,7 @@ haxe test/m14_class_argument_bounds_test.hxml
 haxe test/m14_class_value_alias_static_test.hxml
 haxe test/m14_compiler_json_value_integration_test.hxml
 haxe test/m14_conditional_mid_line_block_test.hxml
+haxe test/m14_conditional_operands_test.hxml
 haxe test/m14_constrained_result_test.hxml
 haxe test/m14_constraint_open_parts_test.hxml
 haxe test/m14_constructible_bound_test.hxml
@@ -63,6 +64,7 @@ haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
 haxe test/m14_macro_block_syntax_test.hxml
+haxe test/m14_macro_context_type_test.hxml
 haxe test/m14_macro_context_wire_test.hxml
 haxe test/m14_macro_source_positions_test.hxml
 haxe test/m14_macro_target_signature_test.hxml
@@ -83,6 +85,7 @@ haxe test/m14_primitive_constructor_effects_test.hxml
 haxe test/m14_project_macro_runtime_type_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_return_if_syntax_test.hxml
+haxe test/m14_stage3_deferred_enum_payload_test.hxml
 haxe test/m14_stage3_enum_open_record_test.hxml
 haxe test/m14_stage3_local_function_array_for_test.hxml
 haxe test/m14_statement_control_projection_test.hxml
@@ -96,4 +99,5 @@ haxe test/m14_typed_capture_lowering_test.hxml
 haxe test/m14_typed_capture_plan_test.hxml
 haxe test/m14_typed_capture_static_method_test.hxml
 haxe test/m14_untyped_function_body_syntax_test.hxml
+haxe test/m14_untyped_macro_argument_test.hxml
 haxe test/m14_var_declaration_group_test.hxml

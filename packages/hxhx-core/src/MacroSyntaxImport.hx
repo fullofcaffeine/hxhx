@@ -14,9 +14,10 @@ import HxLambdaSignature.HxLambdaParameter;
 	with the parser's exact body fingerprint.
 
 	Totality: every `ExprDef` constructor is handled. Constructors with no faithful parser form
-	yet (`ESwitch`, `EDisplay`, `EIs`, metadata other than `@:privateAccess`, local functions with
-	type parameters, typed constants with suffixes) are rejected with a message that starts with
-	`macro syntax import:`. The caller turns it into a compile error at the macro call.
+	yet (`ESwitch`, `EDisplay`, `EIs`, metadata other than `@:privateAccess` and `@:markup` on a
+	string, local functions with type parameters, typed constants with suffixes) are rejected with
+	a message that starts with `macro syntax import:`. The caller turns it into a compile error at
+	the macro call.
 
 	Positions: a returned position that this call exported restores the original `HxPos`. Any
 	other position falls back to the call's first argument start, or to `HxPos.unknown()` when the
@@ -158,12 +159,33 @@ class MacroSyntaxImport {
 				ETernary(convert(condition, false), convert(whenTrue, false), convert(whenFalse, false));
 			case ECheckType(inner, type):
 				ECheckType(convert(inner, false), typeText(type));
+			case EMeta(entry, inner) if (entry.name == ":markup"):
+				markup(entry, inner);
 			case EMeta(entry, inner):
 				if (entry.name != ":privateAccess" || (entry.params != null && entry.params.length != 0))
-					throw failure("metadata `@" + entry.name + "` on an expression is not imported yet; only `@:privateAccess` is kept by the parser");
+					throw failure("metadata `@"
+						+ entry.name
+						+ "` on an expression is not imported yet; only `@:privateAccess` and `@:markup` are kept by the parser");
 				EPrivateAccess(convert(inner, false), position(expression));
 			case EIs(_, _):
 				throw failure("the `is` operator is not imported yet");
+		};
+	}
+
+	/**
+		An inline markup literal: `@:markup` on the string of its source text, as Haxe 4.3.7's parser
+		gives it (`parser.ml` `handle_xml_literal`). The parser keeps it as expression metadata whose
+		name keeps its colon (`HxParser.parseMarkupLiteral`); this is that exact form, so a literal a
+		macro returns unchanged types as the written one.
+	**/
+	function markup(entry:MetadataEntry, inner:Expr):HxExpr {
+		if (entry.params != null && entry.params.length != 0)
+			throw failure("`@:markup` with arguments is not imported yet; the parser gives a markup literal none");
+		return switch inner == null ? null : inner.expr {
+			case EConst(CString(text, kind)):
+				ECall(EIdent("__hxhx_expr_meta"), [EString(":markup"), EString(""), constantOf(CString(text, kind), false)]);
+			case _:
+				throw failure("`@:markup` on an expression that is not a string is not imported yet");
 		};
 	}
 

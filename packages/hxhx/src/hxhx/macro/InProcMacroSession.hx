@@ -225,7 +225,7 @@ class InProcMacroSession {
 			];
 			final payload = MacroSyntaxWire.encodeArguments(arguments);
 			// The plugin's `haxe.macro.Context` asks this call's services through the native host.
-			final services = MacroContextHostServices.forCall(request.getFilePath(), positions.getAnchor());
+			final services = MacroContextHostServices.forCall(request.getFilePath(), positions.getAnchor(), request.getTyper());
 			NativeMacroModuleHost.setHostService(contextRequest -> MacroContextHostServices.handle(services, contextRequest));
 			final response = try {
 				NativeMacroModuleHost.runDeclaration(key, payload);
