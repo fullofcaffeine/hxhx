@@ -4089,11 +4089,15 @@ class TyperStage {
 		so inference sees it once, as the switch's scrutinee.
 	**/
 	static function enumMatchSwitch(expr:HxExpr, scope:TyFunctionEnv, ctx:TyperContext, pos:HxPos):Null<HxExpr> {
-		return switch expr {
-			case ECall(EField(subject, "match"), [argument]) if (HxMatchPattern.fromExpr(argument) != null):
-				TyEnumMatch.switchFor(subject, argument, inferExprType(subject, scope.copyForInference(), ctx, pos), ctx, pos);
+		// The field name and argument count are compared in the body, not matched as literals
+		// (haxe_ocaml-yuymr: the OCaml backend generator loses such payload bindings in the self-compile).
+		switch expr {
+			case ECall(EField(subject, field), arguments):
+				if (field != "match" || arguments.length != 1 || HxMatchPattern.fromExpr(arguments[0]) == null)
+					return null;
+				return TyEnumMatch.switchFor(subject, arguments[0], inferExprType(subject, scope.copyForInference(), ctx, pos), ctx, pos);
 			case _:
-				null;
+				return null;
 		}
 	}
 

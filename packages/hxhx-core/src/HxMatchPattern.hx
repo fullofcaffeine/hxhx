@@ -17,10 +17,8 @@
 final class HxMatchPattern {
 	public static function fromExpr(expression:HxExpr):Null<HxSwitchPattern> {
 		return switch expression {
-			case EIdent("_"):
-				PWildcard;
 			case EIdent(name):
-				HxSwitchPatternName.isConstructor(name, false) ? PEnumValue(name) : PBind(name);
+				identifier(name);
 			case EEnumValue(name):
 				HxSwitchPatternName.isConstructor(name, false) ? PEnumValue(name) : PBind(name);
 			case EField(_, _):
@@ -37,17 +35,9 @@ final class HxMatchPattern {
 						return null;
 					patterns.push(pattern);
 				}
-				final last = arguments.length == 0 ? null : arguments[arguments.length - 1];
-				PEnumExtract(name, patterns, last != null && last.match(EIdent("_")));
-			case EBinop("|", left, right):
-				final first = fromExpr(left);
-				final second = fromExpr(right);
-				if (first == null || second == null)
-					return null;
-				POr(alternatives(first).concat(alternatives(second)));
-			case EBinop("=", EIdent(name), inner) if (!HxSwitchPatternName.isConstructor(name, false)):
-				final pattern = fromExpr(inner);
-				pattern == null ? null : PCapture(name, pattern);
+				PEnumExtract(name, patterns, arguments.length > 0 && isWildcard(arguments[arguments.length - 1]));
+			case EBinop(op, left, right):
+				binary(op, left, right);
 			case EParenthesized(inner, _):
 				fromExpr(inner);
 			case ENull:
@@ -84,6 +74,48 @@ final class HxMatchPattern {
 				PObject(fieldNames.copy(), patterns);
 			case _:
 				null;
+		}
+	}
+
+	/**
+		Payloads are bound with plain captures and compared in the body, never matched against a
+		String literal or guarded on one: the OCaml backend generator loses such a payload binding in
+		the self-compile (haxe_ocaml-yuymr).
+	**/
+	static function identifier(name:String):HxSwitchPattern {
+		if (name == "_")
+			return PWildcard;
+		return HxSwitchPatternName.isConstructor(name, false) ? PEnumValue(name) : PBind(name);
+	}
+
+	/** `a | b` is an or-pattern; `name = pattern` captures; any other operator is not a pattern. **/
+	static function binary(op:String, left:HxExpr, right:HxExpr):Null<HxSwitchPattern> {
+		if (op == "|") {
+			final first = fromExpr(left);
+			final second = fromExpr(right);
+			if (first == null || second == null)
+				return null;
+			return POr(alternatives(first).concat(alternatives(second)));
+		}
+		if (op != "=")
+			return null;
+		switch left {
+			case EIdent(name):
+				if (HxSwitchPatternName.isConstructor(name, false))
+					return null;
+				final pattern = fromExpr(right);
+				return pattern == null ? null : PCapture(name, pattern);
+			case _:
+				return null;
+		}
+	}
+
+	static function isWildcard(expression:HxExpr):Bool {
+		switch expression {
+			case EIdent(name):
+				return name == "_";
+			case _:
+				return false;
 		}
 	}
 
