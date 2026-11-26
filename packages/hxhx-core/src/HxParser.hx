@@ -3312,12 +3312,48 @@ class HxParser {
 			}
 
 			consumeBinop(peekedOp.len);
+			if (op == "is" && isTypePathWithArguments()) {
+				// Upstream reads a type after `is` (grammar.mly `expr_next`), and an expression cannot
+				// hold type arguments, so `x is T<Int>` keeps its type as text in a parser marker.
+				final typeText = readTypeHintText(() -> stop()
+					|| !(cur.kind.match(TIdent(_)) || cur.kind.match(TDot) || isOtherChar("<")));
+				left = binaryExpression(op, left, ECall(EIdent("__hxhx_is_type_arguments"), [EString(typeText)]));
+				continue;
+			}
 			final nextMin = isRightAssoc(op) ? prec : (prec + 1);
 			final right = parseBinaryExpr(nextMin, stop);
 			left = binaryExpression(op, left, right);
 		}
 
 		return left;
+	}
+
+	/**
+		Whether a dotted type path with type arguments starts here (`T<Int>`, `haxe.ds.Map<K, V>`).
+		The type after `is` is otherwise read as an expression, which keeps its existing parser form.
+		Nothing is consumed.
+	**/
+	function isTypePathWithArguments():Bool {
+		final pending = [cur];
+		for (token in [peeked1, peeked2, peeked3])
+			if (token != null)
+				pending.push(token);
+		final lookahead = lex.fork();
+		var index = 0;
+		final nextToken = () -> index < pending.length ? pending[index++] : lookahead.next();
+		if (!nextToken().kind.match(TIdent(_)))
+			return false;
+		while (true) {
+			switch nextToken().kind {
+				case TDot:
+					if (!nextToken().kind.match(TIdent(_)))
+						return false;
+				case TOther(c) if (c == "<".code):
+					return true;
+				case _:
+					return false;
+			}
+		}
 	}
 
 	function parseExpr(stop:() -> Bool):HxExpr {
@@ -3673,11 +3709,25 @@ class HxParser {
 		return ESourceTry(catches, bodies, position);
 	}
 
-	/** Retain the authored binding, iterable, and body without changing return ownership. */
+	/**
+		Retain the authored binding, iterable, and body without changing return ownership.
+
+		Upstream reads any expression after `for (` (grammar.mly `expr`, the `for` case); only typing
+		requires `name in iterable`. A head that is not `name in ...` or `key => value in ...`, such as
+		`for (1) "foo"` in a quotation, becomes `__hxhx_for_expression(iterator, body)`.
+	**/
 	function parseSourceForExpr(stop:() -> Bool):HxExpr {
 		final position = cur.getPos();
 		expect(TKeyword(KFor), "'for'");
 		expect(TLParen, "'(' after for");
+		if (!startsForBinding()) {
+			final iterator = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+			expect(TRParen, "')' after for expression");
+			if (stop() || cur.kind.match(TEof))
+				fail("Expected for body");
+			final loopBody = parseAuthoredControl(() -> parseExpr(stop));
+			return ECall(EIdent("__hxhx_for_expression"), [iterator, loopBody]);
+		}
 		final first = readIdent("for binding");
 		final binding:HxForBinding = if (cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
 			bump();
@@ -3691,6 +3741,15 @@ class HxParser {
 			fail("Expected for body");
 		final body = parseAuthoredControl(() -> parseExpr(stop));
 		return ESourceFor(binding, iterable, body, position);
+	}
+
+	/** Whether a `name in` or `key => value in` loop binding starts here. Nothing is consumed. */
+	function startsForBinding():Bool {
+		if (!cur.kind.match(TIdent(_)))
+			return false;
+		if (peekKind().match(TKeyword(KIn)))
+			return true;
+		return peekKind().match(TOther("=".code)) && peekKind2().match(TOther(">".code)) && peekKind3().match(TIdent(_));
 	}
 
 	function consumeBalancedParensForExpr():Void {

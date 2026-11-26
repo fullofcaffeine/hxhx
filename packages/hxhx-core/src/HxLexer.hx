@@ -28,6 +28,28 @@ class HxLexer {
 
 	public function new(src:String) {
 		this.src = src;
+		skipByteOrderMarks();
+	}
+
+	/**
+		Skip byte-order marks before the first token, as upstream's lexer does
+		(`lexer.ml` `skip_header`). A mark is one code point (U+FEFF) where strings hold code points
+		and three UTF-8 bytes (EF BB BF) where they hold bytes. Later marks stay ordinary characters.
+	**/
+	function skipByteOrderMarks():Void {
+		if (src == null)
+			return;
+		while (true) {
+			if (peek(0) == 0xFEFF) {
+				bump();
+			} else if (peek(0) == 0xEF && peek(1) == 0xBB && peek(2) == 0xBF) {
+				bump();
+				bump();
+				bump();
+			} else {
+				return;
+			}
+		}
 	}
 
 	/** Capture the consumed spelling before lookahead skips trivia; allocate each token once. */

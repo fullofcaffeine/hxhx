@@ -17,7 +17,7 @@ import haxe.macro.Expr;
 	nothing in it could be placed in the source.
 
 	Failure policy: syntax that has no public macro form in this exporter (pattern switches,
-	comprehensions, unparsed raw text, lowered sequences without source groups, `is`) throws a
+	comprehensions, unparsed raw text, lowered sequences without source groups) throws a
 	message that starts with `macro syntax export:`. It is never flattened to source text.
 **/
 class MacroSyntaxExport {
@@ -146,6 +146,9 @@ class MacroSyntaxExport {
 				if (marker == HxAuthoredSyntax.META || (marker == "__hxhx_expr_meta" && StringTools.startsWith(name, ":"))):
 				EMeta({name: name, params: [for (argument in metadataArguments(argumentText)) child(argument, position)], pos: position},
 					child(inner, position));
+			case ECall(EIdent("__hxhx_for_expression"), [iterator, body]):
+				// `for (1) "foo"`: upstream keeps any head expression (grammar.mly, the `for` case of `expr`).
+				EFor(child(iterator, position), child(body, position));
 			case ECall(EIdent(marker), _) if (StringTools.startsWith(marker, "__hxhx_")):
 				throw failure("the parser marker `" + marker + "` has no public macro form");
 			case ECall(callee, arguments):
@@ -193,6 +196,9 @@ class MacroSyntaxExport {
 			case EUnop(op, fixity, inner):
 				HxUnaryOperatorTools.requireValidFixity(op, fixity);
 				EUnop(unop(op), fixity == Postfix, child(inner, position));
+			case EBinop("is", value, operand):
+				// Upstream parses `x is T` as `EIs` with a type on the right (grammar.mly `expr_next`).
+				EIs(child(value, position), isType(operand, position));
 			case EBinop(op, left, right):
 				EBinop(binop(op), child(left, position), child(right, position));
 			case ERange(left, right):
@@ -263,12 +269,38 @@ class MacroSyntaxExport {
 		};
 	}
 
+	/**
+		The type of `x is T`. The parser writes a type path as an expression (`T`, `pack.T`, `T.Sub`)
+		and a type with arguments as `__hxhx_is_type_arguments("T<Int>")`; both read with the shared
+		type grammar.
+	**/
+	static function isType(operand:HxExpr, position:Position):ComplexType {
+		final text = switch operand {
+			case ECall(EIdent("__hxhx_is_type_arguments"), [EString(typeText)]): typeText;
+			case _: dottedPath(operand);
+		};
+		final type = text == null ? null : typeOrNull(text, position);
+		if (type == null)
+			throw failure("the type of an `is` operator is not a type path");
+		return type;
+	}
+
+	static function dottedPath(expression:HxExpr):Null<String> {
+		return switch expression {
+			case EIdent(name) | EEnumValue(name): name;
+			case EField(owner, field):
+				final prefix = dottedPath(owner);
+				prefix == null ? null : prefix + "." + field;
+			case _: null;
+		};
+	}
+
 	static function writtenMetadata(entries:Array<String>):Metadata
 		throw failure("written metadata inside types or type parameters is not exported yet");
 
 	static function binop(token:String):Binop {
 		return switch token {
-			case "is": throw failure("the `is` operator is not exported yet; the parser keeps its type as an expression");
+			case "is": throw failure("an `is` operator reached the binary operator table; it exports as `EIs`");
 			case _: HxMacroBinaryOperator.parse(token);
 		};
 	}

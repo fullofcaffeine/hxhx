@@ -14,10 +14,10 @@ import HxLambdaSignature.HxLambdaParameter;
 	with the parser's exact body fingerprint.
 
 	Totality: every `ExprDef` constructor is handled. Constructors with no faithful parser form
-	yet (`ESwitch`, `EDisplay`, `EIs`, metadata other than `@:privateAccess` and `@:markup` on a
-	string, local functions with type parameters, typed constants with suffixes) are rejected with
-	a message that starts with `macro syntax import:`. The caller turns it into a compile error at
-	the macro call.
+	yet (`ESwitch`, `EDisplay`, `EIs` with a type that is not a path, metadata other than
+	`@:privateAccess` and `@:markup` on a string, local functions with type parameters, typed
+	constants with suffixes) are rejected with a message that starts with `macro syntax import:`.
+	The caller turns it into a compile error at the macro call.
 
 	Positions: a returned position that this call exported restores the original `HxPos`. Any
 	other position falls back to the call's first argument start, or to `HxPos.unknown()` when the
@@ -167,8 +167,30 @@ class MacroSyntaxImport {
 						+ entry.name
 						+ "` on an expression is not imported yet; only `@:privateAccess` and `@:markup` are kept by the parser");
 				EPrivateAccess(convert(inner, false), position(expression));
-			case EIs(_, _):
-				throw failure("the `is` operator is not imported yet");
+			case EIs(value, type):
+				HxExpr.EBinop("is", convert(value, false), isOperand(type));
+		};
+	}
+
+	/**
+		The right side of `x is T` in the parser's form. A type path without arguments is the path
+		written as an expression, read with the expression parser exactly as the parser reads it
+		after `is`; a type with arguments is `__hxhx_is_type_arguments` with its compact text.
+		Upstream accepts only type paths there.
+	**/
+	static function isOperand(type:ComplexType):HxExpr {
+		return switch type {
+			case TPath(path) if (path.params == null || path.params.length == 0):
+				final text = typePathText(path);
+				try {
+					HxParser.parseCompleteExprText(text);
+				} catch (error:HxParseError) {
+					throw failure("the `is` type `" + text + "` could not be read: " + error.message);
+				}
+			case TPath(_):
+				ECall(EIdent("__hxhx_is_type_arguments"), [EString(typeText(type))]);
+			case _:
+				throw failure("the type of an `is` operator must be a type path");
 		};
 	}
 
@@ -362,25 +384,35 @@ class MacroSyntaxImport {
 		the public tree nests as `key => (value in iterable)`. Each level is matched separately;
 		the bootstrap OCaml backend does not lower a structure pattern nested in an enum pattern.
 	**/
+	/**
+		A loop whose head is `name in iterable` or `key => value in iterable`, with plain names, is
+		the parser's `ESourceFor`. Upstream parses any other head expression (`for (1) "foo"`), and the
+		parser keeps it as `__hxhx_for_expression(iterator, body)`.
+	**/
 	function sourceFor(iterator:Expr, body:Expr, expression:Expr):HxExpr {
 		if (iterator == null)
 			throw failure("a for loop has no iterator");
 		final shape:ExprDef = iterator.expr;
 		switch shape {
-			case EBinop(OpIn, binding, iterable):
+			case EBinop(OpIn, binding, iterable) if (isLoopName(binding)):
 				return ESourceFor(Value(loopName(binding)), convert(iterable, false), convert(body, false), position(expression));
-			case EBinop(OpArrow, key, valueIterator):
-				if (valueIterator == null)
-					throw failure("a key/value for loop has no value binding");
+			case EBinop(OpArrow, key, valueIterator) if (isLoopName(key) && valueIterator != null):
 				final inner:ExprDef = valueIterator.expr;
 				switch inner {
-					case EBinop(OpIn, value, iterable):
+					case EBinop(OpIn, value, iterable) if (isLoopName(value)):
 						return ESourceFor(KeyValue(loopName(key), loopName(value)), convert(iterable, false), convert(body, false), position(expression));
 					case _:
 				}
 			case _:
 		}
-		throw failure("a for loop iterator must be `name in iterable` or `key => value in iterable`");
+		return ECall(EIdent("__hxhx_for_expression"), [convert(iterator, false), convert(body, false)]);
+	}
+
+	static function isLoopName(binding:Null<Expr>):Bool {
+		if (binding == null)
+			return false;
+		final shape:ExprDef = binding.expr;
+		return shape.match(EConst(CIdent(_)));
 	}
 
 	static function loopName(binding:Expr):String {

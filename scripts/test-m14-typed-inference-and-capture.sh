@@ -37,6 +37,7 @@ haxe test/m14_array_subclass_element_test.hxml
 haxe test/m14_bitwise_parameter_inference_test.hxml
 haxe test/m14_block_ends_expression_test.hxml
 haxe test/m14_bound_input_keeps_type_test.hxml
+haxe test/m14_byte_order_mark_test.hxml
 haxe test/m14_cast_pattern_syntax_test.hxml
 haxe test/m14_char_code_pattern_syntax_test.hxml
 haxe test/m14_class_argument_bounds_test.hxml
@@ -52,11 +53,13 @@ haxe test/m14_extern_inline_generic_test.hxml
 haxe test/m14_extern_inline_storage_test.hxml
 haxe test/m14_extractor_pattern_syntax_test.hxml
 haxe test/m14_extractor_pattern_type_test.hxml
+haxe test/m14_for_expression_syntax_test.hxml
 haxe test/m14_generic_abstract_operator_test.hxml
 haxe test/m14_generic_argument_cast_test.hxml
 haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
+haxe test/m14_is_operator_syntax_test.hxml
 haxe test/m14_macro_block_syntax_test.hxml
 haxe test/m14_macro_context_wire_test.hxml
 haxe test/m14_macro_source_positions_test.hxml
