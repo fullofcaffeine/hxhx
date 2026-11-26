@@ -153,7 +153,15 @@ class TyAbstractMethodConversion {
 			if (projected == null || !candidate.constrain(input, projected)) {
 				// An explicitly declared Dynamic input accepts a known source value;
 				// this provides no evidence for an unknown source type argument.
-				if (!candidate.preview(input).isDynamic() || !complete(candidate.preview(actual)))
+				// A complete source that assigns to a complete input, such as Int to a
+				// `fromFloat(v:Float)` input, unifies upstream as well (haxe_ocaml-uyvpx).
+				final inputType = candidate.preview(input);
+				final sourceType = candidate.preview(actual);
+				final assigns = complete(inputType)
+					&& complete(sourceType)
+					&& !inputType.isDynamic()
+					&& TyAssignmentCompatibility.classify(inputType, sourceType, Unchecked) == Compatible;
+				if (!assigns && (!inputType.isDynamic() || !complete(sourceType)))
 					continue;
 			}
 			if (!complete(candidate.preview(actual)) || !complete(candidate.preview(input)))

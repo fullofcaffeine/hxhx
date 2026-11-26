@@ -946,7 +946,17 @@ class TyperStage {
 					// null must retain its value and skip conversion effects.
 					final storageType = expected.isNullable() && !value.getType().isNullLiteral() ? expected.unwrapNull() : expected;
 					final storage = TyImplicitConversionPlan.select(context.getIndex(), storageType, value.getType());
-					return storage != null && storage.isRepresentationPreservingAbstractConversion() ? storage.apply(value) : value;
+					if (storage != null && storage.isRepresentationPreservingAbstractConversion())
+						return storage.apply(value);
+					// A structure destination reads an abstract value through the declared `to` type
+					// that supplies it (`Wrapped<Array<Int>>` as an `Iterable<Int>`); the view keeps the
+					// storage and shows backends the members they retain (haxe_ocaml-uyvpx).
+					if (storageType.isAnonymous() && !value.getType().isAnonymous())
+						for (view in TyAbstractConversionViews.declaredOutputs(context.getIndex(), value.getType()))
+							if (TyStructuralConstraint.constrain(context.getIndex(), new TyInferenceSolver("structural-view"),
+								TyInferenceSolver.fromType(view), storageType))
+								return TypedExpr.castValue(value, view.getDisplay(), view, value.getPosition(), true);
+					return value;
 				},
 				indexedUpdate: function(expression, position, environment) {
 					final outcome = environment.getInference().indexedUpdateOutcome(expression, environment);
@@ -2046,7 +2056,8 @@ class TyperStage {
 		compared structurally so `Array<T>` can accept `Array<String>` without
 		turning the backend carrier into the binding key.
 	**/
-	static function overloadArgScore(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, semanticIndex:TyperIndex):Int {
+	static function overloadArgScore(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>, semanticIndex:TyperIndex,
+			viewDepth:Int = 0):Int {
 		if (expected == null || actual == null)
 			return -1;
 		final classScheme = actual.getClassValueScheme();
@@ -2085,6 +2096,17 @@ class TyperStage {
 		// Selection owns a private solver; ranking must not mutate caller inference.
 		if (TyAbstractMethodConversion.select(semanticIndex, expected, actual) != null)
 			return 1;
+		// A parameter that names this method's own type parameters accepts a value that converts
+		// to it through an abstract cast, as upstream unifies with those parameters still open
+		// (haxe_ocaml-uyvpx). Selection specializes the parameter; the ordinary conversion then emits it.
+		if (viewDepth < 2 && namesMethodParameter(expected, methodTypeParameters)) {
+			for (view in TyAbstractConversionViews.outputs(semanticIndex, actual))
+				if (overloadArgScore(expected, view, methodTypeParameters, semanticIndex, viewDepth + 1) >= 0)
+					return 1;
+			for (view in TyAbstractConversionViews.inputs(semanticIndex, expected))
+				if (overloadArgScore(view, actual, methodTypeParameters, semanticIndex, viewDepth + 1) >= 0)
+					return 1;
+		}
 		final structural = TyStructuralArgument.compatibility(semanticIndex, expected, actual, methodTypeParameters);
 		if (structural != null)
 			return structural == Compatible ? 3 : -1;
@@ -2175,6 +2197,15 @@ class TyperStage {
 			score += argScore;
 		}
 		return TyMethodGenericBinding.argumentsAreConsistent(sig, argTypes, suppliedArity, methodTypeParameters, semanticIndex) ? score : -1;
+	}
+
+	static function namesMethodParameter(type:TyType, methodTypeParameters:Array<TyTypeParameterId>):Bool {
+		if (methodTypeParameters.length == 0)
+			return false;
+		for (parameter in TyTypeSubstitution.parameterIdentities(type))
+			if (methodTypeParameters.filter(owned -> owned.equals(parameter)).length > 0)
+				return true;
+		return false;
 	}
 
 	/** Align a candidate with the same structural and conversion rules used for its overload score. */
@@ -3876,7 +3907,14 @@ class TyperStage {
 			&& result.unwrapNull().getNominalIdentity() != null
 			&& !result.hasUnknownComponent()) {
 			final validation = new TyInferenceSolver("structural-assignment");
+			// A declared `to` type keeps the storage, so it may supply the structure:
+			// `Foo<Array<Int>>` declared `to T` is an `Iterable<Int>` (haxe_ocaml-uyvpx).
+			final throughDeclaredCast = TyAbstractConversionViews.declaredOutputs(ctx.getIndex(), result.unwrapNull())
+				.filter(view -> TyStructuralConstraint.constrain(ctx.getIndex(), new TyInferenceSolver("structural-assignment"),
+					TyInferenceSolver.fromType(view), expectedResult.unwrapNull()))
+				.length > 0;
 			if (!TyStructuralConstraint.constrain(ctx.getIndex(), validation, TyInferenceSolver.fromType(result.unwrapNull()), expectedResult.unwrapNull())
+				&& !throughDeclaredCast
 				&& TyAbstractMethodConversion.select(ctx.getIndex(), expectedResult, result) == null)
 				throw new TyperError(ctx.getFilePath(), pos, "class value does not satisfy its structural type");
 		}

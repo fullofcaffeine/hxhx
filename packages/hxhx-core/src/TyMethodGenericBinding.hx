@@ -345,11 +345,19 @@ class TyMethodGenericBinding {
 				final b = TyAliasExpansion.containsApplication(right.type);
 				return a != b ? (a ? 1 : -1) : left.name < right.name ? -1 : left.name > right.name ? 1 : 0;
 			});
+			var reached = false;
 			for (field in fields) {
 				final supplied = TyStructuralConstraint.argumentMember(index, actual, field);
-				if (supplied != null
-					&& !collect(field.type, supplied, methodTypeParameters, bindings, index, selectedSignature, activeAliases))
-					return false;
+				if (supplied != null) {
+					reached = true;
+					if (!collect(field.type, supplied, methodTypeParameters, bindings, index, selectedSignature, activeAliases))
+						return false;
+				}
+			}
+			if (!reached && fields.length > 0) {
+				final converted = collectThroughConversion(expected, actual, methodTypeParameters, bindings, index, selectedSignature, activeAliases);
+				if (converted != null)
+					return converted;
 			}
 			return true;
 		}
@@ -377,13 +385,33 @@ class TyMethodGenericBinding {
 		final ancestor = owner == null || sameTypeConstructor(expected, actual) ? null : TyNominalAncestor.view(index, actual, owner);
 		final selected = ancestor == null ? actual : ancestor;
 		final actualArguments = selected.getTypeArguments();
-		if (!sameTypeConstructor(expected, selected) || expectedArguments.length != actualArguments.length)
-			return true;
+		if (!sameTypeConstructor(expected, selected) || expectedArguments.length != actualArguments.length) {
+			final converted = collectThroughConversion(expected, actual, methodTypeParameters, bindings, index, selectedSignature, activeAliases);
+			return converted == null ? true : converted;
+		}
 		for (argumentIndex in 0...expectedArguments.length)
 			if (!collect(expectedArguments[argumentIndex], actualArguments[argumentIndex], methodTypeParameters, bindings, index, selectedSignature,
 				activeAliases))
 				return false;
 		return true;
+	}
+
+	/**
+		Bind method parameters through an abstract cast when the argument's own type does not line up
+		with the parameter (haxe_ocaml-uyvpx): a declared `to` type or `@:to` result of the argument
+		(`CustomArray to Array<Int>` for `Array<T>`, `Foo<Array<Int>> to T` for `Iterable<A>`), or the
+		input of a `from` / `@:from` conversion of the parameter (`2` for `Lazy<A>` through
+		`ofConst<T>(c:T):Lazy<T>`). Null when no conversion view lines up.
+	**/
+	static function collectThroughConversion(expected:TyType, actual:TyType, methodTypeParameters:Array<TyTypeParameterId>,
+			bindings:haxe.ds.StringMap<TyType>, index:TyperIndex, selectedSignature:Bool, activeAliases:Array<String>):Null<Bool> {
+		for (view in TyAbstractConversionViews.outputs(index, actual))
+			if (sameTypeConstructor(expected, view) || (expected.isAnonymous() && view.getSemanticKey() != actual.getSemanticKey()))
+				return collect(expected, view, methodTypeParameters, bindings, index, selectedSignature, activeAliases);
+		for (view in TyAbstractConversionViews.inputs(index, expected))
+			if (parameterIdentity(view, methodTypeParameters) != null || sameTypeConstructor(view, actual))
+				return collect(view, actual, methodTypeParameters, bindings, index, selectedSignature, activeAliases);
+		return null;
 	}
 
 	/**
@@ -401,6 +429,9 @@ class TyMethodGenericBinding {
 		if (isAny(target) || isAny(value))
 			return true;
 		if (TyImplicitConversionPlan.select(index, target, value) != null)
+			return true;
+		// A cast method also unifies (`@:from static function fromFloat(v:Float):R`), haxe_ocaml-uyvpx.
+		if (TyAbstractMethodConversion.select(index, target, value) != null)
 			return true;
 		final identity = target.getNominalIdentity();
 		final ancestor = identity == null || index == null ? null : TyNominalAncestor.view(index, value, identity);

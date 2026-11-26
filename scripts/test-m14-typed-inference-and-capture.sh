@@ -55,6 +55,7 @@ haxe test/m14_extractor_pattern_syntax_test.hxml
 haxe test/m14_extractor_pattern_type_test.hxml
 haxe test/m14_generic_abstract_operator_test.hxml
 haxe test/m14_generic_argument_cast_test.hxml
+haxe test/m14_generic_cast_arguments_test.hxml
 haxe test/m14_generic_structure_method_test.hxml
 haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
