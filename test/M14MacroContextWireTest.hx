@@ -38,6 +38,13 @@ class M14MacroContextWireTest {
 		return null;
 	}
 
+	static function parsedInt(payload:String):String {
+		return switch MacroContextWire.readExpr(payload).expr {
+			case EConst(CInt(value, _)): value;
+			case other: throw "expected an Int constant, found " + other;
+		};
+	}
+
 	static function main():Void {
 		// The compilation's defines, as `Stage3Compiler` seeds them from `-D`.
 		MacroState.reset();
@@ -65,6 +72,29 @@ class M14MacroContextWireTest {
 					require(samePosition(left.pos, at) && samePosition(right.pos, at), "parsed child positions");
 				case other:
 					throw "unexpected parsed shape " + other;
+			}
+		}
+
+		// Conditional compilation in parsed text uses the compilation's defines, the ones `defined`
+		// reports, including the target's (`target.unicode`), as upstream's lexer does
+		// (`src/typing/macroContext.ml`: `ctx.com.defines`; haxe_ocaml-w1zmu). `macro` is not one.
+		final compilation = new haxe.ds.StringMap<String>();
+		compilation.set("target.unicode", "1");
+		MacroState.setCompilationDefines(compilation);
+		require(MacroContextWire.readBool(answer(MacroContextWire.requestDefined("target.unicode"))), "defined(target.unicode)");
+		for (inlined in [false, true]) {
+			require(parsedInt(answer(MacroContextWire.requestParse("#if probe_flag 1 #else 2 #end", at, inlined))) == "1", "#if of a defined flag");
+			require(parsedInt(answer(MacroContextWire.requestParse("#if probe_missing 1 #else 2 #end", at, inlined))) == "2", "#if of an undefined flag");
+			require(parsedInt(answer(MacroContextWire.requestParse("#if target.unicode 1 #else 2 #end", at, inlined))) == "1", "#if target.unicode");
+			require(parsedInt(answer(MacroContextWire.requestParse("#if macro 1 #else 2 #end", at, inlined))) == "2", "#if macro in a target compile");
+			require(parsedInt(answer(MacroContextWire.requestParse("#if probe_missing\n1\n#elseif (probe_value == \"forty-two\")\n3\n#end", at,
+				inlined))) == "3",
+				"#elseif with a value test");
+			// Upstream's test builder parses `"{" + file + "\n}"`: an opener right after `{`.
+			switch MacroContextWire.readExpr(answer(MacroContextWire.requestParse("{#if probe_flag\n1;\n#else\n2;\n#end\n}", at, inlined))).expr {
+				case EBlock([{expr: EConst(CInt("1", _))}]):
+				case other:
+					throw "a block opener after `{` selected the wrong branch: " + other;
 			}
 		}
 
