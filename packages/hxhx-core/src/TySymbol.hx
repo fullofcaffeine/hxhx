@@ -11,6 +11,7 @@ class TySymbol {
 	final identity:TyLocalId;
 	final kind:TyLocalDeclarationKind;
 	var ty:TyType;
+	var staticsOwner:Null<TyNominalInfo> = null;
 
 	public function new(name:String, ty:TyType, identity:TyLocalId, kind:TyLocalDeclarationKind) {
 		if (identity == null)
@@ -54,5 +55,18 @@ class TySymbol {
 	**/
 	public function setType(t:TyType):Void {
 		this.ty = t;
+	}
+
+	/**
+		The class whose statics this local holds: `var s = Something;` without a written type.
+		Haxe 4.3.7 types such a local as the class's statics, so `s.f()` is a static access of
+		`Something`; a written `Class<Something>` is not (upstream rejects its static fields).
+		Typing marks it once; sealed replay reuses this same symbol.
+	**/
+	public function getStaticsOwner():Null<TyNominalInfo>
+		return staticsOwner;
+
+	public function markStaticsOwner(owner:TyNominalInfo):Void {
+		staticsOwner = owner;
 	}
 }
