@@ -362,25 +362,35 @@ class MacroSyntaxImport {
 		the public tree nests as `key => (value in iterable)`. Each level is matched separately;
 		the bootstrap OCaml backend does not lower a structure pattern nested in an enum pattern.
 	**/
+	/**
+		A loop whose head is `name in iterable` or `key => value in iterable`, with plain names, is
+		the parser's `ESourceFor`. Upstream parses any other head expression (`for (1) "foo"`), and the
+		parser keeps it as `__hxhx_for_expression(iterator, body)`.
+	**/
 	function sourceFor(iterator:Expr, body:Expr, expression:Expr):HxExpr {
 		if (iterator == null)
 			throw failure("a for loop has no iterator");
 		final shape:ExprDef = iterator.expr;
 		switch shape {
-			case EBinop(OpIn, binding, iterable):
+			case EBinop(OpIn, binding, iterable) if (isLoopName(binding)):
 				return ESourceFor(Value(loopName(binding)), convert(iterable, false), convert(body, false), position(expression));
-			case EBinop(OpArrow, key, valueIterator):
-				if (valueIterator == null)
-					throw failure("a key/value for loop has no value binding");
+			case EBinop(OpArrow, key, valueIterator) if (isLoopName(key) && valueIterator != null):
 				final inner:ExprDef = valueIterator.expr;
 				switch inner {
-					case EBinop(OpIn, value, iterable):
+					case EBinop(OpIn, value, iterable) if (isLoopName(value)):
 						return ESourceFor(KeyValue(loopName(key), loopName(value)), convert(iterable, false), convert(body, false), position(expression));
 					case _:
 				}
 			case _:
 		}
-		throw failure("a for loop iterator must be `name in iterable` or `key => value in iterable`");
+		return ECall(EIdent("__hxhx_for_expression"), [convert(iterator, false), convert(body, false)]);
+	}
+
+	static function isLoopName(binding:Null<Expr>):Bool {
+		if (binding == null)
+			return false;
+		final shape:ExprDef = binding.expr;
+		return shape.match(EConst(CIdent(_)));
 	}
 
 	static function loopName(binding:Expr):String {

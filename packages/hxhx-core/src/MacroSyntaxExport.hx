@@ -146,6 +146,9 @@ class MacroSyntaxExport {
 				if (marker == HxAuthoredSyntax.META || (marker == "__hxhx_expr_meta" && StringTools.startsWith(name, ":"))):
 				EMeta({name: name, params: [for (argument in metadataArguments(argumentText)) child(argument, position)], pos: position},
 					child(inner, position));
+			case ECall(EIdent("__hxhx_for_expression"), [iterator, body]):
+				// `for (1) "foo"`: upstream keeps any head expression (grammar.mly, the `for` case of `expr`).
+				EFor(child(iterator, position), child(body, position));
 			case ECall(EIdent(marker), _) if (StringTools.startsWith(marker, "__hxhx_")):
 				throw failure("the parser marker `" + marker + "` has no public macro form");
 			case ECall(callee, arguments):

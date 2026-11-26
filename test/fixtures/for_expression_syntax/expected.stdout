@@ -1,0 +1,7 @@
+(for (1) "foo") | int 1
+(for (x) x) | ident x
+(for (f()) 2) | call(ident f,0)
+(for ((i in xs)) i) | paren(in(ident i,ident xs))
+(for ((i) in xs) i) | in(paren(ident i),ident xs)
+(for (i in xs) i) | in(ident i,ident xs)
+(for (k => v in m) v) | arrow(ident k,in(ident v,ident m))

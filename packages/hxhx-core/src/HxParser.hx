@@ -3709,11 +3709,25 @@ class HxParser {
 		return ESourceTry(catches, bodies, position);
 	}
 
-	/** Retain the authored binding, iterable, and body without changing return ownership. */
+	/**
+		Retain the authored binding, iterable, and body without changing return ownership.
+
+		Upstream reads any expression after `for (` (grammar.mly `expr`, the `for` case); only typing
+		requires `name in iterable`. A head that is not `name in ...` or `key => value in ...`, such as
+		`for (1) "foo"` in a quotation, becomes `__hxhx_for_expression(iterator, body)`.
+	**/
 	function parseSourceForExpr(stop:() -> Bool):HxExpr {
 		final position = cur.getPos();
 		expect(TKeyword(KFor), "'for'");
 		expect(TLParen, "'(' after for");
+		if (!startsForBinding()) {
+			final iterator = parseExpr(() -> cur.kind.match(TRParen) || cur.kind.match(TEof));
+			expect(TRParen, "')' after for expression");
+			if (stop() || cur.kind.match(TEof))
+				fail("Expected for body");
+			final loopBody = parseAuthoredControl(() -> parseExpr(stop));
+			return ECall(EIdent("__hxhx_for_expression"), [iterator, loopBody]);
+		}
 		final first = readIdent("for binding");
 		final binding:HxForBinding = if (cur.kind.match(TOther("=".code)) && peekKind().match(TOther(">".code))) {
 			bump();
@@ -3727,6 +3741,15 @@ class HxParser {
 			fail("Expected for body");
 		final body = parseAuthoredControl(() -> parseExpr(stop));
 		return ESourceFor(binding, iterable, body, position);
+	}
+
+	/** Whether a `name in` or `key => value in` loop binding starts here. Nothing is consumed. */
+	function startsForBinding():Bool {
+		if (!cur.kind.match(TIdent(_)))
+			return false;
+		if (peekKind().match(TKeyword(KIn)))
+			return true;
+		return peekKind().match(TOther("=".code)) && peekKind2().match(TOther(">".code)) && peekKind3().match(TIdent(_));
 	}
 
 	function consumeBalancedParensForExpr():Void {
