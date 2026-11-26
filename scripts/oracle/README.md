@@ -113,6 +113,12 @@ The output line looks like this:
 TYPED_ORACLE: methods=1671 match=1365 (81.7%) mismatch=48 missing=258 hxhx_error=0 module_errors=19 match_truncated=40
 ```
 
+A class that declares no constructor but inherits one has a `new` record on both sides. Upstream
+types that constructor as a class field (`typeloadFunction.ml`, `add_constructor`, lines 183-240).
+`hxhx` keeps only declared functions, so `TypedOracleHxhx` derives the record from the nearest
+ancestor's `new` (`TypedConstructorPath.inheritedSignature`). That record is derived: it is not a
+typed function of `hxhx`, and backends never see it.
+
 A method is missing when `hxhx` could not type its module; `report.json` lists those module
 errors. `match_truncated` counts the matches whose signature contains `...`: they are part of
 `match`, but nothing below the cut was compared. `typed-oracle-baseline.json` holds the matching count for the default corpus, with the

@@ -1,0 +1,9 @@
+-cp test
+-cp packages/hxhx-core/src
+-cp packages/hxhx/src
+-cp packages/reflaxe.ocaml/src
+-cp scripts/oracle
+-cp scripts/oracle/shared
+
+-main M14ReturnedInputBindingTest
+--interp

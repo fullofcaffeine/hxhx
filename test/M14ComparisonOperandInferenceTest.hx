@@ -12,8 +12,8 @@ import sys.io.File;
 
 	`value == null` makes `value` a `Null<Unknown>` (haxe_ocaml-a4ytl). The upstream observer reads
 	through `Null`, so the facts compare without the wrapper, and the wrapped types are checked
-	separately. Upstream also gives `nullFallback.first` the type `Null<Unknown>`, through the
-	shared result; hxhx leaves it `Unknown` (haxe_ocaml-catyk).
+	separately. `nullFallback.first` gets the same `Null<Unknown>` through the shared result, as
+	upstream gives it (haxe_ocaml-catyk).
 **/
 class M14ComparisonOperandInferenceTest {
 	static final root = "test/fixtures/comparison_operand_inference";
@@ -71,14 +71,14 @@ class M14ComparisonOperandInferenceTest {
 					for (parameter in fn.getEnvironment().getParams()) {
 						final name = HxFunctionDecl.getName(fn.getSourceDeclaration()) + "." + parameter.getName();
 						observations.push(name + "=" + parameter.getType().unwrapNull().getDisplay());
-						if (name == "nullCheck.value" || name == "nullFallback.second")
+						if (name == "nullCheck.value" || name == "nullFallback.first" || name == "nullFallback.second")
 							wrapped.push(name + "=" + parameter.getType().getDisplay());
 					}
 		observations.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		if (observations.join("\n") + "\n" != expectedTypes)
 			throw "comparison input facts differ:\n" + observations.join("\n");
 		wrapped.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
-		final expectedWrapped = "nullCheck.value=Null<Unknown>\nnullFallback.second=Null<Unknown>";
+		final expectedWrapped = "nullCheck.value=Null<Unknown>\nnullFallback.first=Null<Unknown>\nnullFallback.second=Null<Unknown>";
 		if (wrapped.join("\n") != expectedWrapped)
 			throw "comparison wrapped types differ:\n" + wrapped.join("\n");
 		final fullModule = new ResolvedModule("Main", path, ParserStage.parse(full, path));

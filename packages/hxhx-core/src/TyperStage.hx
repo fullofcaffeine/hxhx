@@ -1866,6 +1866,21 @@ class TyperStage {
 				return bound;
 			}
 		}
+		// Every return unifies with one result monomorph in Haxe 4.3.7 (typer.ml type_return), so
+		// a returned value of unknown type takes the type of its first typed peer.
+		final openReturns = [
+			for (returned in finished)
+				if (scope.getInference().termType(returned.term).isUnknown()) returned.term
+		];
+		final peers = [
+			for (returned in finished)
+				if (!scope.getInference().termType(returned.term).isUnknown()) returned
+		];
+		if (openReturns.length > 0 && peers.length > 0) {
+			final peerType = scope.getInference().termType(peers[0].term);
+			if (!peerType.isDynamic() && !peerType.isVoid())
+				scope.getInference().bindReturnedInputs(openReturns, peers[0].term);
+		}
 		for (returned in finished) {
 			final type = scope.getInference().termType(returned.term);
 			if (type.isUnknown())
@@ -5001,7 +5016,8 @@ class TyperStage {
 									// that same term.
 									if ((sym.getType().isUnknown() || sym.getType().isNullLiteral())
 										&& scope.getInference().sourceTerm(a, scope) == null) {
-										final assignedTerm = scope.getInference().sourceTerm(b, scope);
+										final retainedTerm = scope.getInference().sourceTerm(b, scope);
+										final assignedTerm = retainedTerm != null ? retainedTerm : scope.getInference().literalTerm(b, rhs, scope);
 										if (assignedTerm != null)
 											scope.getInference().recordLocal(sym, assignedTerm);
 									}

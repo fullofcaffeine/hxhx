@@ -67,6 +67,9 @@ class TypedOracleHxhx {
 						records.push({key: key, error: e.message});
 					}
 				}
+				final inherited = inheritedConstructor(index, cls);
+				if (inherited != null)
+					records.push({key: owner + ".new", signature: inherited});
 			}
 		}
 		sys.io.File.saveContent(args[1], haxe.Json.stringify({records: records, moduleErrors: moduleErrors}));
@@ -80,6 +83,29 @@ class TypedOracleHxhx {
 				return haxe.io.Path.withoutExtension(file.substr(prefix.length)).split("/").join(".");
 		}
 		return null;
+	}
+
+	/**
+		The derived record for a class that declares no `new` but inherits one, which upstream
+		records as a typed field (`TypedConstructorPath.inheritedSignature`). Each argument prints
+		like the ancestor's own `new`, with this class's view of its types.
+	**/
+	public static function inheritedConstructor(index:TyperIndex, cls:TypedClass):Null<String> {
+		final inherited = TypedConstructorPath.inheritedSignature(index, cls.getSemanticInfo());
+		if (inherited == null)
+			return null;
+		final sig = inherited.signature;
+		final names = sig.getArgNames();
+		final optional = sig.getArgOptional();
+		final types = sig.getArgs();
+		final source = HxFunctionDecl.getArgs(inherited.declaration.getSourceDeclaration());
+		final parts = [
+			for (index in 0...names.length)
+				(optional[index] ? "?" : "")
+				+ names[index]
+				+ ":"
+				+ canonical(index < source.length ? argumentReadType(source[index], types[index]) : types[index])];
+		return "(" + parts.join(",") + ")->" + canonical(sig.getReturnType());
 	}
 
 	public static function signature(fn:TypedFunction):String {

@@ -55,8 +55,10 @@ haxe test/m14_extractor_pattern_type_test.hxml
 haxe test/m14_generic_abstract_operator_test.hxml
 haxe test/m14_generic_argument_cast_test.hxml
 haxe test/m14_generic_structure_method_test.hxml
+haxe test/m14_inherited_constructor_signature_test.hxml
 haxe test/m14_int_literal_suffix_test.hxml
 haxe test/m14_interpolation_syntax_test.hxml
+haxe test/m14_literal_term_inference_test.hxml
 haxe test/m14_macro_block_syntax_test.hxml
 haxe test/m14_macro_context_type_test.hxml
 haxe test/m14_macro_context_wire_test.hxml
@@ -79,6 +81,7 @@ haxe test/m14_primitive_constructor_effects_test.hxml
 haxe test/m14_project_macro_runtime_type_test.hxml
 haxe test/m14_regex_literal_syntax_test.hxml
 haxe test/m14_return_if_syntax_test.hxml
+haxe test/m14_returned_input_binding_test.hxml
 haxe test/m14_stage3_deferred_enum_payload_test.hxml
 haxe test/m14_stage3_enum_open_record_test.hxml
 haxe test/m14_stage3_local_function_array_for_test.hxml
@@ -92,5 +95,6 @@ haxe test/m14_typed_backend_capture_catalog_test.hxml
 haxe test/m14_typed_capture_lowering_test.hxml
 haxe test/m14_typed_capture_plan_test.hxml
 haxe test/m14_typed_capture_static_method_test.hxml
+haxe test/m14_typing_exception_message_test.hxml
 haxe test/m14_untyped_function_body_syntax_test.hxml
 haxe test/m14_var_declaration_group_test.hxml
